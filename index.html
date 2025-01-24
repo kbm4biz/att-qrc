@@ -478,14 +478,13 @@
                 await fetch(DISCORD_WEBHOOK, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        content: `تسجيل حضور جديد:
-الرقم: ${trainee.id}
-الاسم: ${trainee.name}
-البرنامج: ${trainee.program}
-التاريخ: ${new Date().toLocaleString()}`
-                    })
-                });
+               body: JSON.stringify({
+  id: trainee.id,
+  name: trainee.name,
+  program: trainee.program,
+  date: new Date().toLocaleString()
+})
+;
             } catch (error) {
                 console.error('خطأ في إرسال البيانات إلى الديسكورد:', error);
             }
