@@ -2,29 +2,110 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Student Attendance System</title>
+    <title>Smart Attendance System</title>
     <style>
-        /* Existing styles remain */
-        .step { display: none; }
-        .active-step { display: block; }
-        #idInput { 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .step {
+            display: none;
+            flex: 1;
+            text-align: center;
+        }
+        .active-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #idInput {
             padding: 15px;
             margin: 20px;
             width: 80%;
             font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            text-align: center;
+        }
+        .scanner-container {
+            width: 100%;
+            max-width: 500px;
+            flex: 1;
+            position: relative;
+            margin: 10px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        #video-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .scan-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70%;
+            height: 70%;
+            border: 4px solid #4CAF50;
+            border-radius: 15px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { border-color: #4CAF50; }
+            50% { border-color: #4CAF5080; }
+            100% { border-color: #4CAF50; }
+        }
+        .status-bar {
+            padding: 15px;
+            text-align: center;
+            background: white;
+            margin: 10px;
+            border-radius: 10px;
+            width: 80%;
+        }
+        .valid { color: #4CAF50; }
+        .invalid { color: #f44336; }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 80%;
+            max-width: 300px;
+        }
+        #step3 .status-bar {
+            margin-top: 50px;
+            font-size: 24px;
         }
     </style>
 </head>
 <body>
     <!-- Step 1: ID Verification -->
     <div id="step1" class="step active-step">
-        <input type="text" id="idInput" placeholder="Enter Student ID">
+        <h2 style="margin: 20px;">Enter Student ID</h2>
+        <input type="text" id="idInput" placeholder="123456">
         <button onclick="verifyID()">Verify ID</button>
         <div id="idStatus" class="status-bar"></div>
     </div>
 
     <!-- Step 2: QR Scanner -->
     <div id="step2" class="step">
+        <h2 style="margin: 20px;">Scan Class QR Code</h2>
         <div class="scanner-container">
             <video id="video-preview" playsinline autoplay></video>
             <div class="scan-overlay"></div>
@@ -35,20 +116,26 @@
 
     <!-- Step 3: Success Message -->
     <div id="step3" class="step">
-        <div class="status-bar valid" style="margin-top: 50px;">Attendance Recorded!</div>
+        <div class="status-bar valid">Attendance Recorded Successfully!</div>
+        <button onclick="location.reload()" style="background: #4CAF50;">Check In Another Student</button>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
-        // Configuration
-        const GOOGLE_SHEET_JSON_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
-        const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1147683551236587550/Me9GrRXPY1aMRch5if7KHEymy36qm28XDl_YlDEX-pkVqbasrlXlJppcbaAVbRNqSePU';
+        // =============== CONFIGURATION =============== //
+        const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
+        const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1147683551236587550/Me9GrRXPY1aMRch5if7KHEymy36qm28XDl_YlDEX-pkVqbasrlXlJppcbaAVbRNqSePUL';
+        const SECRET_PHRASE = 'SCHOOL_SECRET_2024'; // Must match teacher's secret
         const SESSION_DURATION = 2 * 60 * 60 * 1000; // 2 hours
+        const MAX_ATTEMPTS = 3;
 
+        // =============== APP STATE =============== //
         let studentID = '';
         let scannerActive = false;
         let videoStream = null;
+        let attemptCount = 0;
 
-        // Check existing session
+        // =============== INITIALIZATION =============== //
         window.onload = () => {
             const savedID = getCookie('studentSession');
             if(savedID) {
@@ -57,48 +144,122 @@
             }
         };
 
+        // =============== CORE FUNCTIONS =============== //
         async function verifyID() {
-            const inputID = document.getElementById('idInput').value;
+            if(attemptCount >= MAX_ATTEMPTS) {
+                showError('Too many attempts. Try again later.');
+                return;
+            }
+            
+            const inputID = document.getElementById('idInput').value.trim();
+            if(!inputID) {
+                showError('Please enter a Student ID');
+                return;
+            }
+
+            attemptCount++;
             const idStatus = document.getElementById('idStatus');
-
+            
             try {
-                const response = await fetch(GOOGLE_SHEET_JSON_URL);
-                const data = await response.json();
-                const validIDs = data.values.flat();
-
+                const response = await fetch(GOOGLE_SHEET_URL);
+                const csvData = await response.text();
+                
+                const validIDs = processCSV(csvData);
+                
                 if(validIDs.includes(inputID)) {
                     studentID = inputID;
                     setCookie('studentSession', studentID, SESSION_DURATION);
-                    idStatus.className = 'valid';
-                    idStatus.textContent = `Valid ID: ${studentID}`;
+                    showSuccess(idStatus, `Valid ID: ${studentID}`);
                     setTimeout(() => showStep(2), 1000);
                 } else {
-                    idStatus.className = 'invalid';
-                    idStatus.textContent = 'Invalid Student ID';
+                    showError('Invalid Student ID', idStatus);
                 }
             } catch (error) {
-                idStatus.className = 'invalid';
-                idStatus.textContent = 'Verification Service Unavailable';
+                showError('Verification service unavailable', idStatus);
+                console.error('Sheet fetch error:', error);
             }
         }
 
-        async function sendToDiscord() {
-            const payload = {
-                content: `Attendance Check-In: ${studentID} - ${new Date().toLocaleString()}`
-            };
+        function processCSV(csvData) {
+            return csvData
+                .split('\n')
+                .map(row => {
+                    const columns = row.split(',');
+                    return columns[0]?.replace(/['"]/g, '').trim();
+                })
+                .filter(id => id && id !== 'ID' && /^\d+$/.test(id));
+        }
 
+        async function validateQRData(data) {
             try {
-                await fetch(DISCORD_WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                });
+                const decoded = atob(data);
+                const payload = JSON.parse(decoded);
+                
+                const currentWindow = Math.floor(Date.now() / 10000);
+                const validWindows = [currentWindow, currentWindow - 1];
+                
+                if (!validWindows.includes(payload.t)) return false;
+                
+                const expectedHash = simpleHash(
+                    payload.t.toString() + 
+                    payload.s + 
+                    SECRET_PHRASE
+                );
+                
+                return payload.h === expectedHash;
             } catch (error) {
-                console.error('Discord webhook error:', error);
+                console.error('Validation error:', error);
+                return false;
             }
         }
 
-        // Modified scanFrame function
+        function simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = (hash << 5) - hash + str.charCodeAt(i);
+                hash |= 0;
+            }
+            return hash.toString(36).slice(-8);
+        }
+
+        // =============== SCANNER FUNCTIONS =============== //
+        async function toggleScanner() {
+            if (scannerActive) {
+                stopScanner();
+            } else {
+                await startScanner();
+            }
+        }
+
+        async function startScanner() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" }
+                });
+                
+                const video = document.getElementById('video-preview');
+                video.srcObject = videoStream;
+                
+                video.onplaying = () => {
+                    scannerActive = true;
+                    document.getElementById('controlBtn').textContent = 'Stop Scanner';
+                    document.getElementById('scanStatus').textContent = 'Scanning...';
+                    scanFrame();
+                };
+                
+            } catch (error) {
+                showError('Camera access required for scanning');
+                console.error('Camera error:', error);
+            }
+        }
+
+        function stopScanner() {
+            if (videoStream) videoStream.getTracks().forEach(track => track.stop());
+            scannerActive = false;
+            document.getElementById('controlBtn').textContent = 'Start Scanner';
+            document.getElementById('scanStatus').textContent = 'Scanner stopped';
+        }
+
         async function scanFrame() {
             if (!scannerActive) return;
 
@@ -114,25 +275,46 @@
             const code = jsQR(imageData.data, imageData.width, imageData.height);
             
             if (code) {
-                const isValid = validateQRData(code.data);
+                const isValid = await validateQRData(code.data);
                 if(isValid) {
                     await sendToDiscord();
                     showStep(3);
                     stopScanner();
                 } else {
-                    document.getElementById('scanStatus').className = 'invalid';
-                    document.getElementById('scanStatus').textContent = 'Invalid QR Code';
+                    showError('Invalid QR Code', document.getElementById('scanStatus'));
                 }
             }
             
             requestAnimationFrame(scanFrame);
         }
 
-        // Cookie Management
+        // =============== INTEGRATIONS =============== //
+        async function sendToDiscord() {
+            try {
+                await fetch(DISCORD_WEBHOOK, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        content: `Attendance Check-In: ${studentID} - ${new Date().toLocaleString()}`
+                    })
+                });
+            } catch (error) {
+                console.error('Discord webhook error:', error);
+            }
+        }
+
+        // =============== UTILITIES =============== //
+        function showStep(stepNumber) {
+            document.querySelectorAll('.step').forEach(step => {
+                step.classList.remove('active-step');
+            });
+            document.getElementById(`step${stepNumber}`).classList.add('active-step');
+        }
+
         function setCookie(name, value, duration) {
             const date = new Date();
             date.setTime(date.getTime() + duration);
-            document.cookie = `${name}=${value};expires=${date.toUTCString()};path=/`;
+            document.cookie = `${name}=${value};expires=${date.toUTCString()};path=/;SameSite=Strict`;
         }
 
         function getCookie(name) {
@@ -142,16 +324,18 @@
                 ?.split('=')[1];
         }
 
-        // Step Navigation
-        function showStep(stepNumber) {
-            document.querySelectorAll('.step').forEach(step => {
-                step.classList.remove('active-step');
-            });
-            document.getElementById(`step${stepNumber}`).classList.add('active-step');
+        function showError(message, element = document.getElementById('idStatus')) {
+            element.className = 'invalid';
+            element.textContent = message;
         }
 
-        // Existing scanner functions remain unchanged
-        // ... (keep previous startScanner/stopScanner functions)
+        function showSuccess(element, message) {
+            element.className = 'valid';
+            element.textContent = message;
+        }
+
+        // Cleanup on exit
+        window.addEventListener('beforeunload', stopScanner);
     </script>
 </body>
 </html>
