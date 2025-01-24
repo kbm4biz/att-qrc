@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QR Validation Test</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+        #scanner-container {
+            width: 300px;
+            height: 300px;
+            border: 2px solid #333;
+            margin: 20px;
+            position: relative;
+        }
+        #result {
+            font-size: 24px;
+            margin: 20px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .valid {
+            background: #dfffdf;
+            color: #2a802a;
+        }
+        .invalid {
+            background: #ffe5e5;
+            color: #ff0000;
+        }
+        #validation-mark {
+            font-size: 60px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>QR Validation Test</h1>
+    
+    <div id="scanner-container">
+        <video id="qr-video" width="100%" height="100%"></video>
+        <canvas id="qr-canvas" hidden></canvas>
+    </div>
+    
+    <div id="result">
+        <div id="validation-mark"></div>
+        <div id="status-text"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script>
+        const video = document.getElementById('qr-video');
+        const canvas = document.getElementById('qr-canvas');
+        const validationMark = document.getElementById('validation-mark');
+        const statusText = document.getElementById('status-text');
+
+        // Test Validation Logic
+        function isValidQR(data) {
+            try {
+                // Example validation pattern: "VALID_123456789"
+                return data.startsWith('VALID_') && data.length === 16;
+            } catch {
+                return false;
+            }
+        }
+
+        function updateResult(valid) {
+            if(valid) {
+                validationMark.innerHTML = '✅';
+                statusText.textContent = 'Valid QR Code';
+                result.className = 'valid';
+            } else {
+                validationMark.innerHTML = '❌';
+                statusText.textContent = 'Invalid QR Code';
+                result.className = 'invalid';
+            }
+        }
+
+        // Camera Setup
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+                requestAnimationFrame(tick);
+            })
+            .catch(err => {
+                statusText.textContent = 'Error accessing camera: ' + err.message;
+            });
+
+        function tick() {
+            if(video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0);
+                
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                
+                if(code) {
+                    const valid = isValidQR(code.data);
+                    updateResult(valid);
+                    return; // Stop processing after detection
+                }
+            }
+            requestAnimationFrame(tick);
+        }
+
+        // Restart scanning
+        function restartScan() {
+            validationMark.innerHTML = '';
+            statusText.textContent = 'Scanning...';
+            result.className = '';
+            requestAnimationFrame(tick);
+        }
+    </script>
+
+    <button onclick="restartScan()" style="margin-top: 20px; padding: 10px 20px;">
+        Start New Scan
+    </button>
+</body>
+</html>
