@@ -5,126 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>نظام حضور المتدربين</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Arial', sans-serif;
-            background: #f5f5f5;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            direction: rtl;
-        }
-        .step {
-            display: none;
-            flex: 1;
-            text-align: center;
-        }
-        .active-step {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        #idInput {
-            padding: 15px;
-            margin: 20px;
-            width: 80%;
-            font-size: 18px;
-            border: 2px solid #ddd;
-            border-radius: 25px;
-            text-align: right;
-        }
-        .scanner-container {
-            width: 100%;
-            max-width: 500px;
-            flex: 1;
-            position: relative;
-            margin: 10px;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-        }
-        #video-preview {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .scan-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 70%;
-            height: 70%;
-            border: 4px solid #4CAF50;
-            border-radius: 15px;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0% { border-color: #4CAF50; }
-            50% { border-color: #4CAF5080; }
-            100% { border-color: #4CAF50; }
-        }
-        .status-bar {
-            padding: 15px;
-            text-align: center;
-            background: white;
-            margin: 10px;
-            border-radius: 10px;
-            width: 80%;
-        }
-        .valid { color: #4CAF50; }
-        .invalid { color: #f44336; }
-        button {
-            background: #2196F3;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 25px;
-            margin: 10px;
-            font-size: 16px;
-            cursor: pointer;
-            width: 80%;
-            max-width: 300px;
-        }
-        h2 {
-            margin: 20px;
-            color: #333;
-        }
-        #gpsStatus {
-            margin: 10px;
-            padding: 10px;
-            border-radius: 5px;
-            display: none;
-        }
-        .gps-enabled { background: #e8f5e9; color: #2e7d32; }
-        .gps-disabled { background: #ffebee; color: #c62828; }
-        .trainee-info {
-            padding: 15px;
-            background: #e8f5e9;
-            border-radius: 10px;
-            margin: 15px;
-            width: 80%;
-            text-align: right;
-        }
-        .cooldown-message {
-            color: #ff9800;
-            font-weight: bold;
-            margin: 20px;
-            font-size: 18px;
-        }
+        /* جميع الأنماط السابقة */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; background: #f5f5f5; height: 100vh; display: flex; flex-direction: column; direction: rtl; }
+        .step { display: none; flex: 1; text-align: center; }
+        .active-step { display: flex; flex-direction: column; align-items: center; }
+        #idInput { padding: 15px; margin: 20px; width: 80%; font-size: 18px; border: 2px solid #ddd; border-radius: 25px; text-align: right; }
+        .scanner-container { width: 100%; max-width: 500px; flex: 1; position: relative; margin: 10px; border-radius: 15px; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+        #video-preview { width: 100%; height: 100%; object-fit: cover; }
+        .scan-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70%; height: 70%; border: 4px solid #4CAF50; border-radius: 15px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { border-color: #4CAF50; } 50% { border-color: #4CAF5080; } 100% { border-color: #4CAF50; } }
+        .status-bar { padding: 15px; text-align: center; background: white; margin: 10px; border-radius: 10px; width: 80%; }
+        .valid { color: #4CAF50; } .invalid { color: #f44336; }
+        button { background: #2196F3; color: white; border: none; padding: 15px 30px; border-radius: 25px; margin: 10px; font-size: 16px; cursor: pointer; width: 80%; max-width: 300px; }
+        h2 { margin: 20px; color: #333; }
+        #gpsStatus { margin: 10px; padding: 10px; border-radius: 5px; display: none; }
+        .gps-enabled { background: #e8f5e9; color: #2e7d32; } .gps-disabled { background: #ffebee; color: #c62828; }
+        .trainee-info { padding: 15px; background: #e8f5e9; border-radius: 10px; margin: 15px; width: 80%; text-align: right; }
+        .cooldown-message { color: #ff9800; font-weight: bold; margin: 20px; font-size: 18px; }
     </style>
 </head>
 <body>
     <!-- الخطوة 1: التحقق من الهوية -->
     <div id="step1" class="step active-step">
         <h2>أدخل رقم المتدرب</h2>
-        <div id="gpsStatus" class="gps-disabled">GPS غير مفعل</div>
+        <div id="gpsStatus" class="gps-disabled">جارٍ التحقق من GPS...</div>
         <input type="text" id="idInput" placeholder="123456">
-        <button onclick="verifyID()" id="verifyBtn" disabled>تحقق من الهوية</button>
+        <button onclick="startVerification()" id="verifyBtn">تحقق من الهوية</button>
         <div id="idStatus" class="status-bar"></div>
     </div>
 
@@ -153,161 +60,218 @@
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
         const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1147683551236587550/Me9GrRXPY1aMRch5if7KHEymy36qm28XDl_YlDEX-pkVqbasrlXlJppcbaAVbRNqSePU';
         const SECRET_PHRASE = 'SCHOOL_SECRET_2024';
-        const SESSION_DURATION = 12 * 60 * 60 * 1000; // 12 ساعة
-        const ALLOWED_RADIUS_KM = 0.3; // 300 متر
+        const SESSION_DURATION = 12 * 60 * 60 * 1000;
+        const ALLOWED_RADIUS_KM = 0.3;
         const MAX_ATTEMPTS = 3;
         const REDIRECT_URL = 'https://www.google.com';
-        const REDIRECT_DELAY = 10000; // 10 ثواني
+        const REDIRECT_DELAY = 10000;
 
         let traineeID = '';
         let scannerActive = false;
         let videoStream = null;
         let attemptCount = 0;
+        let gpsAccessGranted = false;
 
         // =============== إدارة الجلسة =============== //
-        window.onload = async () => {
-            checkGPSPermission();
+        window.onload = () => {
             const sessionCookie = getCookie('traineeSession');
-            
-            if(sessionCookie) {
-                if(isSessionActive(sessionCookie)) {
-                    showCooldownScreen();
-                    return;
-                } else {
-                    clearExpiredSession();
-                }
-            }
+            if(sessionCookie && isSessionActive(sessionCookie)) showCooldownScreen();
         };
 
-        async function checkGPSPermission() {
-            try {
-                const permission = await navigator.permissions.query({ name: 'geolocation' });
-                updateGPSStatus(permission.state);
-                permission.onchange = () => updateGPSStatus(permission.state);
-            } catch (error) {
-                showGPSStatus(false);
-            }
-        }
-
-        function updateGPSStatus(state) {
-            const gpsStatus = document.getElementById('gpsStatus');
-            const verifyBtn = document.getElementById('verifyBtn');
-            
-            if(state === 'granted') {
-                gpsStatus.className = 'gps-enabled';
-                gpsStatus.textContent = 'GPS مفعل';
-                verifyBtn.disabled = false;
-                gpsStatus.style.display = 'block';
-            } else {
-                gpsStatus.className = 'gps-disabled';
-                gpsStatus.textContent = 'يجب تفعيل GPS للمتابعة';
-                verifyBtn.disabled = true;
-                gpsStatus.style.display = 'block';
-            }
-        }
-
         // =============== التحقق من الهوية =============== //
-        async function verifyID() {
-            if(attemptCount >= MAX_ATTEMPTS) {
-                showError('تم تجاوز عدد المحاولات. يرجى المحاولة لاحقًا');
-                return;
-            }
-            
-            const inputID = document.getElementById('idInput').value.trim();
-            if(!inputID) {
-                showError('يرجى إدخال رقم المتدرب');
-                return;
-            }
-
-            attemptCount++;
-            const idStatus = document.getElementById('idStatus');
-            
-            try {
-                // التحقق من الهوية
-                const trainees = await fetchCSV(TRAINEE_SHEET_URL);
-                const foundTrainee = trainees.find(t => t.id === inputID);
-                
-                if(foundTrainee) {
-                    // التحقق من الموقع
-                    const locationValid = await validateLocation();
-                    
-                    if(locationValid) {
-                        traineeID = inputID;
-                        setCookie('traineeSession', `${traineeID}_${Date.now()}`, SESSION_DURATION);
-                        sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
-                        showStep(2);
-                    } else {
-                        showError('الموقع خارج النطاق المسموح', idStatus);
-                    }
-                } else {
-                    showError('رقم المتدرب غير صحيح', idStatus);
-                }
-            } catch (error) {
-                showError('حدث خطأ أثناء التحقق', idStatus);
-                console.error('خطأ في التحقق:', error);
-            }
+        async function startVerification() {
+            if (!gpsAccessGranted && !(await requestGPSAccess())) return;
+            if (!(await validateID())) return;
+            if (!(await validateLocation())) return showError('الموقع خارج النطاق المسموح');
+            showStep(2);
         }
 
-        async function validateLocation() {
-            return new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(async (position) => {
-                    try {
-                        const locations = await fetchCSV(LOCATION_SHEET_URL);
-                        const isValid = locations.some(loc => 
-                            calculateDistance(
-                                position.coords.latitude,
-                                position.coords.longitude,
-                                loc.lat,
-                                loc.lon
-                            ) <= ALLOWED_RADIUS_KM
-                        );
-                        resolve(isValid);
-                    } catch (error) {
-                        reject(error);
-                    }
-                }, reject, {
-                    enableHighAccuracy: true,
-                    timeout: 5000,
-                    maximumAge: 0
-                });
+        async function requestGPSAccess() {
+            return new Promise((resolve) => {
+                navigator.geolocation.getCurrentPosition(
+                    () => { gpsAccessGranted = true; updateGPSStatus('granted'); resolve(true); },
+                    () => { updateGPSStatus('denied'); resolve(false); },
+                    { enableHighAccuracy: true, timeout: 5000 }
+                );
             });
         }
 
-        // =============== الوظائف الأساسية =============== //
-        async function fetchCSV(url) {
-            const response = await fetch(url);
-            const csvData = await response.text();
-            return csvData.split('\n').slice(1).map(line => {
-                const columns = line.split(',');
-                return {
-                    id: columns[0]?.replace(/['"]/g, '').trim(),
-                    name: columns[1]?.replace(/['"]/g, '').trim(),
-                    program: columns[2]?.replace(/['"]/g, '').trim(),
-                    lat: parseFloat(columns[3]?.trim()),
-                    lon: parseFloat(columns[4]?.trim())
+        async function validateID() {
+            const inputID = document.getElementById('idInput').value.trim();
+            if(++attemptCount > MAX_ATTEMPTS) return showError('تم تجاوز عدد المحاولات');
+            
+            try {
+                const trainees = await processCSV(await fetchCSV(TRAINEE_SHEET_URL));
+                const trainee = trainees.find(t => t.id === inputID);
+                if(!trainee) return showError('رقم غير صحيح');
+                
+                sessionStorage.setItem('traineeDetails', JSON.stringify(trainee));
+                setCookie('traineeSession', `${inputID}_${Date.now()}`, SESSION_DURATION);
+                return true;
+            } catch(error) {
+                showError('فشل التحقق');
+                console.error(error);
+                return false;
+            }
+        }
+
+        // =============== التحقق الجغرافي =============== //
+        async function validateLocation() {
+            const position = await getCurrentPosition();
+            const locations = await processCSV(await fetchCSV(LOCATION_SHEET_URL));
+            
+            return locations.some(loc => 
+                calculateDistance(
+                    position.coords.latitude,
+                    position.coords.longitude,
+                    loc.lat,
+                    loc.lon
+                ) <= ALLOWED_RADIUS_KM
+            );
+        }
+
+        function getCurrentPosition() {
+            return new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, 
+                    { enableHighAccuracy: true, timeout: 5000 });
+            });
+        }
+
+        // =============== الماسح الضوئي =============== //
+        async function toggleScanner() {
+            scannerActive ? stopScanner() : await startScanner();
+        }
+
+        async function startScanner() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                const video = document.getElementById('video-preview');
+                video.srcObject = videoStream;
+                video.onplaying = () => {
+                    scannerActive = true;
+                    scanFrame();
                 };
-            }).filter(item => item.id);
+            } catch(error) {
+                showError('فشل تشغيل الكاميرا');
+            }
+        }
+
+        function stopScanner() {
+            videoStream.getTracks().forEach(track => track.stop());
+            scannerActive = false;
+        }
+
+        async function scanFrame() {
+            if (!scannerActive) return;
+            
+            const video = document.getElementById('video-preview');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            const code = jsQR(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
+            if (!code) return requestAnimationFrame(scanFrame);
+
+            if(await validateQR(code.data)) {
+                await sendToDiscord();
+                showStep(3);
+                setTimeout(() => location.href = REDIRECT_URL, REDIRECT_DELAY);
+                stopScanner();
+            } else {
+                showError('كود غير صالح');
+            }
+        }
+
+        // =============== أدوات مساعدة =============== //
+        async function validateQR(data) {
+            try {
+                const { t, s, h } = JSON.parse(atob(data));
+                const currentWindow = Math.floor(Date.now()/10000);
+                return [currentWindow, currentWindow-1].includes(t) && 
+                       h === simpleHash(`${t}${s}${SECRET_PHRASE}`);
+            } catch {
+                return false;
+            }
+        }
+
+        function simpleHash(str) {
+            let hash = 0;
+            for(let i=0; i<str.length; i++) hash = (hash << 5) - hash + str.charCodeAt(i);
+            return Math.abs(hash).toString(36).slice(-8);
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = deg2rad(lat2 - lat1);
-            const dLon = deg2rad(lon2 - lon1);
-            const a = 
-                Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-            return R * c;
+            const R = 6371, dLat = deg2rad(lat2-lat1), dLon = deg2rad(lon2-lon1);
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        function deg2rad(deg) {
-            return deg * (Math.PI/180);
+        function deg2rad(deg) { return deg * (Math.PI/180); }
+
+        async function fetchCSV(url) {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('فشل جلب البيانات');
+            return await response.text();
         }
 
-        // ... بقية الدوال السابقة (showStep, setCookie, scanFrame, إلخ) ...
-        // [Rest of the code remains identical to previous version]
-        // [Include all other functions from previous implementation]
+        function processCSV(csvData) {
+            return csvData.split('\n').slice(1).map(line => {
+                const [id, name, program, lat, lon] = line.split(',').map(x => x?.trim());
+                return { id, name, program, lat: parseFloat(lat), lon: parseFloat(lon) };
+            }).filter(x => x.id);
+        }
+
+        async function sendToDiscord() {
+            const trainee = JSON.parse(sessionStorage.getItem('traineeDetails'));
+            await fetch(DISCORD_WEBHOOK, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content: `حضور جديد:\nالاسم: ${trainee.name}\nالرقم: ${trainee.id}\nالبرنامج: ${trainee.program}\nالتاريخ: ${new Date().toLocaleString()}`
+                })
+            });
+        }
+
+        // =============== إدارة الجلسة =============== //
+        function isSessionActive(cookie) {
+            const [_, timestamp] = cookie.split('_');
+            return Date.now() - parseInt(timestamp) < SESSION_DURATION;
+        }
+
+        function setCookie(name, value, duration) {
+            const date = new Date(Date.now() + duration);
+            document.cookie = `${name}=${value}; expires=${date.toUTCString()}; path=/; Secure; SameSite=Strict`;
+        }
+
+        function getCookie(name) {
+            return document.cookie.split('; ').find(row => row.startsWith(name))?.split('=')[1];
+        }
+
+        function showStep(step) {
+            document.querySelectorAll('.step').forEach(el => el.classList.remove('active-step'));
+            document.getElementById(`step${step}`).classList.add('active-step');
+        }
+
+        function showError(msg, element = document.getElementById('idStatus')) {
+            element.classList.add('invalid');
+            element.textContent = msg;
+        }
+
+        function updateGPSStatus(state) {
+            const el = document.getElementById('gpsStatus');
+            el.style.display = 'block';
+            el.className = state === 'granted' ? 'gps-enabled' : 'gps-disabled';
+            el.textContent = state === 'granted' ? 'GPS مفعل' : 'تفعيل GPS مطلوب';
+        }
+
+        function showCooldownScreen() {
+            document.getElementById('step1').innerHTML = `
+                <h2>تم التسجيل مسبقاً</h2>
+                <div class="cooldown-message">يمكنك المحاولة مرة أخرى بعد 12 ساعة</div>
+            `;
+        }
     </script>
 </body>
 </html>
