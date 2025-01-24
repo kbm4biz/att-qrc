@@ -128,7 +128,6 @@
             margin: 20px;
             font-size: 18px;
         }
-        /* Extra for disclaimers or instructions */
         .disclaimer {
             font-size: 14px;
             color: #555;
@@ -180,6 +179,9 @@
     <!-- HIDDEN ADMIN RESET BUTTON -->
     <button id="adminReset" onclick="forceReset()" title="إعادة تعيين الجلسة"></button>
 
+    <!-- SUCCESS SOUND (Replace the src URL with your actual GitHub link) -->
+    <audio id="successSound" src="https://raw.githubusercontent.com/kbm4biz/att-qrc/main/assets/notification.wav" preload="auto"></audio>
+
     <!-- JSQR Library -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
@@ -190,7 +192,7 @@
         const RADIUS_KM = 0.3; // 0.3 km = 300 m (Adjust as needed)
 
         // B) For ID & QR scanning:
-        const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';  // CSV with trainee IDs, names, programs
+        const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
         const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1147683551236587550/Me9GrRXPY1aMRch5if7KHEymy36qm28XDl_YlDEX-pkVqbasrlXlJppcbaAVbRNqSePU';
         const SECRET_PHRASE = 'SCHOOL_SECRET_2024';
         const SESSION_DURATION = 12 * 60 * 60 * 1000; // 12 hours
@@ -205,7 +207,6 @@
 
         // ================== ON PAGE LOAD ================== //
         window.onload = () => {
-            // If there's an existing session cookie, handle cooldown or reset
             const sessionCookie = getCookie('traineeSession');
             if(sessionCookie) {
                 if(isSessionActive(sessionCookie)) {
@@ -215,8 +216,6 @@
                     clearExpiredSession();
                 }
             }
-
-            // If admin mode, show admin button
             if(isAdmin()) {
                 document.getElementById('adminReset').style.display = 'block';
             }
@@ -255,7 +254,6 @@
 
                             const distance = getDistanceFromLatLonInKm(userLat, userLon, lat, lon);
                             if (distance <= RADIUS_KM) {
-                                // If within the desired radius, break
                                 foundValid = true;
                                 break;
                             }
@@ -264,7 +262,6 @@
                         if (foundValid) {
                             gpsStatus.classList.add('valid');
                             gpsStatus.textContent = 'أنت داخل النطاق المسموح به!';
-                            // Proceed to the next step:
                             setTimeout(() => showStep(1), 1000);
                         } else {
                             gpsStatus.classList.add('invalid');
@@ -284,18 +281,15 @@
             );
         }
 
-        // Calculate distance (in km) between two lat/lon
         function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
             const R = 6371; // radius of Earth in km
             const dLat = deg2rad(lat2 - lat1);
             const dLon = deg2rad(lon2 - lon1);
-            const a =
-                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            const d = R * c;
-            return d;
+            return R * c;
         }
 
         function deg2rad(deg) {
@@ -417,7 +411,14 @@
                         <strong>البرنامج:</strong> ${trainee.program}
                     `;
                     await sendToDiscord(trainee);
+
+                    // Move to Step 3 (Success)
                     showStep(3);
+
+                    // Play success sound
+                    const successSound = document.getElementById('successSound');
+                    successSound.play().catch(err => console.error('Audio play error:', err));
+
                     stopScanner();
 
                     setTimeout(() => {
@@ -456,7 +457,7 @@
             let hash = 0;
             for (let i = 0; i < str.length; i++) {
                 hash = (hash << 5) - hash + str.charCodeAt(i);
-                hash |= 0; // convert to 32-bit integer
+                hash |= 0;
             }
             return hash.toString(36).slice(-8);
         }
@@ -545,7 +546,6 @@
             return location.hash === '#admin';
         }
 
-        // Stop camera on page unload
         window.addEventListener('beforeunload', stopScanner);
     </script>
 </body>
