@@ -190,11 +190,12 @@
 
         // B) For ID & QR scanning:
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
-        const DISCORD_WEBHOOK = 'https://prod-27.westeurope.logic.azure.com:443/workflows/a66bab290af54af2bfbec13c5dd17b81/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ggoyx8BPz6Cy1m3fFT5T7XuVQzVokJipPxxCerwxAvo';
+        // Replace this with your Power Automate webhook URL:
+        const POWER_AUTOMATE_WEBHOOK = 'https://prod-27.westeurope.logic.azure.com:443/workflows/a66bab290af54af2bfbec13c5dd17b81/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ggoyx8BPz6Cy1m3fFT5T7XuVQzVokJipPxxCerwxAvo';
         const SECRET_PHRASE = 'SCHOOL_SECRET_2024';
         const SESSION_DURATION = 12 * 60 * 60 * 1000; // 12 hours
         const MAX_ATTEMPTS = 3;
-        const REDIRECT_URL = 'https://tvtc.gov.sa/ar/About/Pages/default.aspx';
+        const REDIRECT_URL = 'https://www.google.com';
         const REDIRECT_DELAY = 10000; // 10 seconds
 
         // Admin password
@@ -227,7 +228,7 @@
             if(sessionCookie) {
                 if(isSessionActive(sessionCookie)) {
                     showCooldownScreen();
-                    return; 
+                    return;
                 } else {
                     clearExpiredSession();
                 }
@@ -422,7 +423,7 @@
                         <strong>الاسم:</strong> ${trainee.name}<br>
                         <strong>البرنامج:</strong> ${trainee.program}
                     `;
-                    await sendToDiscord(trainee);
+                    await sendToPowerAutomate(trainee);
 
                     // Move to Step 3 (Success)
                     showStep(3);
@@ -472,21 +473,22 @@
             return hash.toString(36).slice(-8);
         }
 
-        // ================== STEP 3: SEND TO DISCORD ================== //
-        async function sendToDiscord(trainee) {
+        // ================== STEP 3: SEND TO POWER AUTOMATE ================== //
+        async function sendToPowerAutomate(trainee) {
             try {
-                await fetch(DISCORD_WEBHOOK, {
+                await fetch(POWER_AUTOMATE_WEBHOOK, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-               body: JSON.stringify({
-  id: trainee.id,
-  name: trainee.name,
-  program: trainee.program,
-  date: new Date().toLocaleString()
-})
-;
+                    // We send separate fields for easier parsing in Power Automate
+                    body: JSON.stringify({
+                        id: trainee.id,
+                        name: trainee.name,
+                        program: trainee.program,
+                        date: new Date().toLocaleString()
+                    })
+                });
             } catch (error) {
-                console.error('خطأ في إرسال البيانات إلى الديسكورد:', error);
+                console.error('خطأ في إرسال البيانات إلى Power Automate:', error);
             }
         }
 
