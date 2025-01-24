@@ -2,7 +2,8 @@
 <html dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>نظام حضور المتدربين مع تحقق الموقع</title>
     <style>
         * {
@@ -58,20 +59,14 @@
             color: #333;
         }
         #adminReset {
-            position: fixed;
-            bottom: 10px;
-            left: 10px;
-            width: 30px;
-            height: 30px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            opacity: 0.2;
-            transition: opacity 0.3s;
+            /* Hidden by default; unhidden if admin logs in */
             display: none;
-        }
-        #adminReset:hover {
-            opacity: 0.5;
+            background: transparent;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 20px;
+            cursor: pointer;
         }
         #idInput {
             padding: 15px;
@@ -176,11 +171,13 @@
         <div class="cooldown-message">سيتم تحويلك تلقائياً خلال 10 ثواني...</div>
     </div>
 
-    <!-- HIDDEN ADMIN RESET BUTTON -->
-    <button id="adminReset" onclick="forceReset()" title="إعادة تعيين الجلسة"></button>
+    <!-- ADMIN RESET BUTTON: Shown only when in admin mode & cooldown -->
+    <button id="adminReset" onclick="forceReset()">إعادة تعيين الجلسة</button>
 
-    <!-- SUCCESS SOUND (Replace the src URL with your actual GitHub link) -->
-    <audio id="successSound" src="https://raw.githubusercontent.com/kbm4biz/att-qrc/main/assets/notification.wav" preload="auto"></audio>
+    <!-- SUCCESS SOUND (Replace with your actual GitHub link) -->
+    <audio id="successSound"
+           src="https://raw.githubusercontent.com/YourUserName/YourRepoName/main/assets/notification.wav"
+           preload="auto"></audio>
 
     <!-- JSQR Library -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
@@ -197,27 +194,43 @@
         const SECRET_PHRASE = 'SCHOOL_SECRET_2024';
         const SESSION_DURATION = 12 * 60 * 60 * 1000; // 12 hours
         const MAX_ATTEMPTS = 3;
-        const REDIRECT_URL = 'https://www.google.com';
+        const REDIRECT_URL = 'https://tvtc.gov.sa/ar/About/Pages/default.aspx';
         const REDIRECT_DELAY = 10000; // 10 seconds
+
+        // Admin password
+        const ADMIN_PASSWORD = '2030';
 
         let traineeID = '';
         let scannerActive = false;
         let videoStream = null;
         let attemptCount = 0;
 
+        // We'll store whether admin mode is active in this variable
+        let adminMode = false;
+
         // ================== ON PAGE LOAD ================== //
         window.onload = () => {
+            // 1) Check if URL has #admin
+            if (location.hash === '#admin') {
+                // Ask for admin password
+                const pass = prompt('أدخل كلمة مرور الإدارة:');
+                if (pass === ADMIN_PASSWORD) {
+                    adminMode = true;
+                } else {
+                    alert('كلمة المرور غير صحيحة!');
+                    // remove #admin from URL
+                    history.replaceState(null, '', location.pathname);
+                }
+            }
+
             const sessionCookie = getCookie('traineeSession');
             if(sessionCookie) {
                 if(isSessionActive(sessionCookie)) {
                     showCooldownScreen();
-                    return;
+                    return; 
                 } else {
                     clearExpiredSession();
                 }
-            }
-            if(isAdmin()) {
-                document.getElementById('adminReset').style.display = 'block';
             }
         };
 
@@ -251,7 +264,6 @@
                             const [latStr, lonStr] = lines[i].split(',');
                             const lat = parseFloat(latStr.trim());
                             const lon = parseFloat(lonStr.trim());
-
                             const distance = getDistanceFromLatLonInKm(userLat, userLon, lat, lon);
                             if (distance <= RADIUS_KM) {
                                 foundValid = true;
@@ -439,13 +451,11 @@
 
                 const currentWindow = Math.floor(Date.now() / 10000);
                 const validWindows = [currentWindow, currentWindow - 1];
-
                 if (!validWindows.includes(payload.t)) return false;
 
                 const expectedHash = simpleHash(
                     payload.t.toString() + payload.s + SECRET_PHRASE
                 );
-
                 return payload.h === expectedHash;
             } catch (error) {
                 console.error('خطأ في التحقق:', error);
@@ -467,7 +477,7 @@
             try {
                 await fetch(DISCORD_WEBHOOK, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         content: `تسجيل حضور جديد:
 الرقم: ${trainee.id}
@@ -484,18 +494,30 @@
         // ================== SESSION MANAGEMENT ================== //
         function isSessionActive(cookieValue) {
             const [id, timestamp] = cookieValue.split('_');
-            return Date.now() - parseInt(timestamp) < SESSION_DURATION;
+            return (Date.now() - parseInt(timestamp)) < SESSION_DURATION;
         }
 
         function showCooldownScreen() {
+            // Hide the GPS step
             document.getElementById('step0').classList.remove('active-step');
-            document.getElementById('step1').innerHTML = `
+
+            // Overwrite step1 with cooldown UI
+            const step1 = document.getElementById('step1');
+            step1.innerHTML = `
                 <h2>نظام الحضور</h2>
                 <div class="cooldown-message">
                     تم تسجيل حضورك مسبقاً، يرجى المحاولة مرة أخرى بعد 12 ساعة
                 </div>
             `;
-            document.getElementById('step1').classList.add('active-step');
+            step1.classList.add('active-step');
+
+            // Show admin reset button only if adminMode = true
+            if (adminMode) {
+                const adminBtn = document.getElementById('adminReset');
+                adminBtn.style.display = 'block';
+                // Append inside step1 so it appears below the message
+                step1.appendChild(adminBtn);
+            }
         }
 
         function clearExpiredSession() {
@@ -536,17 +558,12 @@
 
         function forceReset() {
             if (confirm('هل تريد إعادة تعيين الجلسة بالكامل؟')) {
+                // Clear the session cookie and session storage
                 document.cookie = 'traineeSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
                 sessionStorage.clear();
                 location.reload();
             }
         }
-
-        function isAdmin() {
-            return location.hash === '#admin';
-        }
-
-        window.addEventListener('beforeunload', stopScanner);
     </script>
 </body>
 </html>
