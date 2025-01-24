@@ -110,6 +110,14 @@
         #adminReset:hover {
             opacity: 0.5;
         }
+        .trainee-info {
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 10px;
+            margin: 15px;
+            width: 80%;
+            text-align: right;
+        }
     </style>
 </head>
 <body>
@@ -135,7 +143,7 @@
     <!-- الخطوة 3: تأكيد الحضور -->
     <div id="step3" class="step">
         <div class="status-bar valid">تم تسجيل الحضور بنجاح!</div>
-        <button onclick="resetSession()" style="background: #4CAF50;">بدء جلسة جديدة</button>
+        <div class="trainee-info" id="traineeDetails"></div>
     </div>
 
     <!-- زر الإدارة المخفي -->
@@ -146,7 +154,7 @@
         // =============== الإعدادات =============== //
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
         const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1147683551236587550/Me9GrRXPY1aMRch5if7KHEymy36qm28XDl_YlDEX-pkVqbasrlXlJppcbaAVbRNqSePU';
-        const SECRET_PHRASE = 'SCHOOL_SECRET_2024';
+        const SECRET_PHRASE = 'SCHOOL_SECRET_2023';
         const SESSION_DURATION = 12 * 60 * 60 * 1000; // 12 ساعة
         const MAX_ATTEMPTS = 3;
 
@@ -190,12 +198,14 @@
                 const response = await fetch(GOOGLE_SHEET_URL);
                 const csvData = await response.text();
                 
-                const validIDs = processCSV(csvData);
+                const trainees = processCSV(csvData);
+                const foundTrainee = trainees.find(t => t.id === inputID);
                 
-                if(validIDs.includes(inputID)) {
+                if(foundTrainee) {
                     traineeID = inputID;
                     setCookie('traineeSession', traineeID, SESSION_DURATION);
-                    showSuccess(idStatus, `رقم صحيح: ${traineeID}`);
+                    sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
+                    showSuccess(idStatus, `تم التحقق: ${foundTrainee.name}`);
                     setTimeout(() => showStep(2), 1000);
                 } else {
                     showError('رقم المتدرب غير صحيح', idStatus);
@@ -209,11 +219,16 @@
         function processCSV(csvData) {
             return csvData
                 .split('\n')
+                .slice(1) // تخطى رأس الجدول
                 .map(row => {
                     const columns = row.split(',');
-                    return columns[0]?.replace(/['"]/g, '').trim();
+                    return {
+                        id: columns[0]?.replace(/['"]/g, '').trim(),
+                        name: columns[1]?.replace(/['"]/g, '').trim(),
+                        program: columns[2]?.replace(/['"]/g, '').trim()
+                    };
                 })
-                .filter(id => id && id !== 'ID' && /^\d+$/.test(id));
+                .filter(trainee => trainee.id && /^\d+$/.test(trainee.id));
         }
 
         async function validateQRData(data) {
@@ -303,9 +318,21 @@
             if (code) {
                 const isValid = await validateQRData(code.data);
                 if(isValid) {
-                    await sendToDiscord();
+                    const trainee = JSON.parse(sessionStorage.getItem('traineeDetails'));
+                    document.getElementById('traineeDetails').innerHTML = `
+                        <strong>رقم المتدرب:</strong> ${trainee.id}<br>
+                        <strong>الاسم:</strong> ${trainee.name}<br>
+                        <strong>البرنامج:</strong> ${trainee.program}
+                    `;
+                    
+                    await sendToDiscord(trainee);
                     showStep(3);
                     stopScanner();
+                    
+                    setTimeout(() => {
+                        document.getElementById('step3').classList.remove('active-step');
+                        forceReset();
+                    }, 10000);
                 } else {
                     showError('كود غير صحيح', document.getElementById('scanStatus'));
                 }
@@ -315,13 +342,17 @@
         }
 
         // =============== التكاملات =============== //
-        async function sendToDiscord() {
+        async function sendToDiscord(trainee) {
             try {
                 await fetch(DISCORD_WEBHOOK, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        content: `تسجيل حضور المتدرب: ${traineeID} - ${new Date().toLocaleString()}`
+                        content: `تسجيل حضور جديد:
+الرقم: ${trainee.id}
+الاسم: ${trainee.name}
+البرنامج: ${trainee.program}
+التاريخ: ${new Date().toLocaleString()}`
                     })
                 });
             } catch (error) {
@@ -340,7 +371,7 @@
         function setCookie(name, value, duration) {
             const date = new Date();
             date.setTime(date.getTime() + duration);
-            document.cookie = `${name}=${value};expires=${date.toUTCString()};path=/;SameSite=Strict`;
+            document.cookie = `${name}=${value};expires=${date.toUTCString()};path=/;SameSite=Strict;Secure`;
         }
 
         function getCookie(name) {
@@ -360,15 +391,10 @@
             element.textContent = message;
         }
 
-        function resetSession() {
-            document.cookie = 'traineeSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-            location.reload();
-        }
-
         function forceReset() {
-            if (confirm('هل تريد إعادة تعيين الجلسة بالكامل؟')) {
-                resetSession();
-            }
+            document.cookie = 'traineeSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            sessionStorage.clear();
+            location.reload();
         }
 
         function isAdmin() {
