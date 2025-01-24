@@ -1,130 +1,206 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>QR Test Scanner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile QR Validator</title>
     <style>
-        /* Same styles as previous version */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .scanner-container {
+            flex: 1;
+            position: relative;
+            max-width: 100%;
+            margin: 20px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        #video-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .scan-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70%;
+            height: 70%;
+            border: 4px solid #4CAF50;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(76,175,80,0.3);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { border-color: #4CAF50; }
+            50% { border-color: #4CAF5080; }
+            100% { border-color: #4CAF50; }
+        }
+        .status-bar {
+            padding: 15px;
+            text-align: center;
+            background: white;
+            margin: 10px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .valid { color: #4CAF50; }
+        .invalid { color: #f44336; }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        @media (max-width: 480px) {
+            .scanner-container {
+                margin: 10px;
+            }
+            button {
+                width: calc(100% - 20px);
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>QR Code Test Scanner</h1>
-    
-    <div id="scanner-box">
-        <video id="video-element" playsinline autoplay></video>
-        <div id="scan-frame"></div>
+    <div class="scanner-container">
+        <video id="video-preview" playsinline autoplay></video>
+        <div class="scan-overlay"></div>
     </div>
     
-    <div id="result">Initializing scanner...</div>
+    <div class="status-bar" id="status">Initializing...</div>
     
-    <button onclick="toggleScanner()" id="toggleBtn">Start Scanner</button>
+    <button onclick="toggleScanner()" id="controlBtn">Start Scanner</button>
 
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
-        let isScanning = false;
+        const SECRET = 'YOUR_DYNAMIC_SECRET'; // Must match teacher's secret
+        const TIME_WINDOW = 10; // Seconds (must match teacher's interval)
+        
+        let scannerActive = false;
         let videoStream = null;
-        const video = document.getElementById('video-element');
-        const resultDiv = document.getElementById('result');
-        const toggleBtn = document.getElementById('toggleBtn');
+        
+        // Dynamic QR Validation (Matches Teacher's Algorithm)
+        function validateDynamicQR(data) {
+            try {
+                const [receivedTime, receivedHash] = data.split('|');
+                
+                // Get current time window
+                const currentWindow = Math.floor(Date.now() / (TIME_WINDOW * 1000));
+                const previousWindow = currentWindow - 1;
+                
+                // Generate valid hashes for current and previous window
+                const validHashes = [currentWindow, previousWindow].map(window => {
+                    return hashCode(`${window}|${SECRET}`);
+                });
+                
+                return validHashes.includes(receivedHash) && 
+                       Math.abs(currentWindow - parseInt(receivedTime)) <= 1;
+                
+            } catch (error) {
+                console.error('Validation error:', error);
+                return false;
+            }
+        }
+
+        function hashCode(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = (hash << 5) - hash + str.charCodeAt(i);
+                hash |= 0; // Convert to 32bit integer
+            }
+            return hash.toString(16);
+        }
 
         async function toggleScanner() {
-            if (!isScanning) {
-                await startScanner();
-            } else {
+            if (scannerActive) {
                 stopScanner();
+            } else {
+                await startScanner();
             }
         }
 
         async function startScanner() {
             try {
-                const constraints = {
+                videoStream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         facingMode: "environment",
-                        width: { min: 640, ideal: 1280 },
-                        height: { min: 480, ideal: 720 }
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
                     }
-                };
-
-                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                });
+                
+                const video = document.getElementById('video-preview');
                 video.srcObject = videoStream;
                 
-                // Wait for video to start playing
-                await new Promise((resolve) => {
-                    video.onplaying = resolve;
-                });
-
-                isScanning = true;
-                toggleBtn.textContent = 'Stop Scanner';
-                resultDiv.textContent = 'Scanning...';
+                await new Promise(resolve => video.onplaying = resolve);
+                
+                scannerActive = true;
+                document.getElementById('controlBtn').textContent = 'Stop Scanner';
+                document.getElementById('status').textContent = 'Scanning...';
                 scanFrame();
-            } catch (err) {
-                handleCameraError(err);
+                
+            } catch (error) {
+                document.getElementById('status').textContent = 
+                    `Error: ${error.name} - ${error.message}`;
+                console.error('Camera error:', error);
             }
         }
 
         function stopScanner() {
             if (videoStream) {
-                videoStream.getTracks().forEach(track => {
-                    track.stop();
-                });
+                videoStream.getTracks().forEach(track => track.stop());
             }
-            isScanning = false;
-            toggleBtn.textContent = 'Start Scanner';
-            resultDiv.textContent = 'Scanner stopped';
-            video.srcObject = null;
+            scannerActive = false;
+            document.getElementById('controlBtn').textContent = 'Start Scanner';
+            document.getElementById('status').textContent = 'Scanner stopped';
         }
 
         function scanFrame() {
-            if (!isScanning) return;
-
-            try {
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                
-                ctx.drawImage(video, 0, 0);
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-                if (code) {
-                    handleQRCode(code.data);
-                } else {
-                    requestAnimationFrame(scanFrame);
-                }
-            } catch (err) {
-                handleScanError(err);
-            }
-        }
-
-        function handleQRCode(data) {
-            const isValid = data.startsWith('VALID_');
-            resultDiv.textContent = isValid ? `Valid: ${data}` : `Invalid: ${data}`;
-            resultDiv.className = isValid ? 'valid' : 'invalid';
+            if (!scannerActive) return;
             
-            // Continue scanning
-            requestAnimationFrame(scanFrame);
-        }
-
-        function handleCameraError(err) {
-            console.error('Camera Error:', err);
-            resultDiv.className = 'invalid';
-            resultDiv.textContent = `Camera Error: ${err.name}`;
-            if (err.name === 'NotAllowedError') {
-                resultDiv.textContent += ' - Please allow camera access';
+            const video = document.getElementById('video-preview');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            
+            if (code) {
+                const isValid = validateDynamicQR(code.data);
+                document.getElementById('status').className = isValid ? 'valid' : 'invalid';
+                document.getElementById('status').innerHTML = isValid ?
+                    '✅ Valid QR Code' : 
+                    '❌ Invalid QR Code<br><small>' + code.data + '</small>';
+                
+                // Continue scanning after validation
+                setTimeout(scanFrame, 1000);
+            } else {
+                requestAnimationFrame(scanFrame);
             }
         }
 
-        function handleScanError(err) {
-            console.error('Scan Error:', err);
-            resultDiv.className = 'invalid';
-            resultDiv.textContent = 'Scanning Error - Please try again';
-            stopScanner();
-        }
-
-        // Cleanup on exit
-        window.addEventListener('beforeunload', () => {
-            stopScanner();
-        });
+        // Cleanup
+        window.addEventListener('beforeunload', stopScanner);
     </script>
 </body>
 </html>
