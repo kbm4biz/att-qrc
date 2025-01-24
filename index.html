@@ -1,153 +1,130 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>QR Test with Preview</title>
+    <title>QR Test Scanner</title>
     <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-family: Arial, sans-serif;
-            background: #f0f0f0;
-        }
-        #scanner-box {
-            width: 300px;
-            height: 300px;
-            margin: 20px;
-            position: relative;
-            overflow: hidden;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.2);
-        }
-        #scanner-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: 2px solid #ffffff;
-            box-sizing: border-box;
-        }
-        #video-element {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        #scan-frame {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 70%;
-            height: 70%;
-            border: 4px solid #00ff00;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,255,0,0.3);
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { border-color: #00ff00; }
-            50% { border-color: #00ff0080; }
-            100% { border-color: #00ff00; }
-        }
-        #result {
-            font-size: 24px;
-            margin: 20px;
-            padding: 15px 30px;
-            border-radius: 25px;
-            transition: all 0.3s;
-        }
-        .valid { background: #4CAF50; color: white; }
-        .invalid { background: #f44336; color: white; }
-        button {
-            padding: 12px 24px;
-            font-size: 16px;
-            background: #2196F3;
-            color: white;
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            margin: 10px;
-        }
+        /* Same styles as previous version */
     </style>
 </head>
 <body>
     <h1>QR Code Test Scanner</h1>
     
     <div id="scanner-box">
-        <video id="video-element" playsinline></video>
+        <video id="video-element" playsinline autoplay></video>
         <div id="scan-frame"></div>
     </div>
     
-    <div id="result">Scanning Area Active</div>
+    <div id="result">Initializing scanner...</div>
     
-    <button onclick="startScanner()">Start Scanner</button>
-    <button onclick="stopScanner()">Stop Scanner</button>
+    <button onclick="toggleScanner()" id="toggleBtn">Start Scanner</button>
 
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
+        let isScanning = false;
         let videoStream = null;
         const video = document.getElementById('video-element');
         const resultDiv = document.getElementById('result');
+        const toggleBtn = document.getElementById('toggleBtn');
 
-        function isValidQR(data) {
-            // Test pattern: Should start with "TEST_"
-            return data.startsWith('TEST_');
+        async function toggleScanner() {
+            if (!isScanning) {
+                await startScanner();
+            } else {
+                stopScanner();
+            }
         }
 
         async function startScanner() {
             try {
-                videoStream = await navigator.mediaDevices.getUserMedia({
+                const constraints = {
                     video: {
                         facingMode: "environment",
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
+                        width: { min: 640, ideal: 1280 },
+                        height: { min: 480, ideal: 720 }
                     }
-                });
+                };
+
+                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = videoStream;
-                video.play();
+                
+                // Wait for video to start playing
+                await new Promise((resolve) => {
+                    video.onplaying = resolve;
+                });
+
+                isScanning = true;
+                toggleBtn.textContent = 'Stop Scanner';
+                resultDiv.textContent = 'Scanning...';
                 scanFrame();
             } catch (err) {
-                resultDiv.className = 'invalid';
-                resultDiv.textContent = 'Camera access denied!';
-                console.error('Camera error:', err);
+                handleCameraError(err);
             }
         }
 
         function stopScanner() {
             if (videoStream) {
-                videoStream.getTracks().forEach(track => track.stop());
-                video.srcObject = null;
-                resultDiv.textContent = 'Scanner stopped';
-                resultDiv.className = '';
+                videoStream.getTracks().forEach(track => {
+                    track.stop();
+                });
             }
+            isScanning = false;
+            toggleBtn.textContent = 'Start Scanner';
+            resultDiv.textContent = 'Scanner stopped';
+            video.srcObject = null;
         }
 
         function scanFrame() {
-            if (!videoStream) return;
+            if (!isScanning) return;
 
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            
-            ctx.drawImage(video, 0, 0);
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                
+                ctx.drawImage(video, 0, 0);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
 
-            if (code) {
-                if (isValidQR(code.data)) {
-                    resultDiv.textContent = 'Valid Code: ' + code.data;
-                    resultDiv.className = 'valid';
+                if (code) {
+                    handleQRCode(code.data);
                 } else {
-                    resultDiv.textContent = 'Invalid Code Format';
-                    resultDiv.className = 'invalid';
+                    requestAnimationFrame(scanFrame);
                 }
-                return;
+            } catch (err) {
+                handleScanError(err);
             }
+        }
 
+        function handleQRCode(data) {
+            const isValid = data.startsWith('VALID_');
+            resultDiv.textContent = isValid ? `Valid: ${data}` : `Invalid: ${data}`;
+            resultDiv.className = isValid ? 'valid' : 'invalid';
+            
+            // Continue scanning
             requestAnimationFrame(scanFrame);
         }
+
+        function handleCameraError(err) {
+            console.error('Camera Error:', err);
+            resultDiv.className = 'invalid';
+            resultDiv.textContent = `Camera Error: ${err.name}`;
+            if (err.name === 'NotAllowedError') {
+                resultDiv.textContent += ' - Please allow camera access';
+            }
+        }
+
+        function handleScanError(err) {
+            console.error('Scan Error:', err);
+            resultDiv.className = 'invalid';
+            resultDiv.textContent = 'Scanning Error - Please try again';
+            stopScanner();
+        }
+
+        // Cleanup on exit
+        window.addEventListener('beforeunload', () => {
+            stopScanner();
+        });
     </script>
 </body>
 </html>
