@@ -94,6 +94,22 @@
             margin: 20px;
             color: #333;
         }
+        #adminReset {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            width: 30px;
+            height: 30px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            opacity: 0.2;
+            transition: opacity 0.3s;
+            display: none;
+        }
+        #adminReset:hover {
+            opacity: 0.5;
+        }
     </style>
 </head>
 <body>
@@ -122,13 +138,16 @@
         <button onclick="resetSession()" style="background: #4CAF50;">بدء جلسة جديدة</button>
     </div>
 
+    <!-- زر الإدارة المخفي -->
+    <button id="adminReset" onclick="forceReset()" title="إعادة تعيين الجلسة"></button>
+
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
-        // إعدادات النظام
-        const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
-        const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1147683551236587550/Me9GrRXPY1aMRch5if7KHEymy36qm28XDl_YlDEX-pkVqbasrlXlJppcbaAVbRNqSePU';
-        const SECRET_PHRASE = 'SCHOOL_SECRET_2024';
-        const SESSION_DURATION = 2 * 60 * 60 * 1000; // ساعتين
+        // =============== الإعدادات =============== //
+        const GOOGLE_SHEET_URL = 'رابط_جوجل_شيت_الخاص_بك';
+        const DISCORD_WEBHOOK = 'رابط_ويب_هوك_الديسكورد';
+        const SECRET_PHRASE = 'كلمة_السر_الخاصة_بك';
+        const SESSION_DURATION = 12 * 60 * 60 * 1000; // 12 ساعة
         const MAX_ATTEMPTS = 3;
 
         let traineeID = '';
@@ -136,7 +155,7 @@
         let videoStream = null;
         let attemptCount = 0;
 
-        // إدارة الجلسة
+        // =============== إدارة الجلسة =============== //
         window.onload = () => {
             const savedID = getCookie('traineeSession');
             if(savedID) {
@@ -145,8 +164,13 @@
             } else {
                 showStep(1);
             }
+            
+            if(isAdmin()) {
+                document.getElementById('adminReset').style.display = 'block';
+            }
         };
 
+        // =============== الوظائف الأساسية =============== //
         async function verifyID() {
             if(attemptCount >= MAX_ATTEMPTS) {
                 showError('تم تجاوز عدد المحاولات. يرجى المحاولة لاحقًا');
@@ -224,6 +248,7 @@
             return hash.toString(36).slice(-8);
         }
 
+        // =============== إدارة الماسح =============== //
         async function toggleScanner() {
             if (scannerActive) {
                 stopScanner();
@@ -289,6 +314,7 @@
             requestAnimationFrame(scanFrame);
         }
 
+        // =============== التكاملات =============== //
         async function sendToDiscord() {
             try {
                 await fetch(DISCORD_WEBHOOK, {
@@ -303,6 +329,7 @@
             }
         }
 
+        // =============== أدوات مساعدة =============== //
         function showStep(stepNumber) {
             document.querySelectorAll('.step').forEach(step => {
                 step.classList.remove('active-step');
@@ -336,6 +363,16 @@
         function resetSession() {
             document.cookie = 'traineeSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             location.reload();
+        }
+
+        function forceReset() {
+            if (confirm('هل تريد إعادة تعيين الجلسة بالكامل؟')) {
+                resetSession();
+            }
+        }
+
+        function isAdmin() {
+            return location.hash === '#admin';
         }
 
         window.addEventListener('beforeunload', stopScanner);
