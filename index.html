@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html dir="rtl">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Attendance System</title>
+    <title>نظام حضور المتدربين</title>
     <style>
         * {
             margin: 0;
@@ -10,11 +11,12 @@
             box-sizing: border-box;
         }
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
             background: #f5f5f5;
             height: 100vh;
             display: flex;
             flex-direction: column;
+            direction: rtl;
         }
         .step {
             display: none;
@@ -33,7 +35,7 @@
             font-size: 18px;
             border: 2px solid #ddd;
             border-radius: 25px;
-            text-align: center;
+            text-align: right;
         }
         .scanner-container {
             width: 100%;
@@ -88,72 +90,72 @@
             width: 80%;
             max-width: 300px;
         }
-        #step3 .status-bar {
-            margin-top: 50px;
-            font-size: 24px;
+        h2 {
+            margin: 20px;
+            color: #333;
         }
     </style>
 </head>
 <body>
-    <!-- Step 1: ID Verification -->
+    <!-- الخطوة 1: التحقق من الهوية -->
     <div id="step1" class="step active-step">
-        <h2 style="margin: 20px;">Enter Student ID</h2>
+        <h2>أدخل رقم المتدرب</h2>
         <input type="text" id="idInput" placeholder="123456">
-        <button onclick="verifyID()">Verify ID</button>
+        <button onclick="verifyID()">تحقق من الهوية</button>
         <div id="idStatus" class="status-bar"></div>
     </div>
 
-    <!-- Step 2: QR Scanner -->
+    <!-- الخطوة 2: مسح الكود -->
     <div id="step2" class="step">
-        <h2 style="margin: 20px;">Scan Class QR Code</h2>
+        <h2>امسح كود الحضور</h2>
         <div class="scanner-container">
             <video id="video-preview" playsinline autoplay></video>
             <div class="scan-overlay"></div>
         </div>
         <div class="status-bar" id="scanStatus"></div>
-        <button onclick="toggleScanner()" id="controlBtn">Start Scanner</button>
+        <button onclick="toggleScanner()" id="controlBtn">بدء المسح</button>
     </div>
 
-    <!-- Step 3: Success Message -->
+    <!-- الخطوة 3: تأكيد الحضور -->
     <div id="step3" class="step">
-        <div class="status-bar valid">Attendance Recorded Successfully!</div>
-        <button onclick="location.reload()" style="background: #4CAF50;">Check In Another Student</button>
+        <div class="status-bar valid">تم تسجيل الحضور بنجاح!</div>
+        <button onclick="resetSession()" style="background: #4CAF50;">بدء جلسة جديدة</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
-        // =============== CONFIGURATION =============== //
+        // إعدادات النظام
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
-        const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1147683551236587550/Me9GrRXPY1aMRch5if7KHEymy36qm28XDl_YlDEX-pkVqbasrlXlJppcbaAVbRNqSePUL';
-        const SECRET_PHRASE = 'SCHOOL_SECRET_2024'; // Must match teacher's secret
-        const SESSION_DURATION = 2 * 60 * 60 * 1000; // 2 hours
+        const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1147683551236587550/Me9GrRXPY1aMRch5if7KHEymy36qm28XDl_YlDEX-pkVqbasrlXlJppcbaAVbRNqSePU';
+        const SECRET_PHRASE = 'SCHOOL_SECRET_2024';
+        const SESSION_DURATION = 2 * 60 * 60 * 1000; // ساعتين
         const MAX_ATTEMPTS = 3;
 
-        // =============== APP STATE =============== //
-        let studentID = '';
+        let traineeID = '';
         let scannerActive = false;
         let videoStream = null;
         let attemptCount = 0;
 
-        // =============== INITIALIZATION =============== //
+        // إدارة الجلسة
         window.onload = () => {
-            const savedID = getCookie('studentSession');
+            const savedID = getCookie('traineeSession');
             if(savedID) {
-                studentID = savedID;
+                traineeID = savedID;
                 showStep(2);
+            } else {
+                showStep(1);
             }
         };
 
-        // =============== CORE FUNCTIONS =============== //
         async function verifyID() {
             if(attemptCount >= MAX_ATTEMPTS) {
-                showError('Too many attempts. Try again later.');
+                showError('تم تجاوز عدد المحاولات. يرجى المحاولة لاحقًا');
                 return;
             }
             
             const inputID = document.getElementById('idInput').value.trim();
             if(!inputID) {
-                showError('Please enter a Student ID');
+                showError('يرجى إدخال رقم المتدرب');
                 return;
             }
 
@@ -167,16 +169,16 @@
                 const validIDs = processCSV(csvData);
                 
                 if(validIDs.includes(inputID)) {
-                    studentID = inputID;
-                    setCookie('studentSession', studentID, SESSION_DURATION);
-                    showSuccess(idStatus, `Valid ID: ${studentID}`);
+                    traineeID = inputID;
+                    setCookie('traineeSession', traineeID, SESSION_DURATION);
+                    showSuccess(idStatus, `رقم صحيح: ${traineeID}`);
                     setTimeout(() => showStep(2), 1000);
                 } else {
-                    showError('Invalid Student ID', idStatus);
+                    showError('رقم المتدرب غير صحيح', idStatus);
                 }
             } catch (error) {
-                showError('Verification service unavailable', idStatus);
-                console.error('Sheet fetch error:', error);
+                showError('خدمة التحقق غير متوفرة', idStatus);
+                console.error('خطأ في جلب البيانات:', error);
             }
         }
 
@@ -208,7 +210,7 @@
                 
                 return payload.h === expectedHash;
             } catch (error) {
-                console.error('Validation error:', error);
+                console.error('خطأ في التحقق:', error);
                 return false;
             }
         }
@@ -222,7 +224,6 @@
             return hash.toString(36).slice(-8);
         }
 
-        // =============== SCANNER FUNCTIONS =============== //
         async function toggleScanner() {
             if (scannerActive) {
                 stopScanner();
@@ -242,22 +243,22 @@
                 
                 video.onplaying = () => {
                     scannerActive = true;
-                    document.getElementById('controlBtn').textContent = 'Stop Scanner';
-                    document.getElementById('scanStatus').textContent = 'Scanning...';
+                    document.getElementById('controlBtn').textContent = 'إيقاف الماسح';
+                    document.getElementById('scanStatus').textContent = 'جارِ المسح...';
                     scanFrame();
                 };
                 
             } catch (error) {
-                showError('Camera access required for scanning');
-                console.error('Camera error:', error);
+                showError('يجب السماح بالوصول للكاميرا');
+                console.error('خطأ في الكاميرا:', error);
             }
         }
 
         function stopScanner() {
             if (videoStream) videoStream.getTracks().forEach(track => track.stop());
             scannerActive = false;
-            document.getElementById('controlBtn').textContent = 'Start Scanner';
-            document.getElementById('scanStatus').textContent = 'Scanner stopped';
+            document.getElementById('controlBtn').textContent = 'بدء المسح';
+            document.getElementById('scanStatus').textContent = 'تم إيقاف الماسح';
         }
 
         async function scanFrame() {
@@ -281,29 +282,27 @@
                     showStep(3);
                     stopScanner();
                 } else {
-                    showError('Invalid QR Code', document.getElementById('scanStatus'));
+                    showError('كود غير صحيح', document.getElementById('scanStatus'));
                 }
             }
             
             requestAnimationFrame(scanFrame);
         }
 
-        // =============== INTEGRATIONS =============== //
         async function sendToDiscord() {
             try {
                 await fetch(DISCORD_WEBHOOK, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        content: `Attendance Check-In: ${studentID} - ${new Date().toLocaleString()}`
+                        content: `تسجيل حضور المتدرب: ${traineeID} - ${new Date().toLocaleString()}`
                     })
                 });
             } catch (error) {
-                console.error('Discord webhook error:', error);
+                console.error('خطأ في إرسال البيانات:', error);
             }
         }
 
-        // =============== UTILITIES =============== //
         function showStep(stepNumber) {
             document.querySelectorAll('.step').forEach(step => {
                 step.classList.remove('active-step');
@@ -334,7 +333,11 @@
             element.textContent = message;
         }
 
-        // Cleanup on exit
+        function resetSession() {
+            document.cookie = 'traineeSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            location.reload();
+        }
+
         window.addEventListener('beforeunload', stopScanner);
     </script>
 </body>
