@@ -118,6 +118,12 @@
             width: 80%;
             text-align: right;
         }
+        .cooldown-message {
+            color: #ff9800;
+            font-weight: bold;
+            margin: 20px;
+            font-size: 18px;
+        }
     </style>
 </head>
 <body>
@@ -144,6 +150,7 @@
     <div id="step3" class="step">
         <div class="status-bar valid">تم تسجيل الحضور بنجاح!</div>
         <div class="trainee-info" id="traineeDetails"></div>
+        <div class="cooldown-message">سيتم تحويلك تلقائياً خلال 10 ثواني...</div>
     </div>
 
     <!-- زر الإدارة المخفي -->
@@ -157,6 +164,8 @@
         const SECRET_PHRASE = 'SCHOOL_SECRET_2024';
         const SESSION_DURATION = 12 * 60 * 60 * 1000; // 12 ساعة
         const MAX_ATTEMPTS = 3;
+        const REDIRECT_URL = 'https://www.google.com';
+        const REDIRECT_DELAY = 10000; // 10 ثواني
 
         let traineeID = '';
         let scannerActive = false;
@@ -165,18 +174,42 @@
 
         // =============== إدارة الجلسة =============== //
         window.onload = () => {
-            const savedID = getCookie('traineeSession');
-            if(savedID) {
-                traineeID = savedID;
-                showStep(2);
-            } else {
-                showStep(1);
+            const sessionCookie = getCookie('traineeSession');
+            
+            if(sessionCookie) {
+                if(isSessionActive(sessionCookie)) {
+                    showCooldownScreen();
+                    return;
+                } else {
+                    clearExpiredSession();
+                }
             }
             
             if(isAdmin()) {
                 document.getElementById('adminReset').style.display = 'block';
             }
         };
+
+        function isSessionActive(cookieValue) {
+            const [id, timestamp] = cookieValue.split('_');
+            return Date.now() - parseInt(timestamp) < SESSION_DURATION;
+        }
+
+        function showCooldownScreen() {
+            document.getElementById('step1').innerHTML = `
+                <h2>نظام الحضور</h2>
+                <div class="cooldown-message">
+                    تم تسجيل حضورك مسبقاً، يرجى المحاولة مرة أخرى بعد 12 ساعة
+                </div>
+            `;
+            document.getElementById('step1').classList.add('active-step');
+            disableForm();
+        }
+
+        function disableForm() {
+            document.getElementById('idInput').disabled = true;
+            document.querySelector('button').disabled = true;
+        }
 
         // =============== الوظائف الأساسية =============== //
         async function verifyID() {
@@ -203,7 +236,7 @@
                 
                 if(foundTrainee) {
                     traineeID = inputID;
-                    setCookie('traineeSession', traineeID, SESSION_DURATION);
+                    setCookie('traineeSession', `${traineeID}_${Date.now()}`, SESSION_DURATION);
                     sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
                     showSuccess(idStatus, `تم التحقق: ${foundTrainee.name}`);
                     setTimeout(() => showStep(2), 1000);
@@ -219,7 +252,7 @@
         function processCSV(csvData) {
             return csvData
                 .split('\n')
-                .slice(1) // تخطى رأس الجدول
+                .slice(1)
                 .map(row => {
                     const columns = row.split(',');
                     return {
@@ -330,9 +363,8 @@
                     stopScanner();
                     
                     setTimeout(() => {
-                        document.getElementById('step3').classList.remove('active-step');
-                        forceReset();
-                    }, 10000);
+                        window.location.href = REDIRECT_URL;
+                    }, REDIRECT_DELAY);
                 } else {
                     showError('كود غير صحيح', document.getElementById('scanStatus'));
                 }
@@ -392,6 +424,14 @@
         }
 
         function forceReset() {
+            if (confirm('هل تريد إعادة تعيين الجلسة بالكامل؟')) {
+                document.cookie = 'traineeSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                sessionStorage.clear();
+                location.reload();
+            }
+        }
+
+        function clearExpiredSession() {
             document.cookie = 'traineeSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             sessionStorage.clear();
             location.reload();
