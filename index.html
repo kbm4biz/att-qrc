@@ -637,24 +637,35 @@
             return Math.abs(hash).toString(36).slice(-8).padStart(8, '0');
         }
 
-        // ================== STEP 3: SEND TO POWER AUTOMATE ================== //
-        async function sendToPowerAutomate(trainee) {
-            try {
-                await fetch(POWER_AUTOMATE_WEBHOOK, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    // We send separate fields for easier parsing in Power Automate
-                    body: JSON.stringify({
-                        id: trainee.id,
-                        name: trainee.name,
-                        program: trainee.program,
-                        date: new Date().toISOString()
-                    })
-                });
-            } catch (error) {
-                console.error('خطأ في إرسال البيانات إلى Power Automate:', error);
-            }
-        }
+      // ================== STEP 3: SEND TO POWER AUTOMATE ================== //
+async function sendToPowerAutomate(trainee) {
+    try {
+        // Retrieve the current meeting from sessionStorage
+        const currentMeeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
+        
+        // Extract meetingId if available
+        const meetingId = currentMeeting ? currentMeeting.meetingId : null;
+        
+        // Prepare the payload with meetingId
+        const payload = {
+            id: trainee.id,
+            name: trainee.name,
+            program: trainee.program,
+            meetingId: meetingId, // Include Meeting ID
+            date: new Date().toISOString()
+        };
+        
+        console.log('Sending to Power Automate:', payload); // Debugging log
+        
+        await fetch(POWER_AUTOMATE_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+    } catch (error) {
+        console.error('خطأ في إرسال البيانات إلى Power Automate:', error);
+    }
+}
 
         // ================== SESSION MANAGEMENT ================== //
         function isSessionActive(cookieValue) {
