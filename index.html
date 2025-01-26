@@ -130,6 +130,22 @@
             margin: 10px auto;
             text-align: center;
         }
+        
+        /* ======= Spinner Styles ======= */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #4CAF50;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: none; /* Hidden by default */
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -139,7 +155,9 @@
         <div class="status-bar" id="gpsStatus">
             للمتابعة، يرجى التحقق من أنك داخل النطاق المسموح به.
         </div>
-        <button onclick="verifyLocation()">تحقق من الموقع</button>
+        <!-- Spinner for GPS Verification -->
+        <div id="gpsSpinner" class="spinner"></div>
+        <button onclick="verifyLocation()" id="gpsButton">تحقق من الموقع</button>
         <div class="disclaimer">
             .لن نقوم بتخزين أو تسجيل موقعك. يتم استخدام موقعك للتحقق فقط لتجنب سوء الاستخدام
         </div>
@@ -149,7 +167,9 @@
     <div id="step1" class="step">
         <h2>أدخل رقم المتدرب</h2>
         <input type="text" id="idInput" placeholder="123456">
-        <button onclick="verifyID()">تحقق من الهوية</button>
+        <!-- Spinner for ID Verification -->
+        <div id="idSpinner" class="spinner"></div>
+        <button onclick="verifyID()" id="idButton">تحقق من الهوية</button>
         <div id="idStatus" class="status-bar"></div>
     </div>
 
@@ -190,6 +210,10 @@
 
         // B) For ID & QR scanning:
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
+
+        // **New Configuration for Meeting Schedule (Sheet2)**
+        const MEETING_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?gid=217527569&single=true&output=csv'; // **Replace with your actual Sheet2 CSV URL**
+
         // Replace this with your Power Automate webhook URL:
         const POWER_AUTOMATE_WEBHOOK = 'https://prod-27.westeurope.logic.azure.com:443/workflows/a66bab290af54af2bfbec13c5dd17b81/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ggoyx8BPz6Cy1m3fFT5T7XuVQzVokJipPxxCerwxAvo';
         const SECRET_PHRASE = 'SCHOOL_SECRET_2024';
@@ -238,12 +262,22 @@
         // ================== STEP 0: GPS VALIDATION ================== //
         async function verifyLocation() {
             const gpsStatus = document.getElementById('gpsStatus');
+            const gpsSpinner = document.getElementById('gpsSpinner');
+            const gpsButton = document.getElementById('gpsButton');
+
+            // Show spinner and disable button
+            gpsSpinner.style.display = 'block';
+            gpsButton.disabled = true;
+
             gpsStatus.classList.remove('invalid','valid');
             gpsStatus.textContent = 'جاري التحقق من الموقع، الرجاء الانتظار...';
 
             if (!navigator.geolocation) {
                 gpsStatus.classList.add('invalid');
                 gpsStatus.textContent = 'المتصفح الخاص بك لا يدعم خاصية تحديد الموقع الجغرافي.';
+                // Hide spinner and enable button
+                gpsSpinner.style.display = 'none';
+                gpsButton.disabled = false;
                 return;
             }
 
@@ -284,12 +318,19 @@
                         console.error('Error:', error);
                         gpsStatus.classList.add('invalid');
                         gpsStatus.textContent = 'حدث خطأ أثناء التحقق من الموقع. حاول مرة أخرى لاحقاً.';
+                    } finally {
+                        // Hide spinner and enable button
+                        gpsSpinner.style.display = 'none';
+                        gpsButton.disabled = false;
                     }
                 },
                 (error) => {
                     console.error('Geolocation error:', error);
                     gpsStatus.classList.add('invalid');
                     gpsStatus.textContent = 'تعذر الحصول على موقعك. الرجاء السماح بالوصول للموقع والمحاولة مرة أخرى.';
+                    // Hide spinner and enable button
+                    gpsSpinner.style.display = 'none';
+                    gpsButton.disabled = false;
                 }
             );
         }
@@ -312,7 +353,7 @@
         // ================== STEP 1: VERIFY ID ================== //
         async function verifyID() {
             if (attemptCount >= MAX_ATTEMPTS) {
-                showError('تم تجاوز عدد المحاولات. يرجى المحاولة لاحقًا', document.getElementById('idStatus'));
+                showError('تم تجاوز عدد المحاولات. يرجى المحاولة مرة أخرى', document.getElementById('idStatus'));
                 return;
             }
 
@@ -322,8 +363,17 @@
                 return;
             }
 
-            attemptCount++;
             const idStatus = document.getElementById('idStatus');
+            const idSpinner = document.getElementById('idSpinner');
+            const idButton = document.getElementById('idButton');
+
+            // Increment attempt count and show spinner
+            attemptCount++;
+            idSpinner.style.display = 'block';
+            idButton.disabled = true;
+
+            idStatus.classList.remove('invalid','valid');
+            idStatus.textContent = 'جاري التحقق من الهوية، الرجاء الانتظار...';
 
             try {
                 const response = await fetch(GOOGLE_SHEET_URL);
@@ -333,17 +383,29 @@
                 const foundTrainee = trainees.find(t => t.id === inputID);
 
                 if (foundTrainee) {
-                    traineeID = inputID;
-                    setCookie('traineeSession', `${traineeID}_${Date.now()}`, SESSION_DURATION);
-                    sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
-                    showSuccess(idStatus, `تم التحقق: ${foundTrainee.name}`);
-                    setTimeout(() => showStep(2), 1000);
+                    // **New Step: Verify Meeting Time**
+                    const isMeetingValid = await verifyMeetingTime();
+                    if (isMeetingValid.valid) {
+                        traineeID = inputID;
+                        setCookie('traineeSession', `${traineeID}_${Date.now()}`, SESSION_DURATION);
+                        sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
+                        showSuccess(idStatus, `تم التحقق: ${foundTrainee.name}`);
+                        setTimeout(() => showStep(2), 1000);
+                    } else {
+                        // Show error message based on the meeting verification result
+                        showError(isMeetingValid.message, idStatus);
+                        // Optionally, reset attempt count or handle as needed
+                    }
                 } else {
                     showError('رقم المتدرب غير صحيح', idStatus);
                 }
             } catch (error) {
                 showError('خدمة التحقق غير متوفرة', idStatus);
                 console.error('خطأ في جلب البيانات:', error);
+            } finally {
+                // Hide spinner and enable button
+                idSpinner.style.display = 'none';
+                idButton.disabled = false;
             }
         }
 
@@ -362,7 +424,58 @@
                 .filter(trainee => trainee.id && /^\d+$/.test(trainee.id));
         }
 
-        // ================== STEP 2: QR SCANNING ================== //
+        // **New Function: Verify Meeting Time**
+        async function verifyMeetingTime() {
+            const currentDate = new Date();
+            const currentTimestamp = currentDate.getTime();
+
+            try {
+                const response = await fetch(MEETING_SHEET_URL);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok for Meeting Sheet');
+                }
+                const csvData = await response.text();
+                const meetings = processMeetingCSV(csvData);
+
+                // Iterate through each meeting to find a valid time window
+                for (let meeting of meetings) {
+                    // Construct start and end Date objects
+                    const meetingDate = new Date(meeting.date); // Assuming 'YYYY-MM-DD' format
+                    const startDateTime = new Date(`${meeting.date}T${meeting.startClass}:00`); // Assuming 'HH:MM' format
+                    const endDateTime = new Date(`${meeting.date}T${meeting.endClass}:00`); // Assuming 'HH:MM' format
+
+                    if (currentDate >= startDateTime && currentDate <= endDateTime) {
+                        // Optionally, you can store the meeting ID if needed later
+                        sessionStorage.setItem('currentMeeting', JSON.stringify(meeting));
+                        return { valid: true };
+                    }
+                }
+
+                // If no meeting matches the current time
+                return { valid: false, message: 'لا يوجد اجتماع نشط في الوقت الحالي. يرجى التحقق من جدول الاجتماعات.' };
+            } catch (error) {
+                console.error('خطأ في التحقق من جدول الاجتماعات:', error);
+                return { valid: false, message: 'تعذر التحقق من جدول الاجتماعات. حاول مرة أخرى لاحقاً.' };
+            }
+        }
+
+        function processMeetingCSV(csvData) {
+            return csvData
+                .split('\n')
+                .slice(1) // Assuming first row is headers
+                .map(row => {
+                    const columns = row.split(',');
+                    return {
+                        meetingId: columns[0]?.replace(/['"]/g, '').trim(),
+                        date: columns[1]?.replace(/['"]/g, '').trim(),      // Expected format: 'YYYY-MM-DD'
+                        startClass: columns[2]?.replace(/['"]/g, '').trim(), // Expected format: 'HH:MM'
+                        endClass: columns[3]?.replace(/['"]/g, '').trim()    // Expected format: 'HH:MM'
+                    };
+                })
+                .filter(meeting => meeting.meetingId && meeting.date && meeting.startClass && meeting.endClass);
+        }
+
+        // ================== STEP 2: SCAN QR ================== //
         async function toggleScanner() {
             if (scannerActive) {
                 stopScanner();
@@ -557,6 +670,63 @@
             element.textContent = message;
         }
 
+        // **New Function: Verify Meeting Time**
+        async function verifyMeetingTime() {
+            const currentDate = new Date();
+            const currentTimestamp = currentDate.getTime();
+
+            try {
+                const response = await fetch(MEETING_SHEET_URL);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok for Meeting Sheet');
+                }
+                const csvData = await response.text();
+                const meetings = processMeetingCSV(csvData);
+
+                // Iterate through each meeting to find a valid time window
+                for (let meeting of meetings) {
+                    // Construct start and end Date objects
+                    const meetingDate = new Date(meeting.date); // Assuming 'YYYY-MM-DD' format
+                    const startDateTime = new Date(`${meeting.date}T${meeting.startClass}:00`); // Assuming 'HH:MM' format
+                    const endDateTime = new Date(`${meeting.date}T${meeting.endClass}:00`); // Assuming 'HH:MM' format
+
+                    if (currentDate >= startDateTime && currentDate <= endDateTime) {
+                        // Optionally, you can store the meeting ID if needed later
+                        sessionStorage.setItem('currentMeeting', JSON.stringify(meeting));
+                        return { valid: true };
+                    }
+                }
+
+                // If no meeting matches the current time
+                return { valid: false, message: 'لا يوجد اجتماع نشط في الوقت الحالي. يرجى التحقق من جدول الاجتماعات.' };
+            } catch (error) {
+                console.error('خطأ في التحقق من جدول الاجتماعات:', error);
+                return { valid: false, message: 'تعذر التحقق من جدول الاجتماعات. حاول مرة أخرى لاحقاً.' };
+            }
+        }
+
+        function processMeetingCSV(csvData) {
+            return csvData
+                .split('\n')
+                .slice(1) // Assuming first row is headers
+                .map(row => {
+                    const columns = row.split(',');
+                    return {
+                        meetingId: columns[0]?.replace(/['"]/g, '').trim(),
+                        date: columns[1]?.replace(/['"]/g, '').trim(),      // Expected format: 'YYYY-MM-DD'
+                        startClass: columns[2]?.replace(/['"]/g, '').trim(), // Expected format: 'HH:MM'
+                        endClass: columns[3]?.replace(/['"]/g, '').trim()    // Expected format: 'HH:MM'
+                    };
+                })
+                .filter(meeting => meeting.meetingId && meeting.date && meeting.startClass && meeting.endClass);
+        }
+
+        // **New Function: Retrieve Current Meeting Details (Optional)**
+        function getCurrentMeeting() {
+            return JSON.parse(sessionStorage.getItem('currentMeeting'));
+        }
+
+        // ================== ADMIN RESET BUTTON FUNCTION ================== //
         function forceReset() {
             if (confirm('هل تريد إعادة تعيين الجلسة بالكامل؟')) {
                 // Clear the session cookie and session storage
