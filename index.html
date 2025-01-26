@@ -589,7 +589,8 @@
                 const decoded = atob(data);
                 const payload = JSON.parse(decoded);
 
-                const currentWindow = Math.floor(Date.now() / 10000);
+                const currentDate = getSaudiTime();
+                const currentWindow = Math.floor(currentDate.getTime() / 10000);
                 const validWindows = [currentWindow, currentWindow - 1];
                 if (!validWindows.includes(payload.t)) return false;
 
