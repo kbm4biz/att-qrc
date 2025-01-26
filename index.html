@@ -425,11 +425,11 @@
         }
 
         // **New Function: Get Current Time in Saudi Arabia**
-        function getSaudiTime() {
-            const now = new Date();
-            const saudiTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }));
-            return saudiTime;
-        }
+function getSaudiTime() {
+    const now = new Date();
+    const saudiOffset = 3 * 60 * 60 * 1000; // UTC+3 offset in milliseconds
+    return new Date(now.getTime() + saudiOffset);
+}
 
         // **New Function: Verify Meeting Time**
         async function verifyMeetingTime() {
@@ -586,8 +586,9 @@
         // ================== STEP 2 HELPER: VALIDATE QR DATA ================== //
         async function validateQRData(data) {
             try {
-                const decoded = atob(data);
-                const payload = JSON.parse(decoded);
+// Handle Base64 padding issues
+const decoded = atob(data + '==='.slice(0, (4 - (data.length % 4)) % 4));
+const payload = JSON.parse(decoded);
 
                 // For debugging: Log the payload
                 console.log('Decoded QR Payload:', payload);
@@ -599,10 +600,13 @@
                 }
 
                 // Get current Saudi timestamp in seconds
-                const currentDate = getSaudiTime();
-                const currentTimestampSeconds = Math.floor(currentDate.getTime() / 1000);
-                const currentWindow = Math.floor(currentTimestampSeconds / VALIDITY_WINDOW_SECONDS);
-                const validWindows = [currentWindow, currentWindow - 1];
+const currentSaudiTime = getSaudiTime();
+const currentTimestampSeconds = Math.floor(currentSaudiTime.getTime() / 1000);
+const windowSize = VALIDITY_WINDOW_SECONDS || 15;
+const validWindows = [
+    Math.floor((currentTimestampSeconds - windowSize) / windowSize),
+    Math.floor(currentTimestampSeconds / windowSize)
+];
 
                 // For debugging: Log timestamp information
                 console.log('Current Timestamp (seconds):', currentTimestampSeconds);
@@ -637,14 +641,15 @@
             }
         }
 
-        function simpleHash(str) {
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) {
-                hash = (hash << 5) - hash + str.charCodeAt(i);
-                hash |= 0;
-            }
-            return hash.toString(36).slice(-8);
-        }
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = (hash << 5) - hash + char;
+        hash |= 0;
+    }
+    return Math.abs(hash).toString(36).padStart(8, '0').slice(-8);
+}
 
         // ================== STEP 3: SEND TO POWER AUTOMATE ================== //
         async function sendToPowerAutomate(trainee) {
