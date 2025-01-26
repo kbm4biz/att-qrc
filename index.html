@@ -209,7 +209,7 @@
         const RADIUS_KM = 0.3; // 0.3 km = 300 m (Adjust as needed)
 
         // B) For ID & QR scanning:
-        const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?gid=0&single=true&output=csv';
+        const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
 
         // **New Configuration for Meeting Schedule (Sheet2)**
         const MEETING_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?gid=217527569&single=true&output=csv'; // **Replace with your actual Sheet2 CSV URL**
@@ -427,7 +427,8 @@
         // **New Function: Verify Meeting Time**
         async function verifyMeetingTime() {
             const currentDate = new Date();
-            const currentTimestamp = currentDate.getTime();
+            // For debugging: Log current date and time
+            console.log('Current Date and Time:', currentDate);
 
             try {
                 const response = await fetch(MEETING_SHEET_URL);
@@ -439,12 +440,30 @@
 
                 // Iterate through each meeting to find a valid time window
                 for (let meeting of meetings) {
-                    // Construct start and end Date objects
-                    const meetingDate = new Date(meeting.date); // Assuming 'YYYY-MM-DD' format
-                    const startDateTime = new Date(`${meeting.date}T${meeting.startClass}:00`); // Assuming 'HH:MM' format
-                    const endDateTime = new Date(`${meeting.date}T${meeting.endClass}:00`); // Assuming 'HH:MM' format
+                    // Trim all fields to remove any extra whitespace
+                    const meetingDateStr = meeting.date.trim();
+                    const startTimeStr = meeting.startClass.trim();
+                    const endTimeStr = meeting.endClass.trim();
+
+                    // Parse meeting date
+                    const [year, month, day] = meetingDateStr.split('-').map(part => parseInt(part, 10));
+
+                    // Parse start and end times
+                    const [startHour, startMinute] = startTimeStr.split(':').map(part => parseInt(part, 10));
+                    const [endHour, endMinute] = endTimeStr.split(':').map(part => parseInt(part, 10));
+
+                    // Construct Date objects in local time
+                    const startDateTime = new Date(year, month - 1, day, startHour, startMinute, 0);
+                    const endDateTime = new Date(year, month - 1, day, endHour, endMinute, 0);
+
+                    // For debugging: Log each meeting's start and end times
+                    console.log(`Meeting ID: ${meeting.meetingId}`);
+                    console.log('Start DateTime:', startDateTime);
+                    console.log('End DateTime:', endDateTime);
 
                     if (currentDate >= startDateTime && currentDate <= endDateTime) {
+                        // Meeting is active
+                        console.log('Active Meeting Found:', meeting);
                         // Optionally, you can store the meeting ID if needed later
                         sessionStorage.setItem('currentMeeting', JSON.stringify(meeting));
                         return { valid: true };
@@ -668,62 +687,6 @@
         function showSuccess(element, message) {
             element.className = 'status-bar valid';
             element.textContent = message;
-        }
-
-        // **New Function: Verify Meeting Time**
-        async function verifyMeetingTime() {
-            const currentDate = new Date();
-            const currentTimestamp = currentDate.getTime();
-
-            try {
-                const response = await fetch(MEETING_SHEET_URL);
-                if (!response.ok) {
-                    throw new Error('Network response was not ok for Meeting Sheet');
-                }
-                const csvData = await response.text();
-                const meetings = processMeetingCSV(csvData);
-
-                // Iterate through each meeting to find a valid time window
-                for (let meeting of meetings) {
-                    // Construct start and end Date objects
-                    const meetingDate = new Date(meeting.date); // Assuming 'YYYY-MM-DD' format
-                    const startDateTime = new Date(`${meeting.date}T${meeting.startClass}:00`); // Assuming 'HH:MM' format
-                    const endDateTime = new Date(`${meeting.date}T${meeting.endClass}:00`); // Assuming 'HH:MM' format
-
-                    if (currentDate >= startDateTime && currentDate <= endDateTime) {
-                        // Optionally, you can store the meeting ID if needed later
-                        sessionStorage.setItem('currentMeeting', JSON.stringify(meeting));
-                        return { valid: true };
-                    }
-                }
-
-                // If no meeting matches the current time
-                return { valid: false, message: 'لا يوجد اجتماع نشط في الوقت الحالي. يرجى التحقق من جدول الاجتماعات.' };
-            } catch (error) {
-                console.error('خطأ في التحقق من جدول الاجتماعات:', error);
-                return { valid: false, message: 'تعذر التحقق من جدول الاجتماعات. حاول مرة أخرى لاحقاً.' };
-            }
-        }
-
-        function processMeetingCSV(csvData) {
-            return csvData
-                .split('\n')
-                .slice(1) // Assuming first row is headers
-                .map(row => {
-                    const columns = row.split(',');
-                    return {
-                        meetingId: columns[0]?.replace(/['"]/g, '').trim(),
-                        date: columns[1]?.replace(/['"]/g, '').trim(),      // Expected format: 'YYYY-MM-DD'
-                        startClass: columns[2]?.replace(/['"]/g, '').trim(), // Expected format: 'HH:MM'
-                        endClass: columns[3]?.replace(/['"]/g, '').trim()    // Expected format: 'HH:MM'
-                    };
-                })
-                .filter(meeting => meeting.meetingId && meeting.date && meeting.startClass && meeting.endClass);
-        }
-
-        // **New Function: Retrieve Current Meeting Details (Optional)**
-        function getCurrentMeeting() {
-            return JSON.parse(sessionStorage.getItem('currentMeeting'));
         }
 
         // ================== ADMIN RESET BUTTON FUNCTION ================== //
