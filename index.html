@@ -590,6 +590,7 @@
             try {
                 const decoded = atob(data);
                 const payload = JSON.parse(decoded);
+                console.log('Decoded Payload:', payload);
 
                 // Ensure payload has 't', 's', and 'h'
                 if (!payload.t || !payload.s || !payload.h) {
@@ -619,6 +620,7 @@
                     return false;
                 }
 
+                console.log('QR Code is valid.');
                 return true;
             } catch (error) {
                 console.error('خطأ في التحقق:', error);
@@ -632,7 +634,7 @@
                 hash = (hash << 5) - hash + str.charCodeAt(i);
                 hash |= 0;
             }
-            return hash.toString(36).slice(-8);
+            return Math.abs(hash).toString(36).slice(-8).padStart(8, '0');
         }
 
         // ================== STEP 3: SEND TO POWER AUTOMATE ================== //
