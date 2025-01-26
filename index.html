@@ -424,11 +424,18 @@
                 .filter(trainee => trainee.id && /^\d+$/.test(trainee.id));
         }
 
+        // **New Function: Get Current Time in Saudi Arabia**
+        function getSaudiTime() {
+            const now = new Date();
+            const saudiTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }));
+            return saudiTime;
+        }
+
         // **New Function: Verify Meeting Time**
         async function verifyMeetingTime() {
-            const currentDate = new Date();
+            const currentDate = getSaudiTime();
             // For debugging: Log current date and time
-            console.log('Current Date and Time:', currentDate);
+            console.log('Current Date and Time (Saudi Arabia):', currentDate);
 
             try {
                 const response = await fetch(MEETING_SHEET_URL);
@@ -452,14 +459,14 @@
                     const [startHour, startMinute] = startTimeStr.split(':').map(part => parseInt(part, 10));
                     const [endHour, endMinute] = endTimeStr.split(':').map(part => parseInt(part, 10));
 
-                    // Construct Date objects in local time
+                    // Construct Date objects in Saudi Arabia time
                     const startDateTime = new Date(year, month - 1, day, startHour, startMinute, 0);
                     const endDateTime = new Date(year, month - 1, day, endHour, endMinute, 0);
 
                     // For debugging: Log each meeting's start and end times
                     console.log(`Meeting ID: ${meeting.meetingId}`);
-                    console.log('Start DateTime:', startDateTime);
-                    console.log('End DateTime:', endDateTime);
+                    console.log('Start DateTime (Saudi Arabia):', startDateTime);
+                    console.log('End DateTime (Saudi Arabia):', endDateTime);
 
                     if (currentDate >= startDateTime && currentDate <= endDateTime) {
                         // Meeting is active
