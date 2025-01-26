@@ -189,8 +189,8 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
     <script>
-        // Configurations
-        const SAUDI_OFFSET = 3 * 60 * 60 * 1000;
+        // ================== CONFIGURATIONS ================== //
+        const SAUDI_OFFSET = 3 * 60 * 60 * 1000; // UTC+3 offset
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
         const RADIUS_KM = 0.3;
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
@@ -210,12 +210,12 @@
         let attemptCount = 0;
         let adminMode = false;
 
-        // Time handling
+        // ================== TIME HANDLING ================== //
         function getSaudiTime() {
             return new Date(Date.now() + SAUDI_OFFSET);
         }
 
-        // QR Validation
+        // ================== QR VALIDATION ================== //
         async function validateQRData(data) {
             try {
                 const paddedData = data + '==='.slice(0, (4 - (data.length % 4)) % 4);
@@ -230,11 +230,17 @@
                 ];
 
                 if (!validWindows.includes(Math.floor(payload.t / VALIDITY_WINDOW_SECONDS))) {
+                    console.log('Timestamp window mismatch');
                     return false;
                 }
 
                 const expectedHash = simpleHash(`${payload.t}${payload.s}${SECRET_PHRASE}`);
-                return payload.h === expectedHash;
+                if (payload.h !== expectedHash) {
+                    console.log('Hash mismatch');
+                    return false;
+                }
+
+                return true;
             } catch (error) {
                 console.error('QR Validation Error:', error);
                 return false;
@@ -251,8 +257,339 @@
             return Math.abs(hash).toString(36).slice(-8).padStart(8, '0');
         }
 
-        // Rest of original functionality remains unchanged...
-        // [Include all other original functions: verifyLocation, verifyID, processCSV, etc.]
+        // ================== GPS VALIDATION ================== //
+        async function verifyLocation() {
+            const gpsStatus = document.getElementById('gpsStatus');
+            const gpsSpinner = document.getElementById('gpsSpinner');
+            const gpsButton = document.getElementById('gpsButton');
+
+            gpsSpinner.style.display = 'block';
+            gpsButton.disabled = true;
+            gpsStatus.classList.remove('invalid','valid');
+            gpsStatus.textContent = 'جاري التحقق من الموقع، الرجاء الانتظار...';
+
+            if (!navigator.geolocation) {
+                showError('المتصفح الخاص بك لا يدعم خاصية تحديد الموقع الجغرافي.', gpsStatus);
+                gpsSpinner.style.display = 'none';
+                gpsButton.disabled = false;
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    try {
+                        const userLat = position.coords.latitude;
+                        const userLon = position.coords.longitude;
+                        const response = await fetch(LOCATION_SHEET_URL);
+                        const csvText = await response.text();
+                        const validLocation = csvText.split('\n').some(line => {
+                            const [latStr, lonStr] = line.split(',');
+                            const lat = parseFloat(latStr?.trim());
+                            const lon = parseFloat(lonStr?.trim());
+                            if (isNaN(lat) || isNaN(lon)) return false;
+                            return getDistanceFromLatLonInKm(userLat, userLon, lat, lon) <= RADIUS_KM;
+                        });
+
+                        if (validLocation) {
+                            showSuccess(gpsStatus, 'أنت داخل النطاق المسموح به!');
+                            setTimeout(() => showStep(1), 1000);
+                        } else {
+                            showError('الموقع الحالي خارج النطاق المسموح به.', gpsStatus);
+                        }
+                    } catch (error) {
+                        showError('حدث خطأ أثناء التحقق من الموقع.', gpsStatus);
+                    } finally {
+                        gpsSpinner.style.display = 'none';
+                        gpsButton.disabled = false;
+                    }
+                },
+                (error) => {
+                    showError('تعذر الحصول على موقعك. الرجاء السماح بالوصول للموقع.', gpsStatus);
+                    gpsSpinner.style.display = 'none';
+                    gpsButton.disabled = false;
+                }
+            );
+        }
+
+        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = deg2rad(lat2 - lat1);
+            const dLon = deg2rad(lon2 - lon1);
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function deg2rad(deg) {
+            return deg * (Math.PI/180);
+        }
+
+        // ================== ID VERIFICATION ================== //
+        async function verifyID() {
+            if (attemptCount >= MAX_ATTEMPTS) {
+                showError('تم تجاوز عدد المحاولات المسموح به.', document.getElementById('idStatus'));
+                return;
+            }
+
+            const inputID = document.getElementById('idInput').value.trim();
+            if (!inputID) {
+                showError('يرجى إدخال رقم المتدرب.', document.getElementById('idStatus'));
+                return;
+            }
+
+            const idStatus = document.getElementById('idStatus');
+            const idSpinner = document.getElementById('idSpinner');
+            const idButton = document.getElementById('idButton');
+
+            attemptCount++;
+            idSpinner.style.display = 'block';
+            idButton.disabled = true;
+            idStatus.textContent = 'جاري التحقق...';
+
+            try {
+                const response = await fetch(GOOGLE_SHEET_URL);
+                const csvData = await response.text();
+                const trainees = processCSV(csvData);
+                const foundTrainee = trainees.find(t => t.id === inputID);
+
+                if (foundTrainee) {
+                    const meetingValid = await verifyMeetingTime();
+                    if (meetingValid.valid) {
+                        traineeID = inputID;
+                        setCookie('traineeSession', `${traineeID}_${Date.now()}`, SESSION_DURATION);
+                        sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
+                        showSuccess(idStatus, `تم التحقق: ${foundTrainee.name}`);
+                        setTimeout(() => showStep(2), 1000);
+                    } else {
+                        showError(meetingValid.message, idStatus);
+                    }
+                } else {
+                    showError('رقم المتدرب غير مسجل في النظام.', idStatus);
+                }
+            } catch (error) {
+                showError('حدث خطأ في التحقق، يرجى المحاولة لاحقاً.', idStatus);
+            } finally {
+                idSpinner.style.display = 'none';
+                idButton.disabled = false;
+            }
+        }
+
+        function processCSV(csvData) {
+            return csvData.split('\n').slice(1).map(row => {
+                const cols = row.split(',');
+                return {
+                    id: cols[0]?.replace(/['"]/g, '').trim(),
+                    name: cols[1]?.replace(/['"]/g, '').trim(),
+                    program: cols[2]?.replace(/['"]/g, '').trim()
+                };
+            }).filter(t => t.id && /^\d+$/.test(t.id));
+        }
+
+        // ================== MEETING VALIDATION ================== //
+        async function verifyMeetingTime() {
+            try {
+                const currentDate = getSaudiTime();
+                const response = await fetch(MEETING_SHEET_URL);
+                const csvData = await response.text();
+                
+                const validMeeting = csvData.split('\n').slice(1).some(line => {
+                    const [dateStr, startStr, endStr] = line.split(',');
+                    const meetingDate = new Date(dateStr.trim());
+                    const startTime = parseTime(startStr.trim());
+                    const endTime = parseTime(endStr.trim());
+
+                    return currentDate >= createDateTime(meetingDate, startTime) &&
+                           currentDate <= createDateTime(meetingDate, endTime);
+                });
+
+                return validMeeting ? 
+                    { valid: true } : 
+                    { valid: false, message: 'لا يوجد اجتماع نشط حالياً.' };
+            } catch (error) {
+                return { valid: false, message: 'تعذر التحقق من جدول الاجتماعات.' };
+            }
+        }
+
+        function parseTime(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return { hours, minutes };
+        }
+
+        function createDateTime(date, time) {
+            return new Date(
+                date.getFullYear(),
+                date.getMonth(),
+                date.getDate(),
+                time.hours,
+                time.minutes
+            );
+        }
+
+        // ================== QR SCANNING ================== //
+        async function toggleScanner() {
+            scannerActive ? stopScanner() : await startScanner();
+        }
+
+        async function startScanner() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" }
+                });
+                const video = document.getElementById('video-preview');
+                video.srcObject = videoStream;
+
+                video.onplaying = () => {
+                    scannerActive = true;
+                    document.getElementById('controlBtn').textContent = 'إيقاف الماسح';
+                    scanFrame();
+                };
+            } catch (error) {
+                showError('يجب السماح بالوصول للكاميرا.', document.getElementById('scanStatus'));
+            }
+        }
+
+        function stopScanner() {
+            if (videoStream) videoStream.getTracks().forEach(track => track.stop());
+            scannerActive = false;
+            document.getElementById('controlBtn').textContent = 'بدء المسح';
+        }
+
+        async function scanFrame() {
+            if (!scannerActive) return;
+
+            const video = document.getElementById('video-preview');
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+            if (code) {
+                const isValid = await validateQRData(code.data);
+                if (isValid) {
+                    const trainee = JSON.parse(sessionStorage.getItem('traineeDetails'));
+                    document.getElementById('traineeDetails').innerHTML = `
+                        <strong>رقم المتدرب:</strong> ${trainee.id}<br>
+                        <strong>الاسم:</strong> ${trainee.name}<br>
+                        <strong>البرنامج:</strong> ${trainee.program}
+                    `;
+                    await sendToPowerAutomate(trainee);
+                    showStep(3);
+                    document.getElementById('successSound').play().catch(console.error);
+                    stopScanner();
+                    setTimeout(() => window.location.href = REDIRECT_URL, REDIRECT_DELAY);
+                } else {
+                    showError('كود غير صحيح', document.getElementById('scanStatus'));
+                }
+            }
+            requestAnimationFrame(scanFrame);
+        }
+
+        // ================== UTILITIES ================== //
+        function showStep(stepNumber) {
+            document.querySelectorAll('.step').forEach(step => {
+                step.classList.remove('active-step');
+            });
+            document.getElementById(`step${stepNumber}`).classList.add('active-step');
+        }
+
+        function setCookie(name, value, duration) {
+            const date = new Date();
+            date.setTime(date.getTime() + duration);
+            document.cookie = `${name}=${value};expires=${date.toUTCString()};path=/;Secure`;
+        }
+
+        function getCookie(name) {
+            return document.cookie
+                .split('; ')
+                .find(row => row.startsWith(name))
+                ?.split('=')[1];
+        }
+
+        function showError(message, element) {
+            element.classList.add('invalid');
+            element.textContent = message;
+        }
+
+        function showSuccess(element, message) {
+            element.classList.add('valid');
+            element.textContent = message;
+        }
+
+        async function sendToPowerAutomate(trainee) {
+            try {
+                await fetch(POWER_AUTOMATE_WEBHOOK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: trainee.id,
+                        name: trainee.name,
+                        program: trainee.program,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+            } catch (error) {
+                console.error('Error sending data:', error);
+            }
+        }
+
+        // ================== INITIALIZATION ================== //
+        window.onload = () => {
+            if (location.hash === '#admin') {
+                const pass = prompt('كلمة مرور الإدارة:');
+                if (pass === ADMIN_PASSWORD) {
+                    adminMode = true;
+                    document.getElementById('adminReset').style.display = 'block';
+                } else {
+                    history.replaceState(null, '', location.pathname);
+                }
+            }
+
+            const sessionCookie = getCookie('traineeSession');
+            if (sessionCookie && isSessionActive(sessionCookie)) {
+                showCooldownScreen();
+            } else {
+                clearExpiredSession();
+            }
+        };
+
+        function isSessionActive(cookieValue) {
+            const [id, timestamp] = cookieValue.split('_');
+            return (Date.now() - parseInt(timestamp)) < SESSION_DURATION;
+        }
+
+        function showCooldownScreen() {
+            document.getElementById('step0').classList.remove('active-step');
+            const step1 = document.getElementById('step1');
+            step1.innerHTML = `
+                <h2>نظام الحضور</h2>
+                <div class="cooldown-message">
+                    تم تسجيل حضورك مسبقاً، يرجى المحاولة مرة أخرى بعد 12 ساعة
+                </div>
+            `;
+            step1.classList.add('active-step');
+            if (adminMode) {
+                step1.appendChild(document.getElementById('adminReset'));
+            }
+        }
+
+        function clearExpiredSession() {
+            document.cookie = 'traineeSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            sessionStorage.clear();
+        }
+
+        function forceReset() {
+            if (confirm('هل تريد إعادة تعيين الجلسة؟')) {
+                clearExpiredSession();
+                location.reload();
+            }
+        }
     </script>
 </body>
 </html>
