@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html dir="rtl">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>نظام حضور المتدربين مع تحقق الموقع</title>
+    <title>نظام حضور المتدربين</title>
     <style>
         * {
             margin: 0;
@@ -589,15 +589,48 @@
                 const decoded = atob(data);
                 const payload = JSON.parse(decoded);
 
-                const currentDate = getSaudiTime();
-                const currentWindow = Math.floor(currentDate.getTime() / 10000);
-                const validWindows = [currentWindow, currentWindow - 1];
-                if (!validWindows.includes(payload.t)) return false;
+                // For debugging: Log the payload
+                console.log('Decoded QR Payload:', payload);
 
-                const expectedHash = simpleHash(
-                    payload.t.toString() + payload.s + SECRET_PHRASE
-                );
-                return payload.h === expectedHash;
+                // Check for required fields
+                if (!payload.t || !payload.s || !payload.h) {
+                    console.log('Missing fields in QR payload.');
+                    return false;
+                }
+
+                // Get current Saudi timestamp in seconds
+                const currentDate = getSaudiTime();
+                const currentTimestampSeconds = Math.floor(currentDate.getTime() / 1000);
+                const currentWindow = Math.floor(currentTimestampSeconds / VALIDITY_WINDOW_SECONDS);
+                const validWindows = [currentWindow, currentWindow - 1];
+
+                // For debugging: Log timestamp information
+                console.log('Current Timestamp (seconds):', currentTimestampSeconds);
+                console.log('Payload Timestamp (seconds):', payload.t);
+                console.log('Current Window:', currentWindow);
+                console.log('Valid Windows:', validWindows);
+
+                // Validate timestamp within window
+                const payloadWindow = Math.floor(payload.t / VALIDITY_WINDOW_SECONDS);
+                if (!validWindows.includes(payloadWindow)) {
+                    console.log('Timestamp window mismatch.');
+                    return false;
+                }
+
+                // Recalculate expected hash
+                const expectedHash = simpleHash(`${payload.t}${payload.s}${SECRET_PHRASE}`);
+
+                // For debugging: Log hash comparison
+                console.log('Expected Hash:', expectedHash);
+                console.log('Payload Hash:', payload.h);
+
+                if (payload.h === expectedHash) {
+                    console.log('Hash validation passed.');
+                    return true;
+                } else {
+                    console.log('Hash validation failed.');
+                    return false;
+                }
             } catch (error) {
                 console.error('خطأ في التحقق:', error);
                 return false;
@@ -627,6 +660,7 @@
                         date: new Date().toISOString()
                     })
                 });
+                console.log('Data sent to Power Automate successfully.');
             } catch (error) {
                 console.error('خطأ في إرسال البيانات إلى Power Automate:', error);
             }
