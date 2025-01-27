@@ -18,12 +18,14 @@
             display: flex;
             flex-direction: column;
             direction: rtl;
+            overflow: hidden; /* Prevent scrollbars due to moving emojis */
         }
         .step {
             display: none;
             flex: 1;
             text-align: center;
             padding: 20px;
+            position: relative; /* For positioning emojis */
         }
         .active-step {
             display: flex;
@@ -146,6 +148,52 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* ======= Moving Emojis Styles (Added) ======= */
+        .emoji-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Allow interactions through emojis */
+            overflow: hidden;
+            z-index: 0; /* Behind other content */
+        }
+
+        .emoji {
+            position: absolute;
+            font-size: 2rem;
+            animation: float 5s linear infinite;
+            opacity: 0.8;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) translateX(0);
+                opacity: 0.8;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-10vh) translateX(100px);
+                opacity: 0;
+            }
+        }
+
+        /* Ensure step3 content is above emojis */
+        #step3 .content {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ======= Timestamp Styles (Added) ======= */
+        .timestamp {
+            margin-top: 10px;
+            font-size: 16px;
+            color: #555;
+        }
     </style>
 </head>
 <body>
@@ -166,10 +214,10 @@
     <!-- STEP 1: ID VERIFICATION -->
     <div id="step1" class="step">
         <h2>أدخل رقمك التدريبي</h2>
-        <input type="text" id="idInput" placeholder="441234567">
+        <input type="text" id="idInput" placeholder="441234567" aria-label="رقم المتدرب">
         <!-- Spinner for ID Verification -->
         <div id="idSpinner" class="spinner"></div>
-        <button onclick="verifyID()" id="idButton">تحقق من الهوية</button>
+        <button onclick="verifyID()" id="idButton" aria-label="تحقق من الهوية">تحقق من الهوية</button>
         <div id="idStatus" class="status-bar"></div>
     </div>
 
@@ -186,9 +234,24 @@
 
     <!-- STEP 3: SUCCESS & INFO -->
     <div id="step3" class="step">
-        <div class="status-bar valid">تم تسجيل الحضور بنجاح!</div>
-        <div class="trainee-info" id="traineeDetails"></div>
-        <div class="cooldown-message">سيتم الخروج تلقائياً خلال 10 ثواني...</div>
+        <!-- Emoji Container (Added) -->
+        <div class="emoji-container" aria-hidden="true">
+            <!-- Multiple Emojis for Animation -->
+            <div class="emoji" style="left: 10%;">✅</div>
+            <div class="emoji" style="left: 30%;">🎉</div>
+            <div class="emoji" style="left: 50%;">👏</div>
+            <div class="emoji" style="left: 70%;">👍</div>
+            <div class="emoji" style="left: 90%;">🎊</div>
+        </div>
+
+        <!-- Content Container (Modified to include timestamp) -->
+        <div class="content">
+            <div class="status-bar valid">تم تسجيل الحضور بنجاح!</div>
+            <div class="trainee-info" id="traineeDetails"></div>
+            <!-- Timestamp Display (Added) -->
+            <div class="timestamp" id="timestamp"></div>
+            <div class="cooldown-message">سيتم الخروج تلقائياً خلال 10 ثواني...</div>
+        </div>
     </div>
 
     <!-- ADMIN RESET BUTTON: Shown only when in admin mode & cooldown -->
@@ -564,6 +627,10 @@
                         <strong>الاسم:</strong> ${trainee.name}<br>
                         <strong>البرنامج:</strong> ${trainee.program}
                     `;
+                    // **Add Timestamp (Added)**
+                    const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
+                    document.getElementById('timestamp').textContent = `التاريخ والوقت: ${timestamp}`;
+
                     await sendToPowerAutomate(trainee);
 
                     // Move to Step 3 (Success)
