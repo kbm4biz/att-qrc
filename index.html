@@ -267,6 +267,9 @@
 
     <script>
         // ================== CONFIGURATIONS ================== //
+        // **إضافة متغير التحكم في التحقق من GPS**
+        const ENABLE_GPS_VALIDATION = false; // قم بتعيينه إلى false لتعطيل التحقق من الموقع
+
         // A) For GPS Validation:
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
         const RADIUS_KM = 0.3; // 0.3 km = 300 m (Adjust as needed)
@@ -319,6 +322,17 @@
                 } else {
                     clearExpiredSession();
                 }
+            }
+
+            // **التحقق مما إذا كان التحقق من GPS مفعلًا**
+            if (ENABLE_GPS_VALIDATION) {
+                // عرض خطوة التحقق من الموقع
+                showStep(0);
+            } else {
+                // تخطي خطوة التحقق من الموقع وعرض الخطوة 1 مباشرة
+                // إخفاء قسم التحقق من الموقع
+                document.getElementById('step0').style.display = 'none';
+                showStep(1);
             }
         };
 
@@ -742,7 +756,9 @@ async function sendToPowerAutomate(trainee) {
 
         function showCooldownScreen() {
             // Hide the GPS step
-            document.getElementById('step0').classList.remove('active-step');
+            if (ENABLE_GPS_VALIDATION) {
+                document.getElementById('step0').classList.remove('active-step');
+            }
 
             // Overwrite step1 with cooldown UI
             const step1 = document.getElementById('step1');
@@ -773,6 +789,13 @@ async function sendToPowerAutomate(trainee) {
             document.querySelectorAll('.step').forEach(step => {
                 step.classList.remove('active-step');
             });
+
+            if (stepNumber === 0 && !ENABLE_GPS_VALIDATION) {
+                // تخطي خطوة التحقق من الموقع إذا كانت معطلة
+                showStep(1);
+                return;
+            }
+
             document.getElementById(`step${stepNumber}`).classList.add('active-step');
         }
 
