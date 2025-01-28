@@ -14,11 +14,11 @@
         body {
             font-family: 'Arial', sans-serif;
             background: #f5f5f5;
-            height: 100vh;
             display: flex;
             flex-direction: column;
             direction: rtl;
-            overflow: hidden; /* Prevent scrollbars due to moving emojis */
+            /* Removed height and overflow to allow natural scrolling */
+            min-height: 100vh;
         }
         .step {
             display: none;
@@ -26,12 +26,14 @@
             text-align: center;
             padding: 20px;
             position: relative; /* For positioning emojis */
-        }
-        .active-step {
+            /* Added flexbox properties to center content */
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+        }
+        .active-step {
+            display: flex;
         }
         .status-bar {
             padding: 15px;
@@ -39,8 +41,9 @@
             background: white;
             margin: 10px;
             border-radius: 10px;
-            width: 80%;
+            width: 90%; /* Increased to 90% for better visibility on small screens */
             max-width: 500px;
+            word-wrap: break-word; /* Ensure text wraps properly */
         }
         .valid { color: #4CAF50; }
         .invalid { color: #f44336; }
@@ -50,15 +53,20 @@
             border: none;
             padding: 15px 30px;
             border-radius: 25px;
-            margin: 10px;
+            margin: 10px 0; /* Adjusted margin for vertical spacing */
             font-size: 16px;
             cursor: pointer;
-            width: 80%;
+            width: 90%; /* Increased to 90% for better visibility on small screens */
             max-width: 300px;
+            transition: background 0.3s ease;
+        }
+        button:hover {
+            background: #1976D2;
         }
         h2 {
-            margin: 20px;
+            margin: 20px 0;
             color: #333;
+            font-size: 1.5em;
         }
         #adminReset {
             /* Hidden by default; unhidden if admin logs in */
@@ -66,25 +74,26 @@
             background: transparent;
             border: 2px solid #333;
             border-radius: 8px;
-            padding: 10px;
+            padding: 10px 20px;
             margin-top: 20px;
             cursor: pointer;
+            font-size: 1em;
         }
         #idInput {
             padding: 15px;
-            margin: 20px;
-            width: 80%;
+            margin: 20px 0;
+            width: 90%; /* Increased to 90% for better visibility on small screens */
             font-size: 18px;
             border: 2px solid #ddd;
             border-radius: 25px;
             text-align: right;
         }
         .scanner-container {
-            width: 100%;
+            width: 90%; /* Increased to 90% for better visibility on small screens */
             max-width: 500px;
             flex: 1;
             position: relative;
-            margin: 10px;
+            margin: 10px 0;
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
@@ -114,16 +123,18 @@
             padding: 15px;
             background: #e8f5e9;
             border-radius: 10px;
-            margin: 15px;
-            width: 80%;
+            margin: 15px 0;
+            width: 90%; /* Increased to 90% for better visibility on small screens */
             max-width: 500px;
             text-align: right;
+            word-wrap: break-word; /* Ensure text wraps properly */
         }
         .cooldown-message {
             color: #ff9800;
             font-weight: bold;
-            margin: 20px;
+            margin: 20px 0;
             font-size: 18px;
+            padding: 0 10px; /* Added padding for better text visibility */
         }
         .disclaimer {
             font-size: 14px;
@@ -131,6 +142,7 @@
             max-width: 500px;
             margin: 10px auto;
             text-align: center;
+            padding: 0 10px; /* Added padding for better text visibility */
         }
         
         /* ======= Spinner Styles ======= */
@@ -193,6 +205,41 @@
             margin-top: 10px;
             font-size: 16px;
             color: #555;
+            padding: 0 10px; /* Added padding for better text visibility */
+            word-wrap: break-word; /* Ensure text wraps properly */
+        }
+
+        /* ======= Responsive Adjustments ======= */
+        @media (max-width: 600px) {
+            h2 {
+                font-size: 1.3em;
+            }
+            button {
+                padding: 12px 20px;
+                font-size: 14px;
+                width: 95%; /* Increase width on smaller screens */
+            }
+            #idInput {
+                font-size: 16px;
+                padding: 12px;
+                width: 95%;
+            }
+            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp {
+                width: 95%;
+            }
+            .scanner-container {
+                width: 95%;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            /* Optional: Adjustments for larger screens if necessary */
+            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp {
+                width: 70%;
+            }
+            button {
+                max-width: 400px;
+            }
         }
     </style>
 </head>
