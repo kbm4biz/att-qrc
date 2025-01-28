@@ -21,19 +21,18 @@
             min-height: 100vh;
         }
         .step {
-            display: none;
+            display: none; /* Hide all steps by default */
             flex: 1;
             text-align: center;
             padding: 20px;
             position: relative; /* For positioning emojis */
-            /* Added flexbox properties to center content */
-            display: flex;
+            /* Removed conflicting display property */
+        }
+        .active-step {
+            display: flex; /* Show only the active step */
             flex-direction: column;
             align-items: center;
             justify-content: center;
-        }
-        .active-step {
-            display: flex;
         }
         .status-bar {
             padding: 15px;
@@ -276,7 +275,7 @@
             <div class="scan-overlay"></div>
         </div>
         <div class="status-bar" id="scanStatus"></div>
-        <button onclick="toggleScanner()" id="controlBtn">بدء المسح</button>
+        <button onclick="toggleScanner()" id="controlBtn">بدء الماسح</button>
     </div>
 
     <!-- STEP 3: SUCCESS & INFO -->
@@ -661,7 +660,7 @@
                 videoStream.getTracks().forEach(track => track.stop());
             }
             scannerActive = false;
-            document.getElementById('controlBtn').textContent = 'بدء المسح';
+            document.getElementById('controlBtn').textContent = 'بدء الماسح';
             document.getElementById('scanStatus').textContent = 'تم إيقاف الماسح';
         }
 
@@ -802,27 +801,30 @@ async function sendToPowerAutomate(trainee) {
         }
 
         function showCooldownScreen() {
-            // Hide the GPS step
-            if (ENABLE_GPS_VALIDATION) {
-                document.getElementById('step0').classList.remove('active-step');
-            }
+            // Hide all steps first
+            document.querySelectorAll('.step').forEach(step => {
+                step.classList.remove('active-step');
+            });
 
+            // Select the appropriate step to display the cooldown message
+            const cooldownStep = ENABLE_GPS_VALIDATION ? 'step1' : 'step1'; // Both map to step1
+            const step = document.getElementById(cooldownStep);
+            
             // Overwrite step1 with cooldown UI
-            const step1 = document.getElementById('step1');
-            step1.innerHTML = `
+            step.innerHTML = `
                 <h2>نظام الحضور</h2>
                 <div class="cooldown-message">
                     تم تسجيل حضورك مسبقاً، يرجى المحاولة مرة أخرى بعد 12 ساعة
                 </div>
             `;
-            step1.classList.add('active-step');
+            step.classList.add('active-step');
 
             // Show admin reset button only if adminMode = true
             if (adminMode) {
                 const adminBtn = document.getElementById('adminReset');
                 adminBtn.style.display = 'block';
                 // Append inside step1 so it appears below the message
-                step1.appendChild(adminBtn);
+                step.appendChild(adminBtn);
             }
         }
 
