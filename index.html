@@ -24,7 +24,7 @@
             flex: 1;
             text-align: center;
             padding: 20px;
-            position: relative; /* For positioning emojis */
+            position: relative;
         }
         .active-step {
             display: flex; /* Show only the active step */
@@ -83,37 +83,6 @@
             border: 2px solid #ddd;
             border-radius: 25px;
             text-align: right;
-        }
-        .scanner-container {
-            width: 90%;
-            max-width: 500px;
-            flex: 1;
-            position: relative;
-            margin: 10px 0;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-        }
-        #video-preview {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .scan-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 70%;
-            height: 70%;
-            border: 4px solid #4CAF50;
-            border-radius: 15px;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0% { border-color: #4CAF50; }
-            50% { border-color: #4CAF5080; }
-            100% { border-color: #4CAF50; }
         }
         .trainee-info {
             padding: 15px;
@@ -210,9 +179,6 @@
             .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp {
                 width: 95%;
             }
-            .scanner-container {
-                width: 95%;
-            }
         }
         @media (min-width: 1200px) {
             .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp {
@@ -247,16 +213,12 @@
         <div id="idStatus" class="status-bar"></div>
     </div>
 
-    <!-- STEP 2: SCAN QR -->
+    <!-- STEP 2: LISTEN ONLY -->
     <div id="step2" class="step">
-        <h2>امسح كود الحضور</h2>
-        <div class="scanner-container">
-            <video id="video-preview" playsinline autoplay></video>
-            <div class="scan-overlay"></div>
-        </div>
-        <div class="status-bar" id="scanStatus"></div>
-        <!-- This button now toggles BOTH camera scanning & mic listening -->
-        <button onclick="toggleScanner()" id="controlBtn">بدء الماسح</button>
+        <h2>استمع للرمز الصوتي</h2>
+        <div class="status-bar" id="scanStatus">اضغط على الزر أدناه لبدء الاستماع</div>
+        <!-- This button now only toggles microphone listening. -->
+        <button onclick="toggleListening()" id="controlBtn">ابدأ الاستماع للرمز</button>
     </div>
 
     <!-- STEP 3: SUCCESS & INFO -->
@@ -284,8 +246,7 @@
            src="https://raw.githubusercontent.com/kbm4biz/att-qrc/main/assets/notification.wav"
            preload="auto"></audio>
 
-    <!-- JSQR Library -->
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <!-- REMOVED JSQR Library (Not needed) -->
 
     <script>
         // ================== CONFIGURATIONS ================== //
@@ -306,19 +267,16 @@
         const ADMIN_PASSWORD = '2030';
 
         let traineeID = '';
-        let scannerActive = false;
-        let videoStream = null;
         let attemptCount = 0;
         let adminMode = false;
 
-        // ========== New for audio listening ========== 
-        let audioStream = null;     // The microphone stream
-        let audioContext = null;    // AudioContext
-        let scriptNode = null;      // ScriptProcessorNode
-        let ggwaveInstance = null;  // Will hold the GGWave decoder
-        let micListening = false;   // Flag to track if mic is active
+        // ========== Audio-only approach ========== 
+        let audioStream = null;
+        let audioContext = null;
+        let scriptNode = null;
+        let ggwaveInstance = null;
+        let micListening = false;
 
-        // ================== ON PAGE LOAD ================== //
         window.onload = () => {
             if (location.hash === '#admin') {
                 const pass = prompt('أدخل كلمة مرور الإدارة:');
@@ -372,7 +330,6 @@
                 async (position) => {
                     const userLat = position.coords.latitude;
                     const userLon = position.coords.longitude;
-
                     try {
                         const response = await fetch(LOCATION_SHEET_URL);
                         if (!response.ok) {
@@ -380,7 +337,6 @@
                         }
                         const csvText = await response.text();
                         const lines = csvText.trim().split('\n');
-
                         let foundValid = false;
                         for (let i = 0; i < lines.length; i++) {
                             const [latStr, lonStr] = lines[i].split(',');
@@ -392,7 +348,6 @@
                                 break;
                             }
                         }
-
                         if (foundValid) {
                             gpsStatus.classList.add('valid');
                             gpsStatus.textContent = 'أنت داخل النطاق المسموح به!';
@@ -430,7 +385,6 @@
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             return R * c;
         }
-
         function deg2rad(deg) {
             return deg * (Math.PI / 180);
         }
@@ -507,8 +461,7 @@
             const now = new Date();
             const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
             const saudiOffset = 3 * 60 * 60 * 1000; 
-            const saudiTime = new Date(utcTime + saudiOffset);
-            return saudiTime;
+            return new Date(utcTime + saudiOffset);
         }
 
         async function verifyMeetingTime() {
@@ -568,73 +521,15 @@
                 .filter(meeting => meeting.meetingId && meeting.date && meeting.startClass && meeting.endClass);
         }
 
-        // ================== STEP 2: SCAN QR (Camera + Microphone) ================== //
-        async function toggleScanner() {
-            if (scannerActive) {
-                stopScanner();
+        // ================== STEP 2: AUDIO LISTENING ONLY ================== //
+        async function toggleListening() {
+            if (micListening) {
                 stopAudioListener();
             } else {
-                await startScanner();
-                await startAudioListener();  // Start microphone listening too
+                await startAudioListener();
             }
         }
 
-        async function startScanner() {
-            try {
-                videoStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment" }
-                });
-                const video = document.getElementById('video-preview');
-                video.srcObject = videoStream;
-
-                video.onplaying = () => {
-                    scannerActive = true;
-                    document.getElementById('controlBtn').textContent = 'إيقاف الماسح';
-                    document.getElementById('scanStatus').textContent = 'جارِ المسح...';
-                    scanFrame();
-                };
-            } catch (error) {
-                showError('يجب السماح بالوصول للكاميرا', document.getElementById('scanStatus'));
-                console.error('خطأ في الكاميرا:', error);
-            }
-        }
-
-        function stopScanner() {
-            if (videoStream) {
-                videoStream.getTracks().forEach(track => track.stop());
-            }
-            scannerActive = false;
-            document.getElementById('controlBtn').textContent = 'بدء الماسح';
-            document.getElementById('scanStatus').textContent = 'تم إيقاف الماسح';
-        }
-
-        async function scanFrame() {
-            if (!scannerActive) return;
-
-            const video = document.getElementById('video-preview');
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-            if (code) {
-                const isValid = await validateQRData(code.data);
-                if (isValid) {
-                    onAttendanceSuccess();
-                    return; 
-                } else {
-                    showError('كود غير صحيح', document.getElementById('scanStatus'));
-                }
-            }
-            requestAnimationFrame(scanFrame);
-        }
-
-        // ================== MICROPHONE LISTENING (GGWave) ================== //
         async function startAudioListener() {
             try {
                 if (!audioContext) {
@@ -642,40 +537,28 @@
                 }
                 audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-                // Create a source from microphone
                 const sourceNode = audioContext.createMediaStreamSource(audioStream);
 
-                // Initialize ggwave if not already
                 if (!ggwaveInstance) {
-                    ggwaveInstance = new GGWave({
-                        // If you want to attempt ultrasound, keep as is:
-                        // Or switch to audible for easy testing:
-                        // preferJS: false, 
-                    });
+                    ggwaveInstance = new GGWave({});
                 }
 
-                // Create a ScriptProcessorNode (for older browsers) or AudioWorklet
                 scriptNode = audioContext.createScriptProcessor(4096, 1, 1);
                 scriptNode.onaudioprocess = (audioProcessingEvent) => {
                     const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
-                    // Convert [-1..1] float to [0..255] bytes
                     const pcmSamples = new Uint8Array(inputData.length);
                     for (let i = 0; i < inputData.length; i++) {
-                        // scale float to 8-bit
                         let val = inputData[i] * 128 + 128;
                         if (val < 0) val = 0;
                         if (val > 255) val = 255;
                         pcmSamples[i] = val;
                     }
-                    // Attempt decode
                     const decoded = ggwaveInstance.decode(pcmSamples);
                     if (decoded && decoded.length > 0) {
-                        // We got data from audio. Let's handle it like a QR code
                         console.log("GGWave Decoded from mic:", decoded);
                         validateQRData(decoded)
                             .then(isValid => {
-                                if (isValid && scannerActive) {
-                                    // Attendance success
+                                if (isValid && micListening) {
                                     onAttendanceSuccess();
                                 }
                             })
@@ -683,11 +566,12 @@
                     }
                 };
 
-                // Connect the chain: mic -> script -> audioContext dest (optional)
                 sourceNode.connect(scriptNode);
-                scriptNode.connect(audioContext.destination); 
-                
+                scriptNode.connect(audioContext.destination);
+
                 micListening = true;
+                document.getElementById('controlBtn').textContent = 'إيقاف الاستماع';
+                document.getElementById('scanStatus').textContent = 'جاري الاستماع للرمز...';
             } catch (error) {
                 console.error('Mic error:', error);
                 showError('يجب السماح بالوصول للميكروفون', document.getElementById('scanStatus'));
@@ -696,6 +580,9 @@
 
         function stopAudioListener() {
             micListening = false;
+            document.getElementById('controlBtn').textContent = 'ابدأ الاستماع للرمز';
+            document.getElementById('scanStatus').textContent = 'تم إيقاف الاستماع';
+
             if (audioStream) {
                 audioStream.getTracks().forEach(track => track.stop());
             }
@@ -706,7 +593,7 @@
             audioStream = null;
         }
 
-        // ================== COMMON VALIDATION & SUCCESS FLOW ================== //
+        // ================== VALIDATION & SUCCESS FLOW ================== //
         async function validateQRData(data) {
             try {
                 const decoded = atob(data);
@@ -722,7 +609,6 @@
                 const validWindows = [currentWindow, currentWindow - 1];
                 console.log('Current Window:', currentWindow);
                 console.log('Payload t:', payload.t);
-                console.log('Valid Windows:', validWindows);
 
                 if (!validWindows.includes(payload.t)) {
                     console.warn('Timestamp window mismatch.');
@@ -737,7 +623,7 @@
                     console.warn('Hash mismatch.');
                     return false;
                 }
-                console.log('QR/Audio Code is valid.');
+                console.log('Audio Code is valid.');
                 return true;
             } catch (error) {
                 console.error('خطأ في التحقق:', error);
@@ -755,8 +641,6 @@
         }
 
         async function onAttendanceSuccess() {
-            // Stop scanning/mic to avoid multiple triggers
-            stopScanner();
             stopAudioListener();
 
             const trainee = JSON.parse(sessionStorage.getItem('traineeDetails'));
@@ -878,9 +762,7 @@
         }
     </script>
 
-    <!-- =========================
-         ADD GGWave Library
-         ========================= -->
+    <!-- GGWave Library for Audio Decoding -->
     <script src="https://cdn.jsdelivr.net/npm/ggwave/dist/ggwave.min.js"></script>
 </body>
 </html>
