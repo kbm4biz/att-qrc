@@ -514,26 +514,19 @@
                         sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
                         showSuccess(idStatus, `تم التحقق: ${foundTrainee.name}`);
                         // إذا كانت خطوة الـQR معطّلة، ننتقل مباشرة للنجاح (STEP 3)
-if (!ENABLE_QR_VALIDATION) {
-    // خزن بيانات المتدرب
-    sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
-    sessionStorage.setItem('currentMeeting', JSON.stringify(meeting));
+        if (!ENABLE_QR_VALIDATION) {
+            // خزن بيانات المتدرب والاجتماع
+            sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
+            const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
+            const meetingId = meeting?.meetingId || 'غير متوفر';
 
-    // عرض تفاصيل المتدرب في شاشة النجاح
-// 1) جلب كائن الاجتماع
-const meetingJson = sessionStorage.getItem('currentMeeting');
-const meeting = meetingJson ? JSON.parse(meetingJson) : null;
-// 2) الحصول على meetingId أو رسالة افتراضية
-const meetingId = meeting?.meetingId || 'غير متوفر';
-
-// 3) عرض التفاصيل
-document.getElementById('traineeDetails').innerHTML = `
-    <strong>رقم المتدرب:</strong> ${foundTrainee.id}<br>
-    <strong>الاسم:</strong> ${foundTrainee.name}<br>
-    <strong>الشعبة:</strong> ${foundTrainee.program}<br>
-    <strong>معرّف الاجتماع:</strong> ${meetingId}
-`;
-
+            // عرض معلومات المتدرب والاجتماع
+            document.getElementById('traineeDetails').innerHTML = `
+                <strong>رقم المتدرب:</strong> ${foundTrainee.id}<br>
+                <strong>الاسم:</strong> ${foundTrainee.name}<br>
+                <strong>البرنامج:</strong> ${foundTrainee.program}<br>
+                <strong>معرّف الاجتماع:</strong> ${meetingId}
+            `;
 
     // إضافة الطابع الزمني
     const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
