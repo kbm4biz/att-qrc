@@ -341,6 +341,9 @@
         let scannerActive = false;
         let videoStream = null;
         let attemptCount = 0;
+        // put this near the other globals
+let matchedAddress = '';
+
 
         // We'll store whether admin mode is active in this variable
         let adminMode = false;
@@ -418,22 +421,22 @@
                         const lines = csvText.trim().split('\n');
 
                         let foundValid = false;
-                        for (let i = 0; i < lines.length; i++) {
-                            const [latStr, lonStr] = lines[i].split(',');
-                            const lat = parseFloat(latStr.trim());
-                            const lon = parseFloat(lonStr.trim());
-                            const addr = (cols[3] || '').trim(); // 3 ⇒ العمود D
+for (let i = 0; i < lines.length; i++) {
+    const cols = lines[i].split(',');          // <-- use cols, not line variables
+    const lat  = parseFloat(cols[0]);
+    const lon  = parseFloat(cols[1]);
+    const addr = (cols[3] || '').trim();       // column D
 
-                            const distance = getDistanceFromLatLonInKm(userLat, userLon, lat, lon);
-                            if (distance <= RADIUS_KM) {
-                                foundValid = true;
-                                matchedAddr = addr;                       // احفظ العنوان المطابق
-sessionStorage.setItem('attendanceAddress',
-                       matchedAddr || 'غير معروف'); 
+    const distance = getDistanceFromLatLonInKm(userLat, userLon, lat, lon);
 
-                                break;
-                            }
-                        }
+    if (distance <= RADIUS_KM) {
+        matchedAddress = addr || 'غير معروف'; // save it
+        sessionStorage.setItem('attendanceAddress', matchedAddress);
+        foundValid = true;
+        break;
+    }
+}
+
 
                         if (foundValid) {
                             gpsStatus.classList.add('valid');
@@ -523,18 +526,18 @@ sessionStorage.setItem('attendanceAddress',
         if (!ENABLE_QR_VALIDATION) {
             // خزن بيانات المتدرب والاجتماع
           sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
+            const address = sessionStorage.getItem('attendanceAddress') || 'غير معروف';
            const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
          const meetingId = meeting?.meetingId || 'غير متوفر';
 
             // عرض معلومات المتدرب والاجتماع
-            document.getElementById('traineeDetails').innerHTML = `
-                <strong>رقم المتدرب:</strong> ${foundTrainee.id}<br>
-                <strong>الاسم:</strong> ${foundTrainee.name}<br>
-                <strong>البرنامج:</strong> ${foundTrainee.program}<br>
-                 <strong>معرّف الاجتماع:</strong> ${meetingId}<br>
-                     <strong>تم تسجيل الحضور من هذا الموقع:</strong> ${address}
-
-            `;
+document.getElementById('traineeDetails').innerHTML = `
+    <strong>رقم المتدرب:</strong> ${trainee.id}<br>
+    <strong>الاسم:</strong> ${trainee.name}<br>
+    <strong>البرنامج:</strong> ${trainee.program}<br>
+    <strong>معرّف الاجتماع:</strong> ${meetingId}<br>
+    <strong>الموقع الذي سُجِّل منه الحضور:</strong> ${address}
+`;
 
     // إضافة الطابع الزمني
     const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
