@@ -522,8 +522,9 @@ if (!ENABLE_QR_VALIDATION) {
     document.getElementById('traineeDetails').innerHTML = `
         <strong>رقم المتدرب:</strong> ${foundTrainee.id}<br>
         <strong>الاسم:</strong> ${foundTrainee.name}<br>
-          <strong>البرنامج-الشعبة:</strong> ${trainee.program}<br>
-            <strong>البرنامج-الشعبة:</strong> ${meeting.meetingId}
+          <strong>البرنامج-الشعبة:</strong> ${trainee.program}
+          <strong>صور📲الشاشه:</strong>
+
 
     `;
 
@@ -714,8 +715,8 @@ setTimeout(() => showStep(2), 1000);
                     document.getElementById('traineeDetails').innerHTML = `
                         <strong>رقم المتدرب:</strong> ${trainee.id}<br>
                         <strong>الاسم:</strong> ${trainee.name}<br>
-                        <strong>البرنامج-الشعبة:</strong> ${trainee.program}<br>
-                             <strong>البرنامج-الشعبة:</strong> ${meeting.meetingId}
+                        <strong>البرنامج-الشعبة:</strong> ${trainee.program}
+
                     `;
                     // **Add Timestamp (Added)**
                     const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
