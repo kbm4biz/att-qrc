@@ -422,9 +422,15 @@
                             const [latStr, lonStr] = lines[i].split(',');
                             const lat = parseFloat(latStr.trim());
                             const lon = parseFloat(lonStr.trim());
+                            const addr = (cols[3] || '').trim(); // 3 ⇒ العمود D
+
                             const distance = getDistanceFromLatLonInKm(userLat, userLon, lat, lon);
                             if (distance <= RADIUS_KM) {
                                 foundValid = true;
+                                matchedAddr = addr;                       // احفظ العنوان المطابق
+sessionStorage.setItem('attendanceAddress',
+                       matchedAddr || 'غير معروف');  // نخزّنه لاستخدام لاحق
+
                                 break;
                             }
                         }
@@ -525,7 +531,8 @@
                 <strong>رقم المتدرب:</strong> ${foundTrainee.id}<br>
                 <strong>الاسم:</strong> ${foundTrainee.name}<br>
                 <strong>البرنامج:</strong> ${foundTrainee.program}<br>
-                 <strong>معرّف الاجتماع:</strong> ${meetingId}
+                 <strong>معرّف الاجتماع:</strong> ${meetingId}<br>
+                     <strong>تم تسجيل الحضور من هذا الموقع:</strong> ${address}
 
             `;
 
