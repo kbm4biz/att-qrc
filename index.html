@@ -313,6 +313,15 @@
             border-top: 1px solid #eee;
             margin-top: 20px;
         }
+        .location-check {
+            background: #e1f5fe;
+            border-left: 5px solid #0288d1;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            max-width: 500px;
+            width: 90%;
+        }
         @media (max-width: 600px) {
             .header h1 {
                 font-size: 1.4rem;
@@ -330,7 +339,7 @@
                 padding: 12px;
                 width: 95%;
             }
-            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp, .address-info, .location-error {
+            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp, .address-info, .location-error, .location-check {
                 width: 95%;
             }
             .scanner-container {
@@ -339,7 +348,7 @@
             }
         }
         @media (min-width: 1200px) {
-            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp, .address-info, .location-error {
+            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp, .address-info, .location-error, .location-check {
                 width: 80%;
             }
             button {
@@ -354,30 +363,30 @@
             <h1>نظام حضور المتدربين مع تحقق الموقع</h1>
         </div>
         
-        <!-- STEP 0: GPS VALIDATION -->
-        <div id="step0" class="step active-step">
-            <h2>التحقق من الموقع</h2>
-            <div class="status-bar" id="gpsStatus">
-                للمتابعة، يرجى التحقق من أنك داخل النطاق المسموح به.
-            </div>
-            <div id="gpsSpinner" class="spinner"></div>
-            <button onclick="verifyLocation()" id="gpsButton">تحقق من الموقع</button>
-            <div class="disclaimer">
-                .لن نقوم بتخزين أو تسجيل موقعك. يتم استخدام موقعك للتحقق فقط لتجنب سوء الاستخدام
-            </div>
-        </div>
-
         <!-- STEP 1: ID VERIFICATION -->
-        <div id="step1" class="step">
+        <div id="step1" class="step active-step">
             <h2>أدخل رقمك التدريبي</h2>
             <input type="text" id="idInput" placeholder="441234567" aria-label="رقم المتدرب">
             <div id="idSpinner" class="spinner"></div>
             <button onclick="verifyID()" id="idButton" aria-label="تحقق من الهوية">تحقق من الرقم التدريبي</button>
             <div id="idStatus" class="status-bar"></div>
+            <div class="disclaimer">
+                .لن نقوم بتخزين أو تسجيل موقعك. يتم استخدام موقعك للتحقق فقط لتجنب سوء الاستخدام
+            </div>
         </div>
 
-        <!-- STEP 2: SCAN QR -->
+        <!-- STEP 2: LOCATION VERIFICATION -->
         <div id="step2" class="step">
+            <h2>التحقق من الموقع</h2>
+            <div class="location-check" id="locationStatus">
+                جاري التحقق من موقعك الحالي...
+            </div>
+            <div id="locationSpinner" class="spinner"></div>
+            <button onclick="retryLocationCheck()" id="retryButton" style="display:none">إعادة المحاولة</button>
+        </div>
+
+        <!-- STEP 3: SCAN QR -->
+        <div id="step3" class="step">
             <h2>امسح كود الحضور</h2>
             <div class="scanner-container">
                 <video id="video-preview" playsinline autoplay></video>
@@ -387,8 +396,8 @@
             <button onclick="toggleScanner()" id="controlBtn">بدء الماسح</button>
         </div>
 
-        <!-- STEP 3: SUCCESS & INFO -->
-        <div id="step3" class="step">
+        <!-- STEP 4: SUCCESS & INFO -->
+        <div id="step4" class="step">
             <div class="emoji-container" aria-hidden="true">
                 <div class="emoji" style="left: 10%;">📲</div>
                 <div class="emoji" style="left: 20%;">✅</div>
@@ -406,8 +415,8 @@
             </div>
         </div>
         
-        <!-- STEP 4: LOCATION ERROR -->
-        <div id="step4" class="step">
+        <!-- STEP 5: LOCATION ERROR -->
+        <div id="step5" class="step">
             <div class="location-error">
                 <h3>خطأ في الموقع</h3>
                 <p id="locationErrorMsg">أنت لست في الموقع المطلوب للحضور.</p>
@@ -420,7 +429,7 @@
         <button id="adminReset" onclick="forceReset()">إعادة تعيين الجلسة</button>
         
         <div class="footer">
-            نظام حضور المتدربين - الإصدار 2.1
+            نظام حضور المتدربين - الإصدار 3.0
         </div>
     </div>
 
@@ -431,10 +440,9 @@
 
     <script>
         // ================== CONFIGURATIONS ================== //
-        const ENABLE_GPS_VALIDATION = true;
         const ENABLE_QR_VALIDATION = false;
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
-        const RADIUS_KM = 0.5;
+        const RADIUS_KM = 0.3;
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
         const MEETING_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?gid=217527569&single=true&output=csv';
         const POWER_AUTOMATE_WEBHOOK = 'https://prod-27.westeurope.logic.azure.com:443/workflows/a66bab290af54af2bfbec13c5dd17b81/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ggoyx8BPz6Cy1m3fFT5T7XuVQzVokJipPxxCerwxAvo';
@@ -451,9 +459,10 @@
         let attemptCount = 0;
         let adminMode = false;
         let requiredLocation = '';
+        let locationData = null;
 
         // ================== ON PAGE LOAD ================== //
-        window.onload = () => {
+        window.onload = async () => {
             if (location.hash === '#admin') {
                 const pass = prompt('أدخل كلمة مرور الإدارة:');
                 if (pass === ADMIN_PASSWORD) {
@@ -474,122 +483,21 @@
                 }
             }
 
-            if (ENABLE_GPS_VALIDATION) {
-                showStep(0);
-            } else {
-                document.getElementById('step0').style.display = 'none';
-                showStep(1);
-            }
-        };
-
-        // ================== STEP 0: GPS VALIDATION ================== //
-        async function verifyLocation() {
-            const gpsStatus = document.getElementById('gpsStatus');
-            const gpsSpinner = document.getElementById('gpsSpinner');
-            const gpsButton = document.getElementById('gpsButton');
-
-            gpsSpinner.style.display = 'block';
-            gpsButton.disabled = true;
-
-            gpsStatus.classList.remove('invalid','valid');
-            gpsStatus.textContent = 'جاري التحقق من الموقع، الرجاء الانتظار...';
-
-            if (!navigator.geolocation) {
-                gpsStatus.classList.add('invalid');
-                gpsStatus.textContent = 'المتصفح الخاص بك لا يدعم خاصية تحديد الموقع الجغرافي.';
-                gspinner.style.display = 'none';
-                gpsButton.disabled = false;
-                return;
-            }
-
-            navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    const userLat = position.coords.latitude;
-                    const userLon = position.coords.longitude;
-
-                    try {
-                        const response = await fetch(LOCATION_SHEET_URL);
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        const csvText = await response.text();
-                        const lines = csvText.trim().split('\n');
-
-                        let foundValid = false;
-                        let matchedAddr = 'غير معروف';
-                        
-                        for (let i = 0; i < lines.length; i++) {
-                            const cols = lines[i].split(',');
-                            
-                            // Ensure we have at least 5 columns (A, B, C, D, E)
-                            if (cols.length < 5) continue;
-                            
-                            const latStr = cols[0]?.trim();
-                            const lonStr = cols[1]?.trim();
-                            
-                            // Get address from column D (index 3)
-                            const addr = cols[3]?.trim() || 'غير معروف';
-                            
-                            // Get required location from column E (index 4)
-                            requiredLocation = cols[4]?.trim() || '';
-                            
-                            const lat = parseFloat(latStr);
-                            const lon = parseFloat(lonStr);
-                            
-                            if (isNaN(lat) || isNaN(lon)) continue;
-                            
-                            const distance = getDistanceFromLatLonInKm(userLat, userLon, lat, lon);
-                            if (distance <= RADIUS_KM) {
-                                foundValid = true;
-                                matchedAddr = addr;
-                                // Store address in session storage
-                                sessionStorage.setItem('attendanceAddress', matchedAddr);
-                                console.log('Valid location found. Address:', matchedAddr);
-                                break;
-                            }
-                        }
-
-                        if (foundValid) {
-                            gpsStatus.classList.add('valid');
-                            gpsStatus.textContent = 'أنت داخل النطاق المسموح به!';
-                            setTimeout(() => showStep(1), 1000);
-                        } else {
-                            gpsStatus.classList.add('invalid');
-                            gpsStatus.textContent = 'عذراً، لا يمكنك المتابعة. الموقع الحالي خارج النطاق المسموح به.';
-                        }
-                    } catch (error) {
-                        console.error('Error:', error);
-                        gpsStatus.classList.add('invalid');
-                        gpsStatus.textContent = 'حدث خطأ أثناء التحقق من الموقع. حاول مرة أخرى لاحقاً.';
-                    } finally {
-                        gpsSpinner.style.display = 'none';
-                        gpsButton.disabled = false;
-                    }
-                },
-                (error) => {
-                    console.error('Geolocation error:', error);
-                    gpsStatus.classList.add('invalid');
-                    gpsStatus.textContent = 'تعذر الحصول على موقعك. الرجاء السماح بالوصول للموقع والمحاولة مرة أخرى.';
-                    gpsSpinner.style.display = 'none';
-                    gpsButton.disabled = false;
+            // Preload location data
+            try {
+                const response = await fetch(LOCATION_SHEET_URL);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
                 }
-            );
-        }
-
-        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = deg2rad(lat2 - lat1);
-            const dLon = deg2rad(lon2 - lon1);
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c;
-        }
-
-        function deg2rad(deg) {
-            return deg * (Math.PI / 180);
-        }
+                const csvText = await response.text();
+                locationData = processLocationCSV(csvText);
+                console.log('Location data loaded:', locationData);
+            } catch (error) {
+                console.error('Error loading location data:', error);
+            }
+            
+            showStep(1);
+        };
 
         // ================== STEP 1: VERIFY ID ================== //
         async function verifyID() {
@@ -625,55 +533,18 @@
                 if (foundTrainee) {
                     const isMeetingValid = await verifyMeetingTime();
                     if (isMeetingValid.valid) {
-                        // Check if user is at required location
-                        const userLocation = sessionStorage.getItem('attendanceAddress') || '';
-                        
-                        if (requiredLocation && userLocation !== requiredLocation) {
-                            showLocationError(`أنت لست في الموقع المطلوب للحضور. الموقع الحالي: ${userLocation}<br>المطلوب: ${requiredLocation}`);
-                            return;
-                        }
-                        
+                        // Store trainee details
                         traineeID = inputID;
-                        setCookie('traineeSession', `${traineeID}_${Date.now()}`, SESSION_DURATION);
                         sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
                         showSuccess(idStatus, `تم التحقق: ${foundTrainee.name}`);
                         
-                        if (!ENABLE_QR_VALIDATION) {
-                            // Get trainee details
-                            const trainee = JSON.parse(sessionStorage.getItem('traineeDetails'));
-                            
-                            // Get meeting details
-                            const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
-                            const meetingId = meeting?.meetingId || 'غير متوفر';
-                            
-                            // Get address from session storage
-                            const address = sessionStorage.getItem('attendanceAddress') || 'غير معروف';
-                            
-                            // Display trainee details
-                            document.getElementById('traineeDetails').innerHTML = `
-                                <strong>رقم المتدرب:</strong> ${trainee.id}<br>
-                                <strong>الاسم:</strong> ${trainee.name}<br>
-                                <strong>البرنامج:</strong> ${trainee.program}<br>
-                                <strong>معرّف الاجتماع:</strong> ${meetingId}
-                            `;
-                            
-                            // Display the address
-                            document.getElementById('addressDetails').innerHTML = `
-                                <strong>تم تسجيل الحضور من الموقع:</strong> ${address}
-                            `;
-
-                            // Display timestamp
-                            const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
-                            document.getElementById('timestamp').textContent = `التاريخ والوقت: ${timestamp}`;
-
-                            // Send to Power Automate
-                            await sendToPowerAutomate(trainee);
-                            
-                            // Show success screen
-                            showStep(3);
-                            return;
-                        }
-                        setTimeout(() => showStep(2), 1000);
+                        // Get required location for this trainee
+                        requiredLocation = foundTrainee.requiredLocation || '';
+                        console.log('Required location:', requiredLocation);
+                        
+                        // Move to location verification
+                        showStep(2);
+                        verifyLocation();
                     } else {
                         showError(isMeetingValid.message, idStatus);
                     }
@@ -689,13 +560,198 @@
             }
         }
         
+        // ================== STEP 2: LOCATION VERIFICATION ================== //
+        async function verifyLocation() {
+            const locationStatus = document.getElementById('locationStatus');
+            const locationSpinner = document.getElementById('locationSpinner');
+            const retryButton = document.getElementById('retryButton');
+
+            locationSpinner.style.display = 'block';
+            retryButton.style.display = 'none';
+            
+            locationStatus.innerHTML = 'جاري التحقق من موقعك الحالي...';
+
+            if (!navigator.geolocation) {
+                locationStatus.innerHTML = 'المتصفح الخاص بك لا يدعم خاصية تحديد الموقع الجغرافي.';
+                locationSpinner.style.display = 'none';
+                retryButton.style.display = 'block';
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    try {
+                        const userLat = position.coords.latitude;
+                        const userLon = position.coords.longitude;
+                        
+                        // If we don't have location data, try to reload it
+                        if (!locationData) {
+                            const response = await fetch(LOCATION_SHEET_URL);
+                            if (!response.ok) throw new Error('Network response was not ok');
+                            const csvText = await response.text();
+                            locationData = processLocationCSV(csvText);
+                        }
+                        
+                        // Find nearest location
+                        const nearestLocation = findNearestLocation(userLat, userLon);
+                        
+                        if (!nearestLocation) {
+                            locationStatus.innerHTML = 'عذراً، لا يمكنك المتابعة. الموقع الحالي خارج النطاق المسموح به.';
+                            locationSpinner.style.display = 'none';
+                            retryButton.style.display = 'block';
+                            return;
+                        }
+                        
+                        // Store detected address
+                        sessionStorage.setItem('attendanceAddress', nearestLocation.address);
+                        
+                        // Check if location matches required location
+                        if (requiredLocation && nearestLocation.address !== requiredLocation) {
+                            showLocationError(`أنت لست في الموقع المطلوب للحضور. الموقع الحالي: ${nearestLocation.address}<br>المطلوب: ${requiredLocation}`);
+                            return;
+                        }
+                        
+                        // Location is valid
+                        locationStatus.innerHTML = `
+                            <strong>الموقع الحالي:</strong> ${nearestLocation.address}<br>
+                            <strong>المسافة:</strong> ${nearestLocation.distance.toFixed(2)} كم
+                        `;
+                        locationStatus.classList.add('valid');
+                        
+                        // Proceed to next step
+                        setTimeout(() => {
+                            if (ENABLE_QR_VALIDATION) {
+                                showStep(3);
+                            } else {
+                                completeAttendance();
+                            }
+                        }, 2000);
+                    } catch (error) {
+                        console.error('Error:', error);
+                        locationStatus.innerHTML = 'حدث خطأ أثناء التحقق من الموقع. حاول مرة أخرى لاحقاً.';
+                        locationSpinner.style.display = 'none';
+                        retryButton.style.display = 'block';
+                    }
+                },
+                (error) => {
+                    console.error('Geolocation error:', error);
+                    locationStatus.innerHTML = 'تعذر الحصول على موقعك. الرجاء السماح بالوصول للموقع والمحاولة مرة أخرى.';
+                    locationSpinner.style.display = 'none';
+                    retryButton.style.display = 'block';
+                }
+            );
+        }
+        
+        function retryLocationCheck() {
+            verifyLocation();
+        }
+        
+        function processLocationCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            const locations = [];
+            
+            for (let i = 0; i < lines.length; i++) {
+                const cols = lines[i].split(',');
+                if (cols.length < 4) continue;
+                
+                const lat = parseFloat(cols[0]?.trim());
+                const lon = parseFloat(cols[1]?.trim());
+                const address = cols[3]?.trim() || 'غير معروف';
+                
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    locations.push({ lat, lon, address });
+                }
+            }
+            
+            return locations;
+        }
+        
+        function findNearestLocation(userLat, userLon) {
+            if (!locationData || locationData.length === 0) return null;
+            
+            let nearestLocation = null;
+            let minDistance = Number.MAX_VALUE;
+            
+            for (const location of locationData) {
+                const distance = getDistanceFromLatLonInKm(userLat, userLon, location.lat, location.lon);
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestLocation = {
+                        ...location,
+                        distance: distance
+                    };
+                }
+            }
+            
+            if (minDistance <= RADIUS_KM) {
+                return nearestLocation;
+            }
+            
+            return null;
+        }
+
+        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = deg2rad(lat2 - lat1);
+            const dLon = deg2rad(lon2 - lon1);
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        function deg2rad(deg) {
+            return deg * (Math.PI / 180);
+        }
+        
+        // ================== COMPLETE ATTENDANCE ================== //
+        async function completeAttendance() {
+            const trainee = JSON.parse(sessionStorage.getItem('traineeDetails'));
+            const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
+            const meetingId = meeting?.meetingId || 'غير متوفر';
+            const address = sessionStorage.getItem('attendanceAddress') || 'غير معروف';
+            
+            // Display trainee details
+            document.getElementById('traineeDetails').innerHTML = `
+                <strong>رقم المتدرب:</strong> ${trainee.id}<br>
+                <strong>الاسم:</strong> ${trainee.name}<br>
+                <strong>البرنامج:</strong> ${trainee.program}<br>
+                <strong>معرّف الاجتماع:</strong> ${meetingId}
+            `;
+            
+            // Display the address
+            document.getElementById('addressDetails').innerHTML = `
+                <strong>تم تسجيل الحضور من الموقع:</strong> ${address}
+            `;
+
+            // Display timestamp
+            const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
+            document.getElementById('timestamp').textContent = `التاريخ والوقت: ${timestamp}`;
+
+            // Send to Power Automate
+            await sendToPowerAutomate(trainee);
+            
+            // Set session cookie to prevent duplicate attendance
+            setCookie('traineeSession', `${traineeID}_${Date.now()}`, SESSION_DURATION);
+            
+            // Show success screen
+            showStep(4);
+            
+            // Play success sound
+            const successSound = document.getElementById('successSound');
+            successSound.play().catch(err => console.error('Audio play error:', err));
+            
+            // Redirect after delay
+            setTimeout(() => {
+                window.location.href = REDIRECT_URL;
+            }, REDIRECT_DELAY);
+        }
+        
         // Show location error and reset form
         function showLocationError(message) {
-            const idStatus = document.getElementById('idStatus');
-            showError('خطأ في الموقع', idStatus);
-            
-            // Show location error screen
-            showStep(4);
+            showStep(5);
             document.getElementById('locationErrorMsg').innerHTML = message;
             
             // Start countdown to reset
@@ -726,11 +782,7 @@
             document.getElementById('idInput').value = '';
             
             // Go to beginning
-            if (ENABLE_GPS_VALIDATION) {
-                showStep(0);
-            } else {
-                showStep(1);
-            }
+            showStep(1);
         }
 
         function processCSV(csvData) {
@@ -742,7 +794,8 @@
                     return {
                         id: columns[0]?.replace(/['"]/g, '').trim(),
                         name: columns[1]?.replace(/['"]/g, '').trim(),
-                        program: columns[2]?.replace(/['"]/g, '').trim()
+                        program: columns[2]?.replace(/['"]/g, '').trim(),
+                        requiredLocation: columns[3]?.replace(/['"]/g, '').trim() || ''
                     };
                 })
                 .filter(trainee => trainee.id && /^\d+$/.test(trainee.id));
@@ -807,7 +860,7 @@
                 .filter(meeting => meeting.meetingId && meeting.date && meeting.startClass && meeting.endClass);
         }
 
-        // ================== STEP 2: SCAN QR ================== //
+        // ================== STEP 3: SCAN QR ================== //
         async function toggleScanner() {
             if (scannerActive) {
                 stopScanner();
@@ -862,59 +915,7 @@
             if (code) {
                 const isValid = await validateQRData(code.data);
                 if (isValid) {
-                    // Check if user is at required location
-                    const userLocation = sessionStorage.getItem('attendanceAddress') || '';
-                    
-                    if (requiredLocation && userLocation !== requiredLocation) {
-                        showLocationError(`أنت لست في الموقع المطلوب للحضور. الموقع الحالي: ${userLocation}<br>المطلوب: ${requiredLocation}`);
-                        stopScanner();
-                        return;
-                    }
-                    
-                    // Get trainee details
-                    const trainee = JSON.parse(sessionStorage.getItem('traineeDetails'));
-                    
-                    // Get meeting details
-                    const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
-                    const meetingId = meeting?.meetingId || 'غير متوفر';
-                    
-                    // Get address from session storage
-                    const address = sessionStorage.getItem('attendanceAddress') || 'غير معروف';
-                    
-                    // Display trainee details
-                    document.getElementById('traineeDetails').innerHTML = `
-                        <strong>رقم المتدرب:</strong> ${trainee.id}<br>
-                        <strong>الاسم:</strong> ${trainee.name}<br>
-                        <strong>البرنامج:</strong> ${trainee.program}<br>
-                        <strong>معرّف الاجتماع:</strong> ${meetingId}
-                    `;
-                    
-                    // Display the address
-                    document.getElementById('addressDetails').innerHTML = `
-                        <strong>تم تسجيل الحضور من الموقع:</strong> ${address}
-                    `;
-
-                    // Display timestamp
-                    const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
-                    document.getElementById('timestamp').textContent = `التاريخ والوقت: ${timestamp}`;
-
-                    // Send to Power Automate
-                    await sendToPowerAutomate(trainee);
-                    
-                    // Show success screen
-                    showStep(3);
-
-                    // Play success sound
-                    const successSound = document.getElementById('successSound');
-                    successSound.play().catch(err => console.error('Audio play error:', err));
-                    
-                    // Stop scanner
-                    stopScanner();
-
-                    // Redirect after delay
-                    setTimeout(() => {
-                        window.location.href = REDIRECT_URL;
-                    }, REDIRECT_DELAY);
+                    completeAttendance();
                 } else {
                     showError('كود غير صحيح', document.getElementById('scanStatus'));
                 }
@@ -1004,8 +1005,7 @@
                 step.classList.remove('active-step');
             });
 
-            const cooldownStep = ENABLE_GPS_VALIDATION ? 'step1' : 'step1';
-            const step = document.getElementById(cooldownStep);
+            const step = document.getElementById('step1');
             
             step.innerHTML = `
                 <h2>نظام الحضور</h2>
@@ -1032,11 +1032,6 @@
             document.querySelectorAll('.step').forEach(step => {
                 step.classList.remove('active-step');
             });
-
-            if (stepNumber === 0 && !ENABLE_GPS_VALIDATION) {
-                showStep(1);
-                return;
-            }
 
             document.getElementById(`step${stepNumber}`).classList.add('active-step');
         }
