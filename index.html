@@ -429,7 +429,7 @@
         <button id="adminReset" onclick="forceReset()">إعادة تعيين الجلسة</button>
         
         <div class="footer">
-            نظام حضور المتدربين - الإصدار 3.0
+            نظام حضور المتدربين - الإصدار 3.1
         </div>
     </div>
 
@@ -440,9 +440,9 @@
 
     <script>
         // ================== CONFIGURATIONS ================== //
-        const ENABLE_QR_VALIDATION = true;
+        const ENABLE_QR_VALIDATION = false;
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
-        const RADIUS_KM = 0.2;
+        const RADIUS_KM = 0.3;
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
         const MEETING_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?gid=217527569&single=true&output=csv';
         const POWER_AUTOMATE_WEBHOOK = 'https://prod-27.westeurope.logic.azure.com:443/workflows/a66bab290af54af2bfbec13c5dd17b81/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ggoyx8BPz6Cy1m3fFT5T7XuVQzVokJipPxxCerwxAvo';
@@ -460,6 +460,7 @@
         let adminMode = false;
         let requiredLocation = '';
         let locationData = null;
+        let attendanceRecorded = false; // Flag to prevent duplicate Power Automate triggers
 
         // ================== ON PAGE LOAD ================== //
         window.onload = async () => {
@@ -708,6 +709,14 @@
         
         // ================== COMPLETE ATTENDANCE ================== //
         async function completeAttendance() {
+            // Prevent duplicate Power Automate triggers
+            if (attendanceRecorded) {
+                console.log('Attendance already recorded. Skipping Power Automate trigger.');
+                return;
+            }
+            
+            attendanceRecorded = true;
+            
             const trainee = JSON.parse(sessionStorage.getItem('traineeDetails'));
             const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
             const meetingId = meeting?.meetingId || 'غير متوفر';
