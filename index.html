@@ -263,7 +263,7 @@
         <input type="text" id="idInput" placeholder="441234567" aria-label="رقم المتدرب">
         <!-- Spinner for ID Verification -->
         <div id="idSpinner" class="spinner"></div>
-        <button onclick="verifyID()" id="idButton" aria-label="تحقق من الهوية">تحقق من الهوية</button>
+        <button onclick="verifyID()" id="idButton" aria-label="تحقق من الهوية">تحقق من الرقم التدريبي</button>
         <div id="idStatus" class="status-bar"></div>
     </div>
 
@@ -285,9 +285,9 @@
             <!-- Multiple Emojis for Animation -->
             <div class="emoji" style="left: 10%;">✅</div>
             <div class="emoji" style="left: 20%;">✅</div>
-            <div class="emoji" style="left: 40%;">✅</div>
+            <div class="emoji" style="left: 40%;">📲</div>
             <div class="emoji" style="left: 60%;">✅</div>
-            <div class="emoji" style="left: 90%;">✅</div>
+            <div class="emoji" style="left: 90%;">📲</div>
         </div>
 
         <!-- Content Container (Modified to include timestamp) -->
@@ -315,7 +315,7 @@
         // ================== CONFIGURATIONS ================== //
         // **إضافة متغير التحكم في التحقق من GPS**
         const ENABLE_GPS_VALIDATION = false; // قم بتعيينه إلى false لتعطيل التحقق من الموقع
-        const ENABLE_QR_VALIDATION = false;
+        const ENABLE_QR_VALIDATION = true;
         // A) For GPS Validation:
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
         const RADIUS_KM = 0.3; // 0.3 km = 300 m (Adjust as needed)
@@ -496,7 +496,7 @@
             idButton.disabled = true;
 
             idStatus.classList.remove('invalid','valid');
-            idStatus.textContent = 'جاري التحقق من الرقم التدريبي، الرجاء الانتظار...';
+            idStatus.textContent = 'جاري التحقق من الهوية، الرجاء الانتظار...';
 
             try {
                 const response = await fetch(GOOGLE_SHEET_URL);
@@ -513,7 +513,7 @@
                         setCookie('traineeSession', `${traineeID}_${Date.now()}`, SESSION_DURATION);
                         sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
                         showSuccess(idStatus, `تم التحقق: ${foundTrainee.name}`);
-                       // إذا كانت خطوة الـQR معطّلة، ننتقل مباشرة للنجاح (STEP 3)
+                        // إذا كانت خطوة الـQR معطّلة، ننتقل مباشرة للنجاح (STEP 3)
 if (!ENABLE_QR_VALIDATION) {
     // خزن بيانات المتدرب
     sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
@@ -522,10 +522,7 @@ if (!ENABLE_QR_VALIDATION) {
     document.getElementById('traineeDetails').innerHTML = `
         <strong>رقم المتدرب:</strong> ${foundTrainee.id}<br>
         <strong>الاسم:</strong> ${foundTrainee.name}<br>
-          <strong>البرنامج-الشعبة:</strong> ${trainee.program}
-
-
-
+        <strong>البرناج-الشعبة:</strong> ${foundTrainee.program}
     `;
 
     // إضافة الطابع الزمني
@@ -539,6 +536,7 @@ if (!ENABLE_QR_VALIDATION) {
     showStep(3);
     return;
 }
+
 
 
 // خلاف ذلك، نفعل المسح كالمعتاد:
@@ -715,8 +713,7 @@ setTimeout(() => showStep(2), 1000);
                     document.getElementById('traineeDetails').innerHTML = `
                         <strong>رقم المتدرب:</strong> ${trainee.id}<br>
                         <strong>الاسم:</strong> ${trainee.name}<br>
-                        <strong>البرنامج-الشعبة:</strong> ${trainee.program}
-
+                        <strong>البرنامج:</strong> ${trainee.program}
                     `;
                     // **Add Timestamp (Added)**
                     const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
