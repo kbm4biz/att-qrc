@@ -496,7 +496,7 @@
             idButton.disabled = true;
 
             idStatus.classList.remove('invalid','valid');
-            idStatus.textContent = 'جاري التحقق من الهوية، الرجاء الانتظار...';
+            idStatus.textContent = 'جاري التحقق من الرقم التدريبي، الرجاء الانتظار...';
 
             try {
                 const response = await fetch(GOOGLE_SHEET_URL);
@@ -523,8 +523,7 @@ if (!ENABLE_QR_VALIDATION) {
         <strong>رقم المتدرب:</strong> ${foundTrainee.id}<br>
         <strong>الاسم:</strong> ${foundTrainee.name}<br>
         <strong>البرنامج-الشعبة:</strong> ${foundTrainee.program}
-       <strong>-الموعد:</strong> ${meetingId}
-       <strong>احفظ📲 الصوره:</strong>
+
     `;
 
     // إضافة الطابع الزمني
@@ -715,8 +714,7 @@ setTimeout(() => showStep(2), 1000);
                         <strong>رقم المتدرب:</strong> ${trainee.id}<br>
                         <strong>الاسم:</strong> ${trainee.name}<br>
                         <strong>البرنامج-الشعبة:</strong> ${trainee.program}
-                         <strong>-الموعد:</strong> ${meetingId}
-                       <strong>احفظ📲 الصوره:</strong>
+
                     `;
                     // **Add Timestamp (Added)**
                     const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
