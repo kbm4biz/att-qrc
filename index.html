@@ -713,10 +713,13 @@ setTimeout(() => showStep(2), 1000);
                 const isValid = await validateQRData(code.data);
                 if (isValid) {
                     const trainee = JSON.parse(sessionStorage.getItem('traineeDetails'));
+                                sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
+            const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
+            const meetingId = meeting?.meetingId || 'غير متوفر';
                     document.getElementById('traineeDetails').innerHTML = `
                         <strong>رقم المتدرب:</strong> ${trainee.id}<br>
-                        <strong>الاسم:</strong> ${trainee.name}<br>
-                        <strong>البرنامج:</strong> ${trainee.program}
+                <strong>البرنامج:</strong> ${foundTrainee.program}<br>
+                <strong>معرّف الاجتماع:</strong> ${meetingId}
                     `;
                     // **Add Timestamp (Added)**
                     const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
