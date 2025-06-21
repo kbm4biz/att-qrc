@@ -263,7 +263,7 @@
         <input type="text" id="idInput" placeholder="441234567" aria-label="رقم المتدرب">
         <!-- Spinner for ID Verification -->
         <div id="idSpinner" class="spinner"></div>
-        <button onclick="verifyID()" id="idButton" aria-label="تحقق من الهوية">تحقق من الرقم التدريبي</button>
+        <button onclick="verifyID()" id="idButton" aria-label="تحقق من الهوية">تحقق من الهوية</button>
         <div id="idStatus" class="status-bar"></div>
     </div>
 
@@ -283,11 +283,11 @@
         <!-- Emoji Container (Added) -->
         <div class="emoji-container" aria-hidden="true">
             <!-- Multiple Emojis for Animation -->
-            <div class="emoji" style="left: 10%;">📲</div>
+            <div class="emoji" style="left: 10%;">✅</div>
             <div class="emoji" style="left: 20%;">✅</div>
-            <div class="emoji" style="left: 40%;">📲</div>
+            <div class="emoji" style="left: 40%;">✅</div>
             <div class="emoji" style="left: 60%;">✅</div>
-            <div class="emoji" style="left: 90%;">📲</div>
+            <div class="emoji" style="left: 90%;">✅</div>
         </div>
 
         <!-- Content Container (Modified to include timestamp) -->
@@ -314,8 +314,8 @@
     <script>
         // ================== CONFIGURATIONS ================== //
         // **إضافة متغير التحكم في التحقق من GPS**
-        const ENABLE_GPS_VALIDATION = true; // قم بتعيينه إلى false لتعطيل التحقق من الموقع
-        const ENABLE_QR_VALIDATION = true;
+        const ENABLE_GPS_VALIDATION = false; // قم بتعيينه إلى false لتعطيل التحقق من الموقع
+
         // A) For GPS Validation:
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
         const RADIUS_KM = 0.3; // 0.3 km = 300 m (Adjust as needed)
@@ -489,7 +489,7 @@
             const idStatus = document.getElementById('idStatus');
             const idSpinner = document.getElementById('idSpinner');
             const idButton = document.getElementById('idButton');
-    
+
             // Increment attempt count and show spinner
             attemptCount++;
             idSpinner.style.display = 'block';
@@ -510,41 +510,10 @@
                     const isMeetingValid = await verifyMeetingTime();
                     if (isMeetingValid.valid) {
                         traineeID = inputID;
-                        setCookie('traineeSession', `${traineeID}_${Date.now()}`, SESSION_DURATION);
+                        setCookie('traineeSession', ${traineeID}_${Date.now()}, SESSION_DURATION);
                         sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
-                        showSuccess(idStatus, `تم التحقق: ${foundTrainee.name}`);
-                        // إذا كانت خطوة الـQR معطّلة، ننتقل مباشرة للنجاح (STEP 3)
-        if (!ENABLE_QR_VALIDATION) {
-            // خزن بيانات المتدرب والاجتماع
-       //     sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
-       //     const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
-         //   const meetingId = meeting?.meetingId || 'غير متوفر';
-
-            // عرض معلومات المتدرب والاجتماع
-            document.getElementById('traineeDetails').innerHTML = `
-                <strong>رقم المتدرب:</strong> ${foundTrainee.id}<br>
-                <strong>الاسم:</strong> ${foundTrainee.name}<br>
-                <strong>البرنامج:</strong> ${foundTrainee.program}
-
-            `;
-
-    // إضافة الطابع الزمني
-    const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
-    document.getElementById('timestamp').textContent = `التاريخ والوقت: ${timestamp}`;
-
-    // أرسل إلى Power Automate
-    await sendToPowerAutomate(foundTrainee);
-
-    // انتقل إلى شاشة النجاح
-    showStep(3);
-    return;
-}
-
-
-
-// خلاف ذلك، نفعل المسح كالمعتاد:
-setTimeout(() => showStep(2), 1000);
-
+                        showSuccess(idStatus, تم التحقق: ${foundTrainee.name});
+                        setTimeout(() => showStep(2), 1000);
                     } else {
                         // Show error message based on the meeting verification result
                         showError(isMeetingValid.message, idStatus);
@@ -620,7 +589,7 @@ setTimeout(() => showStep(2), 1000);
                     const endDateTime = new Date(year, month - 1, day, endHour, endMinute, 0);
 
                     // For debugging: Log each meeting's start and end times
-                    console.log(`Meeting ID: ${meeting.meetingId}`);
+                    console.log(Meeting ID: ${meeting.meetingId});
                     console.log('Start DateTime (Saudi Arabia):', startDateTime);
                     console.log('End DateTime (Saudi Arabia):', endDateTime);
 
@@ -713,17 +682,14 @@ setTimeout(() => showStep(2), 1000);
                 const isValid = await validateQRData(code.data);
                 if (isValid) {
                     const trainee = JSON.parse(sessionStorage.getItem('traineeDetails'));
-                                sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
-            const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
-            const meetingId = meeting?.meetingId || 'غير متوفر';
-                    document.getElementById('traineeDetails').innerHTML = `
+                    document.getElementById('traineeDetails').innerHTML = 
                         <strong>رقم المتدرب:</strong> ${trainee.id}<br>
-                <strong>البرنامج:</strong> ${foundTrainee.program}<br>
-                <strong>معرّف الاجتماع:</strong> ${meetingId}
-                    `;
+                        <strong>الاسم:</strong> ${trainee.name}<br>
+                        <strong>البرنامج:</strong> ${trainee.program}
+                    ;
                     // **Add Timestamp (Added)**
                     const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
-                    document.getElementById('timestamp').textContent = `التاريخ والوقت: ${timestamp}`;
+                    document.getElementById('timestamp').textContent = التاريخ والوقت: ${timestamp};
 
                     await sendToPowerAutomate(trainee);
 
@@ -771,7 +737,7 @@ setTimeout(() => showStep(2), 1000);
                 }
 
                 const expectedHash = simpleHash(
-                    `${payload.t}${payload.s}${SECRET_PHRASE}`
+                    ${payload.t}${payload.s}${SECRET_PHRASE}
                 );
                 console.log('Expected Hash:', expectedHash);
                 console.log('Payload Hash:', payload.h);
@@ -845,12 +811,12 @@ async function sendToPowerAutomate(trainee) {
             const step = document.getElementById(cooldownStep);
             
             // Overwrite step1 with cooldown UI
-            step.innerHTML = `
+            step.innerHTML = 
                 <h2>نظام الحضور</h2>
                 <div class="cooldown-message">
                     تم تسجيل حضورك مسبقاً، يرجى المحاولة مرة أخرى بعد 12 ساعة
                 </div>
-            `;
+            ;
             step.classList.add('active-step');
 
             // Show admin reset button only if adminMode = true
@@ -879,13 +845,13 @@ async function sendToPowerAutomate(trainee) {
                 return;
             }
 
-            document.getElementById(`step${stepNumber}`).classList.add('active-step');
+            document.getElementById(step${stepNumber}).classList.add('active-step');
         }
 
         function setCookie(name, value, duration) {
             const date = new Date();
             date.setTime(date.getTime() + duration);
-            document.cookie = `${name}=${value};expires=${date.toUTCString()};path=/;SameSite=Strict;Secure`;
+            document.cookie = ${name}=${value};expires=${date.toUTCString()};path=/;SameSite=Strict;Secure;
         }
 
         function getCookie(name) {
