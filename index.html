@@ -292,6 +292,19 @@
             from { transform: translateY(0); }
             to { transform: translateY(-20px); }
         }
+        .location-error {
+            background: #ffebee;
+            border-left: 5px solid #f44336;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            max-width: 500px;
+            width: 90%;
+        }
+        .location-error h3 {
+            color: #f44336;
+            margin-bottom: 10px;
+        }
         .footer {
             text-align: center;
             padding: 20px;
@@ -299,15 +312,6 @@
             font-size: 14px;
             border-top: 1px solid #eee;
             margin-top: 20px;
-        }
-        .debug-info {
-            background: #f9f9f9;
-            padding: 10px;
-            border-radius: 8px;
-            margin-top: 10px;
-            font-size: 12px;
-            color: #777;
-            max-width: 500px;
         }
         @media (max-width: 600px) {
             .header h1 {
@@ -326,7 +330,7 @@
                 padding: 12px;
                 width: 95%;
             }
-            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp, .address-info {
+            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp, .address-info, .location-error {
                 width: 95%;
             }
             .scanner-container {
@@ -335,7 +339,7 @@
             }
         }
         @media (min-width: 1200px) {
-            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp, .address-info {
+            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp, .address-info, .location-error {
                 width: 80%;
             }
             button {
@@ -397,16 +401,26 @@
                 <div class="status-bar valid">تم تسجيل الحضور بنجاح!</div>
                 <div class="trainee-info" id="traineeDetails"></div>
                 <div class="timestamp" id="timestamp"></div>
-                <!-- Address display element -->
                 <div class="address-info" id="addressDetails">جاري تحميل معلومات الموقع...</div>
                 <div class="cooldown-message">سيتم الخروج تلقائياً خلال 10 ثواني...</div>
+            </div>
+        </div>
+        
+        <!-- STEP 4: LOCATION ERROR -->
+        <div id="step4" class="step">
+            <div class="location-error">
+                <h3>خطأ في الموقع</h3>
+                <p id="locationErrorMsg">أنت لست في الموقع المطلوب للحضور.</p>
+                <p>يجب أن تكون في الموقع الصحيح لتسجيل الحضور.</p>
+                <div class="spinner" id="resetSpinner"></div>
+                <p id="resetMessage">سيتم إعادة التوجيه إلى البداية خلال <span id="countdown">5</span> ثواني...</p>
             </div>
         </div>
 
         <button id="adminReset" onclick="forceReset()">إعادة تعيين الجلسة</button>
         
         <div class="footer">
-            نظام حضور المتدربين - الإصدار 2.0
+            نظام حضور المتدربين - الإصدار 2.1
         </div>
     </div>
 
@@ -420,7 +434,7 @@
         const ENABLE_GPS_VALIDATION = true;
         const ENABLE_QR_VALIDATION = false;
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
-        const RADIUS_KM = 0.4;
+        const RADIUS_KM = 0.3;
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
         const MEETING_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?gid=217527569&single=true&output=csv';
         const POWER_AUTOMATE_WEBHOOK = 'https://prod-27.westeurope.logic.azure.com:443/workflows/a66bab290af54af2bfbec13c5dd17b81/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ggoyx8BPz6Cy1m3fFT5T7XuVQzVokJipPxxCerwxAvo';
@@ -436,6 +450,7 @@
         let videoStream = null;
         let attemptCount = 0;
         let adminMode = false;
+        let requiredLocation = '';
 
         // ================== ON PAGE LOAD ================== //
         window.onload = () => {
@@ -506,14 +521,17 @@
                         for (let i = 0; i < lines.length; i++) {
                             const cols = lines[i].split(',');
                             
-                            // Ensure we have at least 4 columns (A, B, C, D)
-                            if (cols.length < 4) continue;
+                            // Ensure we have at least 5 columns (A, B, C, D, E)
+                            if (cols.length < 5) continue;
                             
                             const latStr = cols[0]?.trim();
                             const lonStr = cols[1]?.trim();
                             
-                            // CORRECTED: Get address from column D (index 3)
+                            // Get address from column D (index 3)
                             const addr = cols[3]?.trim() || 'غير معروف';
+                            
+                            // Get required location from column E (index 4)
+                            requiredLocation = cols[4]?.trim() || '';
                             
                             const lat = parseFloat(latStr);
                             const lon = parseFloat(lonStr);
@@ -607,6 +625,14 @@
                 if (foundTrainee) {
                     const isMeetingValid = await verifyMeetingTime();
                     if (isMeetingValid.valid) {
+                        // Check if user is at required location
+                        const userLocation = sessionStorage.getItem('attendanceAddress') || '';
+                        
+                        if (requiredLocation && userLocation !== requiredLocation) {
+                            showLocationError(`أنت لست في الموقع المطلوب للحضور. الموقع الحالي: ${userLocation}<br>المطلوب: ${requiredLocation}`);
+                            return;
+                        }
+                        
                         traineeID = inputID;
                         setCookie('traineeSession', `${traineeID}_${Date.now()}`, SESSION_DURATION);
                         sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
@@ -660,6 +686,50 @@
             } finally {
                 idSpinner.style.display = 'none';
                 idButton.disabled = false;
+            }
+        }
+        
+        // Show location error and reset form
+        function showLocationError(message) {
+            const idStatus = document.getElementById('idStatus');
+            showError('خطأ في الموقع', idStatus);
+            
+            // Show location error screen
+            showStep(4);
+            document.getElementById('locationErrorMsg').innerHTML = message;
+            
+            // Start countdown to reset
+            let countdown = 5;
+            const countdownElement = document.getElementById('countdown');
+            countdownElement.textContent = countdown;
+            
+            const resetSpinner = document.getElementById('resetSpinner');
+            resetSpinner.style.display = 'block';
+            
+            const countdownInterval = setInterval(() => {
+                countdown--;
+                countdownElement.textContent = countdown;
+                
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                    resetForm();
+                }
+            }, 1000);
+        }
+        
+        // Reset form and go to beginning
+        function resetForm() {
+            // Clear all stored data
+            clearExpiredSession();
+            sessionStorage.removeItem('attendanceAddress');
+            sessionStorage.removeItem('currentMeeting');
+            document.getElementById('idInput').value = '';
+            
+            // Go to beginning
+            if (ENABLE_GPS_VALIDATION) {
+                showStep(0);
+            } else {
+                showStep(1);
             }
         }
 
@@ -792,6 +862,15 @@
             if (code) {
                 const isValid = await validateQRData(code.data);
                 if (isValid) {
+                    // Check if user is at required location
+                    const userLocation = sessionStorage.getItem('attendanceAddress') || '';
+                    
+                    if (requiredLocation && userLocation !== requiredLocation) {
+                        showLocationError(`أنت لست في الموقع المطلوب للحضور. الموقع الحالي: ${userLocation}<br>المطلوب: ${requiredLocation}`);
+                        stopScanner();
+                        return;
+                    }
+                    
                     // Get trainee details
                     const trainee = JSON.parse(sessionStorage.getItem('traineeDetails'));
                     
