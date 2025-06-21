@@ -283,7 +283,7 @@
         <!-- Emoji Container (Added) -->
         <div class="emoji-container" aria-hidden="true">
             <!-- Multiple Emojis for Animation -->
-            <div class="emoji" style="left: 10%;">✅</div>
+            <div class="emoji" style="left: 10%;">📲</div>
             <div class="emoji" style="left: 20%;">✅</div>
             <div class="emoji" style="left: 40%;">📲</div>
             <div class="emoji" style="left: 60%;">✅</div>
@@ -522,7 +522,8 @@ if (!ENABLE_QR_VALIDATION) {
     document.getElementById('traineeDetails').innerHTML = `
         <strong>رقم المتدرب:</strong> ${foundTrainee.id}<br>
         <strong>الاسم:</strong> ${foundTrainee.name}<br>
-        <strong>البرناج-الشعبة:</strong> ${foundTrainee.program}
+        <strong>-الشعبة:</strong> ${foundTrainee.program}<br>
+      <strong>-الشعبة:</strong> ${processMeetingCSV.meetingId}   
     `;
 
     // إضافة الطابع الزمني
