@@ -315,7 +315,7 @@
         // ================== CONFIGURATIONS ================== //
         // **إضافة متغير التحكم في التحقق من GPS**
         const ENABLE_GPS_VALIDATION = false; // قم بتعيينه إلى false لتعطيل التحقق من الموقع
-
+        const ENABLE_QR_VALIDATION = false;
         // A) For GPS Validation:
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
         const RADIUS_KM = 0.3; // 0.3 km = 300 m (Adjust as needed)
@@ -513,7 +513,17 @@
                         setCookie('traineeSession', `${traineeID}_${Date.now()}`, SESSION_DURATION);
                         sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
                         showSuccess(idStatus, `تم التحقق: ${foundTrainee.name}`);
-                        setTimeout(() => showStep(2), 1000);
+                       // إذا كانت خطوة الـQR معطّلة، ننتقل مباشرة للنجاح (STEP 3)
+if (!ENABLE_QR_VALIDATION) {
+  sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
+  await sendToPowerAutomate(foundTrainee);
+  showStep(3);
+  return;  // نوقف تنفيذ verifyID هنا
+}
+
+// خلاف ذلك، نفعل المسح كالمعتاد:
+setTimeout(() => showStep(2), 1000);
+
                     } else {
                         // Show error message based on the meeting verification result
                         showError(isMeetingValid.message, idStatus);
