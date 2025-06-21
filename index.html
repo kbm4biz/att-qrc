@@ -388,7 +388,7 @@
                             
                             const latStr = cols[0]?.trim();
                             const lonStr = cols[1]?.trim();
-                            const addr = cols[3]?.trim() || 'غير معروف';
+                            const addr = cols[3]?.trim() || 'غير معروف'; // Column D (index 3)
                             
                             const lat = parseFloat(latStr);
                             const lon = parseFloat(lonStr);
