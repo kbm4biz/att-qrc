@@ -516,15 +516,16 @@
                         // إذا كانت خطوة الـQR معطّلة، ننتقل مباشرة للنجاح (STEP 3)
         if (!ENABLE_QR_VALIDATION) {
             // خزن بيانات المتدرب والاجتماع
-       //     sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
-       //     const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
-         //   const meetingId = meeting?.meetingId || 'غير متوفر';
+          sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
+           const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
+         const meetingId = meeting?.meetingId || 'غير متوفر';
 
             // عرض معلومات المتدرب والاجتماع
             document.getElementById('traineeDetails').innerHTML = `
                 <strong>رقم المتدرب:</strong> ${foundTrainee.id}<br>
                 <strong>الاسم:</strong> ${foundTrainee.name}<br>
-                <strong>البرنامج:</strong> ${foundTrainee.program}
+                <strong>البرنامج:</strong> ${foundTrainee.program}<br>
+                 <strong>معرّف الاجتماع:</strong> ${meetingId}
 
             `;
 
