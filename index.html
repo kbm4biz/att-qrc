@@ -522,7 +522,8 @@ if (!ENABLE_QR_VALIDATION) {
     document.getElementById('traineeDetails').innerHTML = `
         <strong>رقم المتدرب:</strong> ${foundTrainee.id}<br>
         <strong>الاسم:</strong> ${foundTrainee.name}<br>
-        <strong>البرنامج:</strong> ${foundTrainee.program}
+        <strong>البرنامج-الشعبة:</strong> ${foundTrainee.program}
+        <strong>الموعد:</strong> ${meeting.meetingId}
     `;
 
     // إضافة الطابع الزمني
