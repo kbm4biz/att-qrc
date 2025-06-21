@@ -2,8 +2,7 @@
 <html dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>نظام حضور المتدربين مع تحقق الموقع</title>
     <style>
         * {
@@ -253,7 +252,7 @@
                 opacity: 0;
             }
         }
-        #step3 .content {
+        #step4 .content {
             position: relative;
             z-index: 1;
             width: 100%;
@@ -385,7 +384,7 @@
             <button onclick="retryLocationCheck()" id="retryButton" style="display:none">إعادة المحاولة</button>
         </div>
 
-        <!-- STEP 3: SCAN QR -->
+        <!-- STEP 3: SCAN QR (ONLY IF ENABLED) -->
         <div id="step3" class="step">
             <h2>امسح كود الحضور</h2>
             <div class="scanner-container">
@@ -429,18 +428,16 @@
         <button id="adminReset" onclick="forceReset()">إعادة تعيين الجلسة</button>
         
         <div class="footer">
-            نظام حضور المتدربين - الإصدار 3.1
+            نظام حضور المتدربين - الإصدار 4.0
         </div>
     </div>
 
-    <audio id="successSound"
-           src="https://raw.githubusercontent.com/kbm4biz/att-qrc/main/assets/notification.wav"
-           preload="auto"></audio>
+    <audio id="successSound" src="https://raw.githubusercontent.com/kbm4biz/att-qrc/main/assets/notification.wav" preload="auto"></audio>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
     <script>
         // ================== CONFIGURATIONS ================== //
-        const ENABLE_QR_VALIDATION = false;
+        const ENABLE_QR_VALIDATION = false; // Set to true to enable QR scanning
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
         const RADIUS_KM = 0.3;
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
@@ -460,7 +457,7 @@
         let adminMode = false;
         let requiredLocation = '';
         let locationData = null;
-        let attendanceRecorded = false; // Flag to prevent duplicate Power Automate triggers
+        let attendanceRecorded = false; // Flag to prevent duplicate triggers
 
         // ================== ON PAGE LOAD ================== //
         window.onload = async () => {
@@ -624,6 +621,7 @@
                             if (ENABLE_QR_VALIDATION) {
                                 showStep(3);
                             } else {
+                                // QR is disabled - directly complete attendance
                                 completeAttendance();
                             }
                         }, 2000);
@@ -715,6 +713,7 @@
                 return;
             }
             
+            // Set flag immediately to prevent duplicate triggers
             attendanceRecorded = true;
             
             const trainee = JSON.parse(sessionStorage.getItem('traineeDetails'));
@@ -739,9 +738,6 @@
             const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
             document.getElementById('timestamp').textContent = `التاريخ والوقت: ${timestamp}`;
 
-            // Send to Power Automate
-            await sendToPowerAutomate(trainee);
-            
             // Set session cookie to prevent duplicate attendance
             setCookie('traineeSession', `${traineeID}_${Date.now()}`, SESSION_DURATION);
             
@@ -751,6 +747,10 @@
             // Play success sound
             const successSound = document.getElementById('successSound');
             successSound.play().catch(err => console.error('Audio play error:', err));
+            
+            // Send to Power Automate AFTER showing success screen
+            // This ensures it's only triggered when attendance is successfully recorded
+            await sendToPowerAutomate(trainee);
             
             // Redirect after delay
             setTimeout(() => {
@@ -924,6 +924,7 @@
             if (code) {
                 const isValid = await validateQRData(code.data);
                 if (isValid) {
+                    // QR is valid - complete attendance
                     completeAttendance();
                 } else {
                     showError('كود غير صحيح', document.getElementById('scanStatus'));
