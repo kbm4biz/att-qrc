@@ -489,7 +489,7 @@
             const idStatus = document.getElementById('idStatus');
             const idSpinner = document.getElementById('idSpinner');
             const idButton = document.getElementById('idButton');
-
+    
             // Increment attempt count and show spinner
             attemptCount++;
             idSpinner.style.display = 'block';
@@ -517,14 +517,23 @@
 if (!ENABLE_QR_VALIDATION) {
     // خزن بيانات المتدرب
     sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
+    sessionStorage.setItem('currentMeeting', JSON.stringify(meeting));
 
     // عرض تفاصيل المتدرب في شاشة النجاح
-    document.getElementById('traineeDetails').innerHTML = `
-        <strong>رقم المتدرب:</strong> ${foundTrainee.id}<br>
-        <strong>الاسم:</strong> ${foundTrainee.name}<br>
-        <strong>-الشعبة:</strong> ${foundTrainee.program}<br>
-      <strong>-الشعبة:</strong> ${processMeetingCSV.meetingId}   
-    `;
+// 1) جلب كائن الاجتماع
+const meetingJson = sessionStorage.getItem('currentMeeting');
+const meeting = meetingJson ? JSON.parse(meetingJson) : null;
+// 2) الحصول على meetingId أو رسالة افتراضية
+const meetingId = meeting?.meetingId || 'غير متوفر';
+
+// 3) عرض التفاصيل
+document.getElementById('traineeDetails').innerHTML = `
+    <strong>رقم المتدرب:</strong> ${foundTrainee.id}<br>
+    <strong>الاسم:</strong> ${foundTrainee.name}<br>
+    <strong>الشعبة:</strong> ${foundTrainee.program}<br>
+    <strong>معرّف الاجتماع:</strong> ${meetingId}
+`;
+
 
     // إضافة الطابع الزمني
     const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
