@@ -515,11 +515,28 @@
                         showSuccess(idStatus, `تم التحقق: ${foundTrainee.name}`);
                        // إذا كانت خطوة الـQR معطّلة، ننتقل مباشرة للنجاح (STEP 3)
 if (!ENABLE_QR_VALIDATION) {
-  sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
-  await sendToPowerAutomate(foundTrainee);
-  showStep(3);
-  return;  // نوقف تنفيذ verifyID هنا
+    // خزن بيانات المتدرب
+    sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
+
+    // عرض تفاصيل المتدرب في شاشة النجاح
+    document.getElementById('traineeDetails').innerHTML = `
+        <strong>رقم المتدرب:</strong> ${foundTrainee.id}<br>
+        <strong>الاسم:</strong> ${foundTrainee.name}<br>
+        <strong>البرنامج:</strong> ${foundTrainee.program}
+    `;
+
+    // إضافة الطابع الزمني
+    const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
+    document.getElementById('timestamp').textContent = `التاريخ والوقت: ${timestamp}`;
+
+    // أرسل إلى Power Automate
+    await sendToPowerAutomate(foundTrainee);
+
+    // انتقل إلى شاشة النجاح
+    showStep(3);
+    return;
 }
+
 
 // خلاف ذلك، نفعل المسح كالمعتاد:
 setTimeout(() => showStep(2), 1000);
