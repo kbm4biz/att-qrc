@@ -17,19 +17,17 @@
             display: flex;
             flex-direction: column;
             direction: rtl;
-            /* Removed height and overflow to allow natural scrolling */
             min-height: 100vh;
         }
         .step {
-            display: none; /* Hide all steps by default */
+            display: none;
             flex: 1;
             text-align: center;
             padding: 20px;
-            position: relative; /* For positioning emojis */
-            /* Removed conflicting display property */
+            position: relative;
         }
         .active-step {
-            display: flex; /* Show only the active step */
+            display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
@@ -40,9 +38,9 @@
             background: white;
             margin: 10px;
             border-radius: 10px;
-            width: 90%; /* Increased to 90% for better visibility on small screens */
+            width: 90%;
             max-width: 500px;
-            word-wrap: break-word; /* Ensure text wraps properly */
+            word-wrap: break-word;
         }
         .valid { color: #4CAF50; }
         .invalid { color: #f44336; }
@@ -52,10 +50,10 @@
             border: none;
             padding: 15px 30px;
             border-radius: 25px;
-            margin: 10px 0; /* Adjusted margin for vertical spacing */
+            margin: 10px 0;
             font-size: 16px;
             cursor: pointer;
-            width: 90%; /* Increased to 90% for better visibility on small screens */
+            width: 90%;
             max-width: 300px;
             transition: background 0.3s ease;
         }
@@ -68,7 +66,6 @@
             font-size: 1.5em;
         }
         #adminReset {
-            /* Hidden by default; unhidden if admin logs in */
             display: none;
             background: transparent;
             border: 2px solid #333;
@@ -81,14 +78,14 @@
         #idInput {
             padding: 15px;
             margin: 20px 0;
-            width: 90%; /* Increased to 90% for better visibility on small screens */
+            width: 90%;
             font-size: 18px;
             border: 2px solid #ddd;
             border-radius: 25px;
             text-align: right;
         }
         .scanner-container {
-            width: 90%; /* Increased to 90% for better visibility on small screens */
+            width: 90%;
             max-width: 500px;
             flex: 1;
             position: relative;
@@ -123,17 +120,17 @@
             background: #e8f5e9;
             border-radius: 10px;
             margin: 15px 0;
-            width: 90%; /* Increased to 90% for better visibility on small screens */
+            width: 90%;
             max-width: 500px;
             text-align: right;
-            word-wrap: break-word; /* Ensure text wraps properly */
+            word-wrap: break-word;
         }
         .cooldown-message {
             color: #ff9800;
             font-weight: bold;
             margin: 20px 0;
             font-size: 18px;
-            padding: 0 10px; /* Added padding for better text visibility */
+            padding: 0 10px;
         }
         .disclaimer {
             font-size: 14px;
@@ -141,10 +138,8 @@
             max-width: 500px;
             margin: 10px auto;
             text-align: center;
-            padding: 0 10px; /* Added padding for better text visibility */
+            padding: 0 10px;
         }
-        
-        /* ======= Spinner Styles ======= */
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
             border-left-color: #4CAF50;
@@ -152,33 +147,28 @@
             width: 24px;
             height: 24px;
             animation: spin 1s linear infinite;
-            display: none; /* Hidden by default */
+            display: none;
             margin: 10px auto;
         }
-
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-
-        /* ======= Moving Emojis Styles (Added) ======= */
         .emoji-container {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none; /* Allow interactions through emojis */
+            pointer-events: none;
             overflow: hidden;
-            z-index: 0; /* Behind other content */
+            z-index: 0;
         }
-
         .emoji {
             position: absolute;
             font-size: 2rem;
             animation: float 5s linear infinite;
             opacity: 0.8;
         }
-
         @keyframes float {
             0% {
                 transform: translateY(100vh) translateX(0);
@@ -192,23 +182,28 @@
                 opacity: 0;
             }
         }
-
-        /* Ensure step3 content is above emojis */
         #step3 .content {
             position: relative;
             z-index: 1;
         }
-
-        /* ======= Timestamp Styles (Added) ======= */
         .timestamp {
             margin-top: 10px;
             font-size: 16px;
             color: #555;
-            padding: 0 10px; /* Added padding for better text visibility */
-            word-wrap: break-word; /* Ensure text wraps properly */
+            padding: 0 10px;
+            word-wrap: break-word;
         }
-
-        /* ======= Responsive Adjustments ======= */
+        .address-info {
+            margin-top: 10px;
+            font-size: 16px;
+            color: #555;
+            padding: 0 10px;
+            word-wrap: break-word;
+            font-weight: bold;
+            background-color: #f0f7ff;
+            padding: 10px;
+            border-radius: 8px;
+        }
         @media (max-width: 600px) {
             h2 {
                 font-size: 1.3em;
@@ -216,24 +211,22 @@
             button {
                 padding: 12px 20px;
                 font-size: 14px;
-                width: 95%; /* Increase width on smaller screens */
+                width: 95%;
             }
             #idInput {
                 font-size: 16px;
                 padding: 12px;
                 width: 95%;
             }
-            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp {
+            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp, .address-info {
                 width: 95%;
             }
             .scanner-container {
                 width: 95%;
             }
         }
-
         @media (min-width: 1200px) {
-            /* Optional: Adjustments for larger screens if necessary */
-            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp {
+            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp, .address-info {
                 width: 70%;
             }
             button {
@@ -249,7 +242,6 @@
         <div class="status-bar" id="gpsStatus">
             للمتابعة، يرجى التحقق من أنك داخل النطاق المسموح به.
         </div>
-        <!-- Spinner for GPS Verification -->
         <div id="gpsSpinner" class="spinner"></div>
         <button onclick="verifyLocation()" id="gpsButton">تحقق من الموقع</button>
         <div class="disclaimer">
@@ -261,7 +253,6 @@
     <div id="step1" class="step">
         <h2>أدخل رقمك التدريبي</h2>
         <input type="text" id="idInput" placeholder="441234567" aria-label="رقم المتدرب">
-        <!-- Spinner for ID Verification -->
         <div id="idSpinner" class="spinner"></div>
         <button onclick="verifyID()" id="idButton" aria-label="تحقق من الهوية">تحقق من الرقم التدريبي</button>
         <div id="idStatus" class="status-bar"></div>
@@ -280,85 +271,59 @@
 
     <!-- STEP 3: SUCCESS & INFO -->
     <div id="step3" class="step">
-        <!-- Emoji Container (Added) -->
         <div class="emoji-container" aria-hidden="true">
-            <!-- Multiple Emojis for Animation -->
             <div class="emoji" style="left: 10%;">📲</div>
             <div class="emoji" style="left: 20%;">✅</div>
             <div class="emoji" style="left: 40%;">📲</div>
             <div class="emoji" style="left: 60%;">✅</div>
             <div class="emoji" style="left: 90%;">📲</div>
         </div>
-
-        <!-- Content Container (Modified to include timestamp) -->
         <div class="content">
             <div class="status-bar valid">تم تسجيل الحضور بنجاح!</div>
             <div class="trainee-info" id="traineeDetails"></div>
-            <!-- Timestamp Display (Added) -->
             <div class="timestamp" id="timestamp"></div>
+            <!-- Address display element -->
+            <div class="address-info" id="addressDetails"></div>
             <div class="cooldown-message">سيتم الخروج تلقائياً خلال 10 ثواني...</div>
         </div>
     </div>
 
-    <!-- ADMIN RESET BUTTON: Shown only when in admin mode & cooldown -->
     <button id="adminReset" onclick="forceReset()">إعادة تعيين الجلسة</button>
-
-    <!-- SUCCESS SOUND (Replace with your actual GitHub link) -->
     <audio id="successSound"
            src="https://raw.githubusercontent.com/kbm4biz/att-qrc/main/assets/notification.wav"
            preload="auto"></audio>
-
-    <!-- JSQR Library -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 
     <script>
         // ================== CONFIGURATIONS ================== //
-        // **إضافة متغير التحكم في التحقق من GPS**
-        const ENABLE_GPS_VALIDATION = true; // قم بتعيينه إلى false لتعطيل التحقق من الموقع
+        const ENABLE_GPS_VALIDATION = true;
         const ENABLE_QR_VALIDATION = false;
-        // A) For GPS Validation:
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
-        const RADIUS_KM = 0.3; // 0.3 km = 300 m (Adjust as needed)
-
-        // B) For ID & QR scanning:
+        const RADIUS_KM = 0.3;
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
-
-        // **New Configuration for Meeting Schedule (Sheet2)**
-        const MEETING_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?gid=217527569&single=true&output=csv'; // **Replace with your actual Sheet2 CSV URL**
-
-        // Replace this with your Power Automate webhook URL:
+        const MEETING_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?gid=217527569&single=true&output=csv';
         const POWER_AUTOMATE_WEBHOOK = 'https://prod-27.westeurope.logic.azure.com:443/workflows/a66bab290af54af2bfbec13c5dd17b81/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ggoyx8BPz6Cy1m3fFT5T7XuVQzVokJipPxxCerwxAvo';
         const SECRET_PHRASE = 'SCHOOL_SECRET_2025';
-        const SESSION_DURATION = 12 * 60 * 60 * 1000; // 12 hours
+        const SESSION_DURATION = 12 * 60 * 60 * 1000;
         const MAX_ATTEMPTS = 5;
         const REDIRECT_URL = 'https://www.google.com';
-        const REDIRECT_DELAY = 10000; // 10 seconds
-
-        // Admin password
+        const REDIRECT_DELAY = 10000;
         const ADMIN_PASSWORD = '2030';
 
         let traineeID = '';
         let scannerActive = false;
         let videoStream = null;
         let attemptCount = 0;
-        // put this near the other globals
-let matchedAddress = '';
-
-
-        // We'll store whether admin mode is active in this variable
         let adminMode = false;
 
         // ================== ON PAGE LOAD ================== //
         window.onload = () => {
-            // 1) Check if URL has #admin
             if (location.hash === '#admin') {
-                // Ask for admin password
                 const pass = prompt('أدخل كلمة مرور الإدارة:');
                 if (pass === ADMIN_PASSWORD) {
                     adminMode = true;
                 } else {
                     alert('كلمة المرور غير صحيحة!');
-                    // remove #admin from URL
                     history.replaceState(null, '', location.pathname);
                 }
             }
@@ -373,13 +338,9 @@ let matchedAddress = '';
                 }
             }
 
-            // **التحقق مما إذا كان التحقق من GPS مفعلًا**
             if (ENABLE_GPS_VALIDATION) {
-                // عرض خطوة التحقق من الموقع
                 showStep(0);
             } else {
-                // تخطي خطوة التحقق من الموقع وعرض الخطوة 1 مباشرة
-                // إخفاء قسم التحقق من الموقع
                 document.getElementById('step0').style.display = 'none';
                 showStep(1);
             }
@@ -391,7 +352,6 @@ let matchedAddress = '';
             const gpsSpinner = document.getElementById('gpsSpinner');
             const gpsButton = document.getElementById('gpsButton');
 
-            // Show spinner and disable button
             gpsSpinner.style.display = 'block';
             gpsButton.disabled = true;
 
@@ -401,7 +361,6 @@ let matchedAddress = '';
             if (!navigator.geolocation) {
                 gpsStatus.classList.add('invalid');
                 gpsStatus.textContent = 'المتصفح الخاص بك لا يدعم خاصية تحديد الموقع الجغرافي.';
-                // Hide spinner and enable button
                 gpsSpinner.style.display = 'none';
                 gpsButton.disabled = false;
                 return;
@@ -421,22 +380,29 @@ let matchedAddress = '';
                         const lines = csvText.trim().split('\n');
 
                         let foundValid = false;
-for (let i = 0; i < lines.length; i++) {
-    const cols = lines[i].split(',');          // <-- use cols, not line variables
-    const lat  = parseFloat(cols[0]);
-    const lon  = parseFloat(cols[1]);
-    const addr = (cols[3] || '').trim();       // column D
-
-    const distance = getDistanceFromLatLonInKm(userLat, userLon, lat, lon);
-
-    if (distance <= RADIUS_KM) {
-        matchedAddress = addr || 'غير معروف'; // save it
-        sessionStorage.setItem('attendanceAddress', matchedAddress);
-        foundValid = true;
-        break;
-    }
-}
-
+                        let matchedAddr = 'غير معروف';
+                        
+                        for (let i = 0; i < lines.length; i++) {
+                            const cols = lines[i].split(',');
+                            if (cols.length < 4) continue;
+                            
+                            const latStr = cols[0]?.trim();
+                            const lonStr = cols[1]?.trim();
+                            const addr = cols[3]?.trim() || 'غير معروف';
+                            
+                            const lat = parseFloat(latStr);
+                            const lon = parseFloat(lonStr);
+                            
+                            if (isNaN(lat) || isNaN(lon)) continue;
+                            
+                            const distance = getDistanceFromLatLonInKm(userLat, userLon, lat, lon);
+                            if (distance <= RADIUS_KM) {
+                                foundValid = true;
+                                matchedAddr = addr;
+                                sessionStorage.setItem('attendanceAddress', matchedAddr);
+                                break;
+                            }
+                        }
 
                         if (foundValid) {
                             gpsStatus.classList.add('valid');
@@ -451,7 +417,6 @@ for (let i = 0; i < lines.length; i++) {
                         gpsStatus.classList.add('invalid');
                         gpsStatus.textContent = 'حدث خطأ أثناء التحقق من الموقع. حاول مرة أخرى لاحقاً.';
                     } finally {
-                        // Hide spinner and enable button
                         gpsSpinner.style.display = 'none';
                         gpsButton.disabled = false;
                     }
@@ -460,7 +425,6 @@ for (let i = 0; i < lines.length; i++) {
                     console.error('Geolocation error:', error);
                     gpsStatus.classList.add('invalid');
                     gpsStatus.textContent = 'تعذر الحصول على موقعك. الرجاء السماح بالوصول للموقع والمحاولة مرة أخرى.';
-                    // Hide spinner and enable button
                     gpsSpinner.style.display = 'none';
                     gpsButton.disabled = false;
                 }
@@ -468,7 +432,7 @@ for (let i = 0; i < lines.length; i++) {
         }
 
         function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-            const R = 6371; // radius of Earth in km
+            const R = 6371;
             const dLat = deg2rad(lat2 - lat1);
             const dLon = deg2rad(lon2 - lon1);
             const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -499,7 +463,6 @@ for (let i = 0; i < lines.length; i++) {
             const idSpinner = document.getElementById('idSpinner');
             const idButton = document.getElementById('idButton');
     
-            // Increment attempt count and show spinner
             attemptCount++;
             idSpinner.style.display = 'block';
             idButton.disabled = true;
@@ -515,51 +478,43 @@ for (let i = 0; i < lines.length; i++) {
                 const foundTrainee = trainees.find(t => t.id === inputID);
 
                 if (foundTrainee) {
-                    // **New Step: Verify Meeting Time**
                     const isMeetingValid = await verifyMeetingTime();
                     if (isMeetingValid.valid) {
                         traineeID = inputID;
                         setCookie('traineeSession', `${traineeID}_${Date.now()}`, SESSION_DURATION);
                         sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
                         showSuccess(idStatus, `تم التحقق: ${foundTrainee.name}`);
-                        // إذا كانت خطوة الـQR معطّلة، ننتقل مباشرة للنجاح (STEP 3)
-        if (!ENABLE_QR_VALIDATION) {
-            // خزن بيانات المتدرب والاجتماع
-          sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
-            const address = sessionStorage.getItem('attendanceAddress') || 'غير معروف';
-           const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
-         const meetingId = meeting?.meetingId || 'غير متوفر';
+                        
+                        if (!ENABLE_QR_VALIDATION) {
+                            sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
+                            const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
+                            const meetingId = meeting?.meetingId || 'غير متوفر';
+                            
+                            // Get address from session storage
+                            const address = sessionStorage.getItem('attendanceAddress') || 'غير معروف';
+                            
+                            document.getElementById('traineeDetails').innerHTML = `
+                                <strong>رقم المتدرب:</strong> ${foundTrainee.id}<br>
+                                <strong>الاسم:</strong> ${foundTrainee.name}<br>
+                                <strong>البرنامج:</strong> ${foundTrainee.program}<br>
+                                <strong>معرّف الاجتماع:</strong> ${meetingId}
+                            `;
+                            
+                            // Display the address
+                            document.getElementById('addressDetails').innerHTML = `
+                                <strong>تم تسجيل الحضور من الموقع:</strong> ${address}
+                            `;
 
-            // عرض معلومات المتدرب والاجتماع
-document.getElementById('traineeDetails').innerHTML = `
-    <strong>رقم المتدرب:</strong> ${trainee.id}<br>
-    <strong>الاسم:</strong> ${trainee.name}<br>
-    <strong>البرنامج:</strong> ${trainee.program}<br>
-    <strong>معرّف الاجتماع:</strong> ${meetingId}<br>
-    <strong>الموقع الذي سُجِّل منه الحضور:</strong> ${address}
-`;
+                            const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
+                            document.getElementById('timestamp').textContent = `التاريخ والوقت: ${timestamp}`;
 
-    // إضافة الطابع الزمني
-    const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
-    document.getElementById('timestamp').textContent = `التاريخ والوقت: ${timestamp}`;
-
-    // أرسل إلى Power Automate
-    await sendToPowerAutomate(foundTrainee);
-
-    // انتقل إلى شاشة النجاح
-    showStep(3);
-    return;
-}
-
-
-
-// خلاف ذلك، نفعل المسح كالمعتاد:
-setTimeout(() => showStep(2), 1000);
-
+                            await sendToPowerAutomate(foundTrainee);
+                            showStep(3);
+                            return;
+                        }
+                        setTimeout(() => showStep(2), 1000);
                     } else {
-                        // Show error message based on the meeting verification result
                         showError(isMeetingValid.message, idStatus);
-                        // Optionally, reset attempt count or handle as needed
                     }
                 } else {
                     showError('رقم المتدرب غير صحيح', idStatus);
@@ -568,7 +523,6 @@ setTimeout(() => showStep(2), 1000);
                 showError('خدمة التحقق غير متوفرة', idStatus);
                 console.error('خطأ في جلب البيانات:', error);
             } finally {
-                // Hide spinner and enable button
                 idSpinner.style.display = 'none';
                 idButton.disabled = false;
             }
@@ -589,19 +543,15 @@ setTimeout(() => showStep(2), 1000);
                 .filter(trainee => trainee.id && /^\d+$/.test(trainee.id));
         }
 
-        // **New Function: Get Current Time in Saudi Arabia**
         function getSaudiTime() {
             const now = new Date();
             const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-            const saudiOffset = 3 * 60 * 60 * 1000; // UTC+3
-            const saudiTime = new Date(utcTime + saudiOffset);
-            return saudiTime;
+            const saudiOffset = 3 * 60 * 60 * 1000;
+            return new Date(utcTime + saudiOffset);
         }
 
-        // **New Function: Verify Meeting Time**
         async function verifyMeetingTime() {
             const currentDate = getSaudiTime();
-            // For debugging: Log current date and time
             console.log('Current Date and Time (Saudi Arabia):', currentDate);
 
             try {
@@ -612,39 +562,28 @@ setTimeout(() => showStep(2), 1000);
                 const csvData = await response.text();
                 const meetings = processMeetingCSV(csvData);
 
-                // Iterate through each meeting to find a valid time window
                 for (let meeting of meetings) {
-                    // Trim all fields to remove any extra whitespace
                     const meetingDateStr = meeting.date.trim();
                     const startTimeStr = meeting.startClass.trim();
                     const endTimeStr = meeting.endClass.trim();
 
-                    // Parse meeting date
                     const [year, month, day] = meetingDateStr.split('-').map(part => parseInt(part, 10));
-
-                    // Parse start and end times
                     const [startHour, startMinute] = startTimeStr.split(':').map(part => parseInt(part, 10));
                     const [endHour, endMinute] = endTimeStr.split(':').map(part => parseInt(part, 10));
 
-                    // Construct Date objects in Saudi Arabia time
                     const startDateTime = new Date(year, month - 1, day, startHour, startMinute, 0);
                     const endDateTime = new Date(year, month - 1, day, endHour, endMinute, 0);
 
-                    // For debugging: Log each meeting's start and end times
                     console.log(`Meeting ID: ${meeting.meetingId}`);
                     console.log('Start DateTime (Saudi Arabia):', startDateTime);
                     console.log('End DateTime (Saudi Arabia):', endDateTime);
 
                     if (currentDate >= startDateTime && currentDate <= endDateTime) {
-                        // Meeting is active
-                        console.log('Active Meeting Found:', meeting);
-                        // Optionally, you can store the meeting ID if needed later
                         sessionStorage.setItem('currentMeeting', JSON.stringify(meeting));
                         return { valid: true };
                     }
                 }
 
-                // If no meeting matches the current time
                 return { valid: false, message: 'لا يوجد اجتماع نشط في الوقت الحالي. يرجى التحقق من جدول الاجتماعات.' };
             } catch (error) {
                 console.error('خطأ في التحقق من جدول الاجتماعات:', error);
@@ -655,14 +594,14 @@ setTimeout(() => showStep(2), 1000);
         function processMeetingCSV(csvData) {
             return csvData
                 .split('\n')
-                .slice(1) // Assuming first row is headers
+                .slice(1)
                 .map(row => {
                     const columns = row.split(',');
                     return {
                         meetingId: columns[0]?.replace(/['"]/g, '').trim(),
-                        date: columns[1]?.replace(/['"]/g, '').trim(),      // Expected format: 'YYYY-MM-DD'
-                        startClass: columns[2]?.replace(/['"]/g, '').trim(), // Expected format: 'HH:MM'
-                        endClass: columns[3]?.replace(/['"]/g, '').trim()    // Expected format: 'HH:MM'
+                        date: columns[1]?.replace(/['"]/g, '').trim(),
+                        startClass: columns[2]?.replace(/['"]/g, '').trim(),
+                        endClass: columns[3]?.replace(/['"]/g, '').trim()
                     };
                 })
                 .filter(meeting => meeting.meetingId && meeting.date && meeting.startClass && meeting.endClass);
@@ -724,27 +663,32 @@ setTimeout(() => showStep(2), 1000);
                 const isValid = await validateQRData(code.data);
                 if (isValid) {
                     const trainee = JSON.parse(sessionStorage.getItem('traineeDetails'));
-                                sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
-            const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
-            const meetingId = meeting?.meetingId || 'غير متوفر';
+                    const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
+                    const meetingId = meeting?.meetingId || 'غير متوفر';
+                    
                     document.getElementById('traineeDetails').innerHTML = `
                         <strong>رقم المتدرب:</strong> ${trainee.id}<br>
-                <strong>البرنامج:</strong> ${foundTrainee.program}<br>
-                <strong>معرّف الاجتماع:</strong> ${meetingId}
+                        <strong>الاسم:</strong> ${trainee.name}<br>
+                        <strong>البرنامج:</strong> ${trainee.program}<br>
+                        <strong>معرّف الاجتماع:</strong> ${meetingId}
                     `;
-                    // **Add Timestamp (Added)**
+                    
+                    // Get address from session storage
+                    const address = sessionStorage.getItem('attendanceAddress') || 'غير معروف';
+                    
+                    // Display the address
+                    document.getElementById('addressDetails').innerHTML = `
+                        <strong>تم تسجيل الحضور من الموقع:</strong> ${address}
+                    `;
+
                     const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
                     document.getElementById('timestamp').textContent = `التاريخ والوقت: ${timestamp}`;
 
                     await sendToPowerAutomate(trainee);
-
-                    // Move to Step 3 (Success)
                     showStep(3);
 
-                    // Play success sound
                     const successSound = document.getElementById('successSound');
                     successSound.play().catch(err => console.error('Audio play error:', err));
-
                     stopScanner();
 
                     setTimeout(() => {
@@ -757,14 +701,12 @@ setTimeout(() => showStep(2), 1000);
             requestAnimationFrame(scanFrame);
         }
 
-        // ================== STEP 2 HELPER: VALIDATE QR DATA ================== //
         async function validateQRData(data) {
             try {
                 const decoded = atob(data);
                 const payload = JSON.parse(decoded);
                 console.log('Decoded Payload:', payload);
 
-                // Ensure payload has 't', 's', and 'h'
                 if (!payload.t || !payload.s || !payload.h) {
                     console.error('Payload missing required fields:', payload);
                     return false;
@@ -809,35 +751,32 @@ setTimeout(() => showStep(2), 1000);
             return Math.abs(hash).toString(36).slice(-8).padStart(8, '0');
         }
 
-      // ================== STEP 3: SEND TO POWER AUTOMATE ================== //
-async function sendToPowerAutomate(trainee) {
-    try {
-        // Retrieve the current meeting from sessionStorage
-        const currentMeeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
-        
-        // Extract meetingId if available
-        const meetingId = currentMeeting ? currentMeeting.meetingId : null;
-        
-        // Prepare the payload with meetingId
-        const payload = {
-            id: trainee.id,
-            name: trainee.name,
-            program: trainee.program,
-            meetingId: meetingId, // Include Meeting ID
-            date: new Date().toISOString()
-        };
-        
-        console.log('Sending to Power Automate:', payload); // Debugging log
-        
-        await fetch(POWER_AUTOMATE_WEBHOOK, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-    } catch (error) {
-        console.error('خطأ في إرسال البيانات إلى Power Automate:', error);
-    }
-}
+        async function sendToPowerAutomate(trainee) {
+            try {
+                const currentMeeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
+                const meetingId = currentMeeting ? currentMeeting.meetingId : null;
+                const address = sessionStorage.getItem('attendanceAddress') || 'غير معروف';
+                
+                const payload = {
+                    id: trainee.id,
+                    name: trainee.name,
+                    program: trainee.program,
+                    meetingId: meetingId,
+                    address: address,
+                    date: new Date().toISOString()
+                };
+                
+                console.log('Sending to Power Automate:', payload);
+                
+                await fetch(POWER_AUTOMATE_WEBHOOK, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (error) {
+                console.error('خطأ في إرسال البيانات إلى Power Automate:', error);
+            }
+        }
 
         // ================== SESSION MANAGEMENT ================== //
         function isSessionActive(cookieValue) {
@@ -846,16 +785,13 @@ async function sendToPowerAutomate(trainee) {
         }
 
         function showCooldownScreen() {
-            // Hide all steps first
             document.querySelectorAll('.step').forEach(step => {
                 step.classList.remove('active-step');
             });
 
-            // Select the appropriate step to display the cooldown message
-            const cooldownStep = ENABLE_GPS_VALIDATION ? 'step1' : 'step1'; // Both map to step1
+            const cooldownStep = ENABLE_GPS_VALIDATION ? 'step1' : 'step1';
             const step = document.getElementById(cooldownStep);
             
-            // Overwrite step1 with cooldown UI
             step.innerHTML = `
                 <h2>نظام الحضور</h2>
                 <div class="cooldown-message">
@@ -864,11 +800,9 @@ async function sendToPowerAutomate(trainee) {
             `;
             step.classList.add('active-step');
 
-            // Show admin reset button only if adminMode = true
             if (adminMode) {
                 const adminBtn = document.getElementById('adminReset');
                 adminBtn.style.display = 'block';
-                // Append inside step1 so it appears below the message
                 step.appendChild(adminBtn);
             }
         }
@@ -885,7 +819,6 @@ async function sendToPowerAutomate(trainee) {
             });
 
             if (stepNumber === 0 && !ENABLE_GPS_VALIDATION) {
-                // تخطي خطوة التحقق من الموقع إذا كانت معطلة
                 showStep(1);
                 return;
             }
@@ -916,10 +849,8 @@ async function sendToPowerAutomate(trainee) {
             element.textContent = message;
         }
 
-        // ================== ADMIN RESET BUTTON FUNCTION ================== //
         function forceReset() {
             if (confirm('هل تريد إعادة تعيين الجلسة بالكامل؟')) {
-                // Clear the session cookie and session storage
                 document.cookie = 'traineeSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
                 sessionStorage.clear();
                 location.reload();
