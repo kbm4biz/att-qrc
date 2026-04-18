@@ -99,6 +99,18 @@
         button:active {
             transform: translateY(0);
         }
+        button:disabled,
+        #idInput:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        button:disabled:hover {
+            background: #2196F3;
+            transform: none;
+            box-shadow: none;
+        }
         h2 {
             margin: 20px 0;
             color: #333;
@@ -368,6 +380,7 @@
             <input type="text" id="idInput" placeholder="441234567" aria-label="رقم المتدرب">
             <div id="idSpinner" class="spinner"></div>
             <button onclick="verifyID()" id="idButton" aria-label="تحقق من الهوية">تحقق من الرقم التدريبي</button>
+            <div id="nfcTapStatus" class="status-bar" style="display:none"></div>
             <div id="idStatus" class="status-bar"></div>
             <div class="disclaimer">
                 .لن نقوم بتخزين أو تسجيل موقعك. يتم استخدام موقعك للتحقق فقط لتجنب سوء الاستخدام
@@ -428,7 +441,7 @@
         <button id="adminReset" onclick="forceReset()">إعادة تعيين الجلسة</button>
         
         <div class="footer">
-            نظام حضور المتدربين - الإصدار 4.0
+            نظام حضور المتدربين - الإصدار 5.0
         </div>
     </div>
 
@@ -437,12 +450,19 @@
 
     <script>
         // ================== CONFIGURATIONS ================== //
+        const ENABLE_GPS_VALIDATION = true; // Set to false to skip GPS verification
         const ENABLE_QR_VALIDATION = true; // Set to true to enable QR scanning
+        const ENABLE_NFC_TAP_VALIDATION = true; // Set to true to require an Ntag 424 DNA tap before the form opens
+        const NFC_REQUIRE_UID = false; // Set to true only if your NFC URL includes a plain uid parameter
+        const NFC_TAP_MAX_AGE_MS = 15 * 60 * 1000; // NFC tap must be used within 15 minutes
+        const NFC_E_PARAM_NAMES = ['e'];
+        const NFC_C_PARAM_NAMES = ['c'];
+        const NFC_UID_PARAM_NAMES = ['uid', 'u'];
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
         const RADIUS_KM = 0.2;
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
         const MEETING_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?gid=217527569&single=true&output=csv';
-        const POWER_AUTOMATE_WEBHOOK = 'https://prod-27.westeurope.logic.azure.com:443/workflows/a66bab290af54af2bfbec13c5dd17b81/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ggoyx8BPz6Cy1m3fFT5T7XuVQzVokJipPxxCerwxAvo';
+        const APPS_SCRIPT_LOG_URL = 'https://script.google.com/macros/s/AKfycbzQ_qHgTzYTZli-ChD_kU-pcpunvHn_PMv4uJ3C5Coj5DfQM0eswdBDYa_PsLrp4drr2Q/exec'; // Apps Script LOG endpoint
         const SECRET_PHRASE = 'SCHOOL_SECRET_2026';
         const SESSION_DURATION = 12 * 60 * 60 * 1000;
         const MAX_ATTEMPTS = 5;
@@ -457,7 +477,11 @@
         let adminMode = false;
         let requiredLocation = '';
         let locationData = null;
-        let attendanceRecorded = false; // Flag to prevent duplicate triggers
+        let attendanceRecorded = false; // Flag to prevent duplicate attendance logs
+        let nfcTapData = null;
+        let nfcTapError = '';
+        let gpsValidationPassed = false;
+        let qrValidationPassed = false;
 
         // ================== ON PAGE LOAD ================== //
         window.onload = async () => {
@@ -481,24 +505,162 @@
                 }
             }
 
-            // Preload location data
-            try {
-                const response = await fetch(LOCATION_SHEET_URL);
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                const csvText = await response.text();
-                locationData = processLocationCSV(csvText);
-                console.log('Location data loaded:', locationData);
-            } catch (error) {
-                console.error('Error loading location data:', error);
+            nfcTapData = loadNfcTapData();
+            applyNfcGateToForm();
+            if (!isNfcGateSatisfied()) {
+                showStep(1);
+                return;
             }
-            
+
+            // Preload location data only when GPS verification is enabled
+            if (ENABLE_GPS_VALIDATION) {
+                try {
+                    const response = await fetch(LOCATION_SHEET_URL);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    const csvText = await response.text();
+                    locationData = processLocationCSV(csvText);
+                    console.log('Location data loaded:', locationData);
+                } catch (error) {
+                    console.error('Error loading location data:', error);
+                }
+            }
+             
             showStep(1);
         };
 
+        // ================== NFC TAP GATE ================== //
+        function loadNfcTapData() {
+            nfcTapError = '';
+
+            if (!ENABLE_NFC_TAP_VALIDATION) {
+                return null;
+            }
+
+            const tapFromUrl = readNfcTapDataFromUrl();
+            if (tapFromUrl) {
+                sessionStorage.setItem('nfcTapData', JSON.stringify(tapFromUrl));
+                return tapFromUrl;
+            }
+
+            const storedTap = readSessionJson('nfcTapData', null);
+            if (storedTap && isNfcTapFresh(storedTap) && hasRequiredNfcData(storedTap)) {
+                return storedTap;
+            }
+
+            sessionStorage.removeItem('nfcTapData');
+            return null;
+        }
+
+        function readNfcTapDataFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const encryptedPayload = getFirstQueryParam(params, NFC_E_PARAM_NAMES);
+            const cmac = getFirstQueryParam(params, NFC_C_PARAM_NAMES);
+            const uid = getFirstQueryParam(params, NFC_UID_PARAM_NAMES);
+
+            if (!encryptedPayload && !cmac && !uid) {
+                return null;
+            }
+
+            const tapData = {
+                encryptedPayload,
+                cmac,
+                uid,
+                capturedAt: Date.now(),
+                capturedAtSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false }),
+                pageUrl: window.location.href,
+                rawQuery: window.location.search.replace(/^\?/, '')
+            };
+
+            if (!hasRequiredNfcData(tapData)) {
+                nfcTapError = NFC_REQUIRE_UID
+                    ? 'رابط NFC غير مكتمل. يجب أن يحتوي على e و c و uid.'
+                    : 'رابط NFC غير مكتمل. يجب أن يحتوي على e و c.';
+                return null;
+            }
+
+            return tapData;
+        }
+
+        function getFirstQueryParam(params, names) {
+            for (const name of names) {
+                const value = params.get(name);
+                if (value && value.trim()) {
+                    return value.trim();
+                }
+            }
+
+            return '';
+        }
+
+        function hasRequiredNfcData(tapData) {
+            return Boolean(
+                tapData &&
+                tapData.encryptedPayload &&
+                tapData.cmac &&
+                (!NFC_REQUIRE_UID || tapData.uid)
+            );
+        }
+
+        function isNfcTapFresh(tapData) {
+            const capturedAt = Number(tapData?.capturedAt);
+            return capturedAt && (Date.now() - capturedAt) <= NFC_TAP_MAX_AGE_MS;
+        }
+
+        function isNfcGateSatisfied() {
+            return !ENABLE_NFC_TAP_VALIDATION || Boolean(nfcTapData && isNfcTapFresh(nfcTapData));
+        }
+
+        function applyNfcGateToForm() {
+            const nfcStatus = document.getElementById('nfcTapStatus');
+            const idInput = document.getElementById('idInput');
+            const idButton = document.getElementById('idButton');
+
+            if (!nfcStatus || !idInput || !idButton) {
+                return;
+            }
+
+            if (!ENABLE_NFC_TAP_VALIDATION) {
+                nfcStatus.style.display = 'none';
+                idInput.disabled = false;
+                idButton.disabled = false;
+                return;
+            }
+
+            nfcStatus.style.display = 'block';
+
+            if (isNfcGateSatisfied()) {
+                nfcStatus.className = 'status-bar valid';
+                nfcStatus.textContent = 'تم فتح النموذج عبر بطاقة NFC. يمكنك الآن إدخال رقمك التدريبي.';
+                idInput.disabled = false;
+                idButton.disabled = false;
+            } else {
+                nfcStatus.className = 'status-bar invalid';
+                nfcStatus.textContent = nfcTapError || 'تسجيل الحضور متاح فقط بعد لمس بطاقة Ntag 424 DNA وفتح هذا الرابط منها.';
+                idInput.disabled = true;
+                idButton.disabled = true;
+            }
+        }
+
+        function readSessionJson(key, fallbackValue) {
+            try {
+                const rawValue = sessionStorage.getItem(key);
+                return rawValue ? JSON.parse(rawValue) : fallbackValue;
+            } catch (error) {
+                console.warn(`Unable to read ${key} from session storage:`, error);
+                return fallbackValue;
+            }
+        }
+
         // ================== STEP 1: VERIFY ID ================== //
         async function verifyID() {
+            if (!isNfcGateSatisfied()) {
+                nfcTapData = loadNfcTapData();
+                applyNfcGateToForm();
+                return;
+            }
+
             if (attemptCount >= MAX_ATTEMPTS) {
                 showError('تم تجاوز عدد المحاولات. يرجى المحاولة مرة أخرى', document.getElementById('idStatus'));
                 return;
@@ -540,9 +702,7 @@
                         requiredLocation = foundTrainee.requiredLocation || '';
                         console.log('Required location:', requiredLocation);
                         
-                        // Move to location verification
-                        showStep(2);
-                        verifyLocation();
+                        proceedAfterIdVerification();
                     } else {
                         showError(isMeetingValid.message, idStatus);
                     }
@@ -554,10 +714,43 @@
                 console.error('خطأ في جلب البيانات:', error);
             } finally {
                 idSpinner.style.display = 'none';
-                idButton.disabled = false;
+                if (ENABLE_NFC_TAP_VALIDATION && !isNfcGateSatisfied()) {
+                    applyNfcGateToForm();
+                } else {
+                    idButton.disabled = false;
+                }
             }
         }
         
+        function proceedAfterIdVerification() {
+            if (!isNfcGateSatisfied()) {
+                nfcTapData = loadNfcTapData();
+                applyNfcGateToForm();
+                showStep(1);
+                return;
+            }
+
+            if (ENABLE_GPS_VALIDATION) {
+                showStep(2);
+                verifyLocation();
+                return;
+            }
+
+            gpsValidationPassed = false;
+            sessionStorage.setItem('attendanceAddress', 'تحقق الموقع غير مفعل');
+            proceedAfterLocationVerification();
+        }
+
+        function proceedAfterLocationVerification() {
+            if (ENABLE_QR_VALIDATION) {
+                showStep(3);
+                return;
+            }
+
+            qrValidationPassed = false;
+            completeAttendance();
+        }
+
         // ================== STEP 2: LOCATION VERIFICATION ================== //
         async function verifyLocation() {
             const locationStatus = document.getElementById('locationStatus');
@@ -615,15 +808,11 @@
                             <strong>المسافة:</strong> ${nearestLocation.distance.toFixed(2)} كم
                         `;
                         locationStatus.classList.add('valid');
+                        gpsValidationPassed = true;
                         
                         // Proceed to next step
                         setTimeout(() => {
-                            if (ENABLE_QR_VALIDATION) {
-                                showStep(3);
-                            } else {
-                                // QR is disabled - directly complete attendance
-                                completeAttendance();
-                            }
+                            proceedAfterLocationVerification();
                         }, 2000);
                     } catch (error) {
                         console.error('Error:', error);
@@ -707,9 +896,14 @@
         
         // ================== COMPLETE ATTENDANCE ================== //
         async function completeAttendance() {
-            // Prevent duplicate Power Automate triggers
+            if (!areEnabledGatesSatisfied()) {
+                console.warn('Attendance blocked because one or more enabled verification gates are not complete.');
+                return;
+            }
+
+            // Prevent duplicate attendance logs
             if (attendanceRecorded) {
-                console.log('Attendance already recorded. Skipping Power Automate trigger.');
+                console.log('Attendance already recorded. Skipping duplicate log.');
                 return;
             }
             
@@ -748,9 +942,9 @@
             const successSound = document.getElementById('successSound');
             successSound.play().catch(err => console.error('Audio play error:', err));
             
-            // Send to Power Automate AFTER showing success screen
-            // This ensures it's only triggered when attendance is successfully recorded
-            await sendToPowerAutomate(trainee);
+            // Log attendance AFTER showing success screen.
+            // This keeps the student experience responsive even if logging is slow.
+            await sendAttendanceLog(trainee);
             
             // Redirect after delay
             setTimeout(() => {
@@ -788,7 +982,12 @@
             clearExpiredSession();
             sessionStorage.removeItem('attendanceAddress');
             sessionStorage.removeItem('currentMeeting');
+            nfcTapData = loadNfcTapData();
+            gpsValidationPassed = false;
+            qrValidationPassed = false;
+            attendanceRecorded = false;
             document.getElementById('idInput').value = '';
+            applyNfcGateToForm();
             
             // Go to beginning
             showStep(1);
@@ -925,7 +1124,10 @@
                 const isValid = await validateQRData(code.data);
                 if (isValid) {
                     // QR is valid - complete attendance
+                    qrValidationPassed = true;
+                    stopScanner();
                     completeAttendance();
+                    return;
                 } else {
                     showError('كود غير صحيح', document.getElementById('scanStatus'));
                 }
@@ -977,30 +1179,93 @@
             return Math.abs(hash).toString(36).slice(-8).padStart(8, '0');
         }
 
-        async function sendToPowerAutomate(trainee) {
+        function buildAttendancePayload(trainee) {
+            const currentMeeting = readSessionJson('currentMeeting', null);
+            const meetingId = currentMeeting ? currentMeeting.meetingId : null;
+            const address = sessionStorage.getItem('attendanceAddress') || 'غير معروف';
+            const attendanceId = window.crypto?.randomUUID
+                ? window.crypto.randomUUID()
+                : `${trainee.id}-${Date.now()}`;
+
+            return {
+                attendanceId,
+                id: trainee.id,
+                name: trainee.name,
+                program: trainee.program,
+                meetingId,
+                address,
+                requiredLocation,
+                clientTimestampIso: new Date().toISOString(),
+                clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false }),
+                verification: {
+                    gpsEnabled: ENABLE_GPS_VALIDATION,
+                    gpsPassed: ENABLE_GPS_VALIDATION ? gpsValidationPassed : false,
+                    gpsStatus: getGateStatus(ENABLE_GPS_VALIDATION, gpsValidationPassed),
+                    qrEnabled: ENABLE_QR_VALIDATION,
+                    qrPassed: ENABLE_QR_VALIDATION ? qrValidationPassed : false,
+                    qrStatus: getGateStatus(ENABLE_QR_VALIDATION, qrValidationPassed),
+                    nfcEnabled: ENABLE_NFC_TAP_VALIDATION,
+                    nfcPassed: ENABLE_NFC_TAP_VALIDATION ? isNfcGateSatisfied() : false,
+                    nfcStatus: getGateStatus(ENABLE_NFC_TAP_VALIDATION, isNfcGateSatisfied())
+                },
+                nfc: nfcTapData ? {
+                    uid: nfcTapData.uid || '',
+                    e: nfcTapData.encryptedPayload || '',
+                    c: nfcTapData.cmac || '',
+                    capturedAt: nfcTapData.capturedAt || '',
+                    capturedAtSaudi: nfcTapData.capturedAtSaudi || '',
+                    pageUrl: nfcTapData.pageUrl || '',
+                    rawQuery: nfcTapData.rawQuery || ''
+                } : null,
+                attemptCount,
+                pageUrl: window.location.href,
+                userAgent: navigator.userAgent,
+                language: navigator.language
+            };
+        }
+
+        function getGateStatus(enabled, passed) {
+            if (!enabled) {
+                return 'disabled';
+            }
+
+            return passed ? 'passed' : 'not_passed';
+        }
+
+        function areEnabledGatesSatisfied() {
+            return isNfcGateSatisfied() &&
+                (!ENABLE_GPS_VALIDATION || gpsValidationPassed) &&
+                (!ENABLE_QR_VALIDATION || qrValidationPassed);
+        }
+
+        async function sendAttendanceLog(trainee) {
             try {
-                const currentMeeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
-                const meetingId = currentMeeting ? currentMeeting.meetingId : null;
-                const address = sessionStorage.getItem('attendanceAddress') || 'غير معروف';
-                
-                const payload = {
-                    id: trainee.id,
-                    name: trainee.name,
-                    program: trainee.program,
-                    meetingId: meetingId,
-                    address: address,
-                    date: new Date().toISOString()
-                };
-                
-                console.log('Sending to Power Automate:', payload);
-                
-                await fetch(POWER_AUTOMATE_WEBHOOK, {
+                const payload = buildAttendancePayload(trainee);
+                console.log('Logging attendance:', payload);
+
+                if (window.google?.script?.run) {
+                    await new Promise((resolve, reject) => {
+                        google.script.run
+                            .withSuccessHandler(resolve)
+                            .withFailureHandler(reject)
+                            .logAttendance(payload);
+                    });
+                    return;
+                }
+
+                if (!APPS_SCRIPT_LOG_URL) {
+                    console.warn('APPS_SCRIPT_LOG_URL is empty. Attendance was accepted, but no LOG sheet entry was sent.');
+                    return;
+                }
+
+                await fetch(APPS_SCRIPT_LOG_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
             } catch (error) {
-                console.error('خطأ في إرسال البيانات إلى Power Automate:', error);
+                console.error('خطأ في تسجيل بيانات الحضور:', error);
             }
         }
 
