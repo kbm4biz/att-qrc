@@ -453,7 +453,7 @@
         const ENABLE_GPS_VALIDATION = false; // Set to false to skip GPS verification
         const ENABLE_QR_VALIDATION = false; // Set to true to enable QR scanning
         const ENABLE_NFC_TAP_VALIDATION = true; // Set to true to require an Ntag 424 DNA tap before the form opens
-        const NFC_TAP_MAX_AGE_MS = 8 * 1000; // NFC tap must be used to start attendance within 8 seconds
+        const NFC_TAP_MAX_AGE_MS = 20 * 1000; // NFC tap must be used to start attendance within 20 seconds
         const NFC_UID_PARAM_NAMES = ['uid', 'u'];
         const NFC_COUNTER_PARAM_NAMES = ['ctr', 'counter', 'cnt'];
         const NFC_MAC_PARAM_NAMES = ['c', 'cmac', 'mac'];
@@ -482,6 +482,7 @@
         let nfcTapUsedForThisAttempt = false;
         let nfcReservationAccepted = false;
         let nfcReservationPending = false;
+        let nfcReservationId = '';
         let gpsValidationPassed = false;
         let qrValidationPassed = false;
 
@@ -559,12 +560,14 @@
 
             const tapFromUrl = readNfcTapDataFromUrl();
             if (tapFromUrl) {
+                ensureNfcReservationId(tapFromUrl);
                 sessionStorage.setItem('nfcTapData', JSON.stringify(tapFromUrl));
                 return tapFromUrl;
             }
 
             const storedTap = readSessionJson('nfcTapData', null);
             if (storedTap && isNfcTapFresh(storedTap) && hasRequiredNfcData(storedTap)) {
+                ensureNfcReservationId(storedTap);
                 return storedTap;
             }
 
@@ -586,6 +589,7 @@
                 uid,
                 counter,
                 cmac,
+                reservationId: createNfcReservationId(),
                 capturedAt: Date.now(),
                 capturedAtSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false }),
                 pageUrl: window.location.href,
@@ -613,6 +617,26 @@
 
         function hasRequiredNfcData(tapData) {
             return Boolean(tapData && tapData.uid && tapData.counter && tapData.cmac);
+        }
+
+        function createNfcReservationId() {
+            return window.crypto?.randomUUID
+                ? window.crypto.randomUUID()
+                : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        }
+
+        function ensureNfcReservationId(tapData) {
+            if (!tapData) {
+                return '';
+            }
+
+            if (!tapData.reservationId) {
+                tapData.reservationId = createNfcReservationId();
+                sessionStorage.setItem('nfcTapData', JSON.stringify(tapData));
+            }
+
+            nfcReservationId = tapData.reservationId;
+            return nfcReservationId;
         }
 
         function getNfcTokenKey(tapData) {
@@ -673,7 +697,7 @@
 
             if (isNfcGateSatisfied()) {
                 nfcStatus.className = 'status-bar valid';
-                nfcStatus.textContent = 'تم فتح النموذج عبر بطاقة NFC. ابدأ تسجيل الحضور خلال 8 ثواني.';
+                nfcStatus.textContent = 'تم فتح النموذج عبر بطاقة NFC. ابدأ تسجيل الحضور خلال 20 ثانية.';
                 idInput.disabled = false;
                 idButton.disabled = false;
             } else {
@@ -697,6 +721,7 @@
             }
 
             nfcReservationPending = true;
+            ensureNfcReservationId(nfcTapData);
             applyNfcGateToForm();
 
             try {
@@ -705,6 +730,7 @@
                         uid: nfcTapData.uid || '',
                         counter: nfcTapData.counter || '',
                         c: nfcTapData.cmac || '',
+                        reservationId: nfcReservationId || nfcTapData.reservationId || '',
                         capturedAt: nfcTapData.capturedAt || '',
                         capturedAtSaudi: nfcTapData.capturedAtSaudi || '',
                         pageUrl: nfcTapData.pageUrl || '',
@@ -737,6 +763,10 @@
         function getNfcReserveErrorMessage(result) {
             if (result?.code === 'NFC_DUPLICATE') {
                 return 'رابط NFC غير صالح أو تم استخدامه. المس البطاقة مرة أخرى.';
+            }
+
+            if (result?.code === 'NFC_NOT_RESERVED') {
+                return 'رابط NFC غير صالح أو لم يتم تثبيته. المس البطاقة مرة أخرى.';
             }
 
             if (result?.code === 'NFC_MISSING') {
@@ -1053,6 +1083,13 @@
             const meeting = JSON.parse(sessionStorage.getItem('currentMeeting'));
             const meetingId = meeting?.meetingId || 'غير متوفر';
             const address = sessionStorage.getItem('attendanceAddress') || 'غير معروف';
+
+            const logAccepted = await sendAttendanceLog(trainee);
+            if (!logAccepted) {
+                attendanceRecorded = false;
+                rejectNfcAttendance(nfcTapError || 'رابط NFC غير صالح أو تم استخدامه. المس البطاقة مرة أخرى.');
+                return;
+            }
             
             // Display trainee details
             document.getElementById('traineeDetails').innerHTML = `
@@ -1080,15 +1117,18 @@
             // Play success sound
             const successSound = document.getElementById('successSound');
             successSound.play().catch(err => console.error('Audio play error:', err));
-            
-            // Log attendance AFTER showing success screen.
-            // This keeps the student experience responsive even if logging is slow.
-            await sendAttendanceLog(trainee);
-            
             // Redirect after delay
             setTimeout(() => {
                 window.location.href = REDIRECT_URL;
             }, REDIRECT_DELAY);
+        }
+
+        function rejectNfcAttendance(message) {
+            nfcTapError = message;
+            nfcReservationAccepted = false;
+            nfcReservationPending = false;
+            showStep(1);
+            applyNfcGateToForm();
         }
         
         // Show location error and reset form
@@ -1125,6 +1165,7 @@
             nfcTapUsedForThisAttempt = false;
             nfcReservationAccepted = false;
             nfcReservationPending = false;
+            nfcReservationId = '';
             gpsValidationPassed = false;
             qrValidationPassed = false;
             attendanceRecorded = false;
@@ -1354,6 +1395,7 @@
                     uid: nfcTapData.uid || '',
                     counter: nfcTapData.counter || '',
                     c: nfcTapData.cmac || '',
+                    reservationId: nfcReservationId || nfcTapData.reservationId || '',
                     capturedAt: nfcTapData.capturedAt || '',
                     capturedAtSaudi: nfcTapData.capturedAtSaudi || '',
                     pageUrl: nfcTapData.pageUrl || '',
@@ -1392,20 +1434,24 @@
                             .withFailureHandler(reject)
                             .logAttendance(payload);
                     });
-                    return;
+                    return true;
                 }
 
                 if (!APPS_SCRIPT_LOG_URL) {
-                    console.warn('APPS_SCRIPT_LOG_URL is empty. Attendance was accepted, but no LOG sheet entry was sent.');
-                    return;
+                    console.warn('APPS_SCRIPT_LOG_URL is empty. Attendance was rejected because no LOG sheet entry can be sent.');
+                    nfcTapError = 'تعذر تسجيل الحضور. رابط السجل غير مضبوط.';
+                    return false;
                 }
 
                 const result = await callAppsScriptJsonp('complete', payload);
                 if (!result?.ok) {
+                    nfcTapError = getNfcReserveErrorMessage(result);
                     throw new Error(result?.error || 'Attendance log was rejected.');
                 }
+                return true;
             } catch (error) {
                 console.error('خطأ في تسجيل بيانات الحضور:', error);
+                return false;
             }
         }
 
