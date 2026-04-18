@@ -480,6 +480,8 @@
         let nfcTapData = null;
         let nfcTapError = '';
         let nfcTapUsedForThisAttempt = false;
+        let nfcReservationAccepted = false;
+        let nfcReservationPending = false;
         let gpsValidationPassed = false;
         let qrValidationPassed = false;
 
@@ -506,10 +508,22 @@
             }
 
             nfcTapData = loadNfcTapData();
+            if (ENABLE_NFC_TAP_VALIDATION && nfcTapData) {
+                applyNfcGateToForm();
+                await reserveNfcTapToken();
+            }
             applyNfcGateToForm();
             if (!isNfcGateSatisfied()) {
                 showStep(1);
                 return;
+            }
+
+            if (ENABLE_NFC_TAP_VALIDATION) {
+                setTimeout(() => {
+                    if (!nfcTapUsedForThisAttempt) {
+                        applyNfcGateToForm();
+                    }
+                }, NFC_TAP_MAX_AGE_MS + 250);
             }
 
             // Preload location data only when GPS verification is enabled
@@ -603,7 +617,7 @@
 
         function isNfcGateSatisfied() {
             return !ENABLE_NFC_TAP_VALIDATION ||
-                Boolean(nfcTapData && (nfcTapUsedForThisAttempt || isNfcTapFresh(nfcTapData)));
+                Boolean(nfcTapData && nfcReservationAccepted && (nfcTapUsedForThisAttempt || isNfcTapFresh(nfcTapData)));
         }
 
         function applyNfcGateToForm() {
@@ -624,6 +638,14 @@
 
             nfcStatus.style.display = 'block';
 
+            if (nfcReservationPending) {
+                nfcStatus.className = 'status-bar';
+                nfcStatus.textContent = 'جاري تثبيت رابط NFC لهذا الجهاز...';
+                idInput.disabled = true;
+                idButton.disabled = true;
+                return;
+            }
+
             if (isNfcGateSatisfied()) {
                 nfcStatus.className = 'status-bar valid';
                 nfcStatus.textContent = 'تم فتح النموذج عبر بطاقة NFC. ابدأ تسجيل الحضور خلال 8 ثواني.';
@@ -635,6 +657,87 @@
                 idInput.disabled = true;
                 idButton.disabled = true;
             }
+        }
+
+        async function reserveNfcTapToken() {
+            if (!ENABLE_NFC_TAP_VALIDATION || !nfcTapData) {
+                nfcReservationAccepted = true;
+                return true;
+            }
+
+            if (!APPS_SCRIPT_LOG_URL) {
+                nfcTapError = 'رابط تسجيل NFC غير مضبوط.';
+                nfcReservationAccepted = false;
+                return false;
+            }
+
+            nfcReservationPending = true;
+            applyNfcGateToForm();
+
+            try {
+                const payload = {
+                    nfc: {
+                        uid: nfcTapData.uid || '',
+                        counter: nfcTapData.counter || '',
+                        c: nfcTapData.cmac || '',
+                        capturedAt: nfcTapData.capturedAt || '',
+                        capturedAtSaudi: nfcTapData.capturedAtSaudi || '',
+                        pageUrl: nfcTapData.pageUrl || '',
+                        rawQuery: nfcTapData.rawQuery || ''
+                    },
+                    pageUrl: window.location.href,
+                    userAgent: navigator.userAgent,
+                    clientTimestampIso: new Date().toISOString(),
+                    clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false })
+                };
+                const result = await callAppsScriptJsonp('reserve', payload);
+                nfcReservationAccepted = Boolean(result?.ok);
+                nfcTapError = nfcReservationAccepted
+                    ? ''
+                    : (result?.error || 'تم استخدام رابط NFC هذا أو فتحه مسبقاً. المس البطاقة مرة أخرى.');
+                return nfcReservationAccepted;
+            } catch (error) {
+                console.error('NFC reservation error:', error);
+                nfcReservationAccepted = false;
+                nfcTapError = 'تعذر تثبيت رابط NFC. حاول لمس البطاقة مرة أخرى.';
+                return false;
+            } finally {
+                nfcReservationPending = false;
+            }
+        }
+
+        function callAppsScriptJsonp(action, payload) {
+            return new Promise((resolve, reject) => {
+                const callbackName = `nfcCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+                const script = document.createElement('script');
+                const timeoutId = setTimeout(() => {
+                    cleanup();
+                    reject(new Error('Apps Script request timed out'));
+                }, 15000);
+
+                function cleanup() {
+                    clearTimeout(timeoutId);
+                    delete window[callbackName];
+                    script.remove();
+                }
+
+                window[callbackName] = (response) => {
+                    cleanup();
+                    resolve(response);
+                };
+
+                const url = new URL(APPS_SCRIPT_LOG_URL);
+                url.searchParams.set('action', action);
+                url.searchParams.set('callback', callbackName);
+                url.searchParams.set('payload', JSON.stringify(payload));
+
+                script.onerror = () => {
+                    cleanup();
+                    reject(new Error('Unable to load Apps Script response'));
+                };
+                script.src = url.toString();
+                document.body.appendChild(script);
+            });
         }
 
         function readSessionJson(key, fallbackValue) {
@@ -980,6 +1083,8 @@
             sessionStorage.removeItem('currentMeeting');
             nfcTapData = loadNfcTapData();
             nfcTapUsedForThisAttempt = false;
+            nfcReservationAccepted = false;
+            nfcReservationPending = false;
             gpsValidationPassed = false;
             qrValidationPassed = false;
             attendanceRecorded = false;
