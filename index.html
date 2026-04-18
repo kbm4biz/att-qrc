@@ -852,7 +852,7 @@
                 const timeoutId = setTimeout(() => {
                     cleanup();
                     reject(new Error('Apps Script request timed out'));
-                }, 15000);
+                }, 45000);
 
                 function cleanup() {
                     clearTimeout(timeoutId);
@@ -1449,17 +1449,13 @@
                 meetingId,
                 address,
                 requiredLocation,
-                clientTimestampIso: new Date().toISOString(),
                 clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false }),
                 verification: {
                     gpsEnabled: ENABLE_GPS_VALIDATION,
-                    gpsPassed: ENABLE_GPS_VALIDATION ? gpsValidationPassed : false,
                     gpsStatus: getGateStatus(ENABLE_GPS_VALIDATION, gpsValidationPassed),
                     qrEnabled: ENABLE_QR_VALIDATION,
-                    qrPassed: ENABLE_QR_VALIDATION ? qrValidationPassed : false,
                     qrStatus: getGateStatus(ENABLE_QR_VALIDATION, qrValidationPassed),
                     nfcEnabled: ENABLE_NFC_TAP_VALIDATION,
-                    nfcPassed: ENABLE_NFC_TAP_VALIDATION ? isNfcGateSatisfied() : false,
                     nfcStatus: getGateStatus(ENABLE_NFC_TAP_VALIDATION, isNfcGateSatisfied())
                 },
                 nfc: nfcTapData ? {
@@ -1467,15 +1463,8 @@
                     counter: nfcTapData.counter || '',
                     c: nfcTapData.cmac || '',
                     reservationId: nfcReservationId || nfcTapData.reservationId || '',
-                    capturedAt: nfcTapData.capturedAt || '',
-                    capturedAtSaudi: nfcTapData.capturedAtSaudi || '',
-                    pageUrl: nfcTapData.pageUrl || '',
-                    rawQuery: nfcTapData.rawQuery || ''
-                } : null,
-                attemptCount,
-                pageUrl: window.location.href,
-                userAgent: navigator.userAgent,
-                language: navigator.language
+                    capturedAtSaudi: nfcTapData.capturedAtSaudi || ''
+                } : null
             };
         }
 
@@ -1522,6 +1511,9 @@
                 return true;
             } catch (error) {
                 console.error('خطأ في تسجيل بيانات الحضور:', error);
+                if (!nfcTapError) {
+                    nfcTapError = 'تعذر تسجيل الحضور. حاول مرة أخرى أو المس البطاقة من جديد.';
+                }
                 return false;
             }
         }
