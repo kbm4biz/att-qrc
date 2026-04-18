@@ -450,11 +450,13 @@
 
     <script>
         // ================== CONFIGURATIONS ================== //
-        const ENABLE_GPS_VALIDATION = false; // Set to false to skip GPS verification
-        const ENABLE_QR_VALIDATION = false; // Set to true to enable QR scanning
+        const ENABLE_GPS_VALIDATION = true; // Set to false to skip GPS verification
+        const ENABLE_QR_VALIDATION = true; // Set to true to enable QR scanning
         const ENABLE_NFC_TAP_VALIDATION = true; // Set to true to require an Ntag 424 DNA tap before the form opens
-        const NFC_TAP_MAX_AGE_MS = 15 * 60 * 1000; // NFC tap must be used within 15 minutes
+        const NFC_TAP_MAX_AGE_MS = 8 * 1000; // NFC tap must be used to start attendance within 8 seconds
         const NFC_UID_PARAM_NAMES = ['uid', 'u'];
+        const NFC_COUNTER_PARAM_NAMES = ['ctr', 'counter', 'cnt'];
+        const NFC_MAC_PARAM_NAMES = ['c', 'cmac', 'mac'];
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
         const RADIUS_KM = 0.2;
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
@@ -477,6 +479,7 @@
         let attendanceRecorded = false; // Flag to prevent duplicate attendance logs
         let nfcTapData = null;
         let nfcTapError = '';
+        let nfcTapUsedForThisAttempt = false;
         let gpsValidationPassed = false;
         let qrValidationPassed = false;
 
@@ -553,13 +556,17 @@
         function readNfcTapDataFromUrl() {
             const params = new URLSearchParams(window.location.search);
             const uid = getFirstQueryParam(params, NFC_UID_PARAM_NAMES);
+            const counter = getFirstQueryParam(params, NFC_COUNTER_PARAM_NAMES);
+            const cmac = getFirstQueryParam(params, NFC_MAC_PARAM_NAMES);
 
-            if (!uid) {
+            if (!uid && !counter && !cmac) {
                 return null;
             }
 
             const tapData = {
                 uid,
+                counter,
+                cmac,
                 capturedAt: Date.now(),
                 capturedAtSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false }),
                 pageUrl: window.location.href,
@@ -567,7 +574,7 @@
             };
 
             if (!hasRequiredNfcData(tapData)) {
-                nfcTapError = 'رابط NFC غير مكتمل. يجب أن يحتوي على uid.';
+                nfcTapError = 'رابط NFC غير مكتمل. يجب أن يحتوي على uid و ctr و c.';
                 return null;
             }
 
@@ -586,7 +593,7 @@
         }
 
         function hasRequiredNfcData(tapData) {
-            return Boolean(tapData && tapData.uid);
+            return Boolean(tapData && tapData.uid && tapData.counter && tapData.cmac);
         }
 
         function isNfcTapFresh(tapData) {
@@ -595,7 +602,8 @@
         }
 
         function isNfcGateSatisfied() {
-            return !ENABLE_NFC_TAP_VALIDATION || Boolean(nfcTapData && isNfcTapFresh(nfcTapData));
+            return !ENABLE_NFC_TAP_VALIDATION ||
+                Boolean(nfcTapData && (nfcTapUsedForThisAttempt || isNfcTapFresh(nfcTapData)));
         }
 
         function applyNfcGateToForm() {
@@ -618,12 +626,12 @@
 
             if (isNfcGateSatisfied()) {
                 nfcStatus.className = 'status-bar valid';
-                nfcStatus.textContent = 'تم فتح النموذج عبر بطاقة NFC. يمكنك الآن إدخال رقمك التدريبي.';
+                nfcStatus.textContent = 'تم فتح النموذج عبر بطاقة NFC. ابدأ تسجيل الحضور خلال 8 ثواني.';
                 idInput.disabled = false;
                 idButton.disabled = false;
             } else {
                 nfcStatus.className = 'status-bar invalid';
-                nfcStatus.textContent = nfcTapError || 'تسجيل الحضور متاح فقط بعد لمس بطاقة Ntag 424 DNA وفتح هذا الرابط منها.';
+                nfcStatus.textContent = nfcTapError || 'تسجيل الحضور متاح فقط بعد لمس بطاقة Ntag 424 DNA برابط uid و ctr و c.';
                 idInput.disabled = true;
                 idButton.disabled = true;
             }
@@ -657,6 +665,8 @@
                 showError('يرجى إدخال رقم المتدرب', document.getElementById('idStatus'));
                 return;
             }
+
+            nfcTapUsedForThisAttempt = true;
 
             const idStatus = document.getElementById('idStatus');
             const idSpinner = document.getElementById('idSpinner');
@@ -969,6 +979,7 @@
             sessionStorage.removeItem('attendanceAddress');
             sessionStorage.removeItem('currentMeeting');
             nfcTapData = loadNfcTapData();
+            nfcTapUsedForThisAttempt = false;
             gpsValidationPassed = false;
             qrValidationPassed = false;
             attendanceRecorded = false;
@@ -1196,6 +1207,8 @@
                 },
                 nfc: nfcTapData ? {
                     uid: nfcTapData.uid || '',
+                    counter: nfcTapData.counter || '',
+                    c: nfcTapData.cmac || '',
                     capturedAt: nfcTapData.capturedAt || '',
                     capturedAtSaudi: nfcTapData.capturedAtSaudi || '',
                     pageUrl: nfcTapData.pageUrl || '',
