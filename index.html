@@ -519,6 +519,8 @@
         let nfcReservationId = '';
         let nfcCountdownTimer = null;
         let nfcReservePromise = null;
+        let nfcStartPromise = null;
+        let nfcTokenStarted = false;
         let gpsValidationPassed = false;
         let qrValidationPassed = false;
 
@@ -692,7 +694,7 @@
 
         function isNfcGateSatisfied() {
             return !ENABLE_NFC_TAP_VALIDATION ||
-                Boolean(nfcTapData && nfcReservationAccepted && (nfcTapUsedForThisAttempt || isNfcTapFresh(nfcTapData)));
+                Boolean(nfcTapData && nfcReservationAccepted && (nfcTokenStarted || nfcTapUsedForThisAttempt || isNfcTapFresh(nfcTapData)));
         }
 
         function applyNfcGateToForm() {
@@ -737,6 +739,12 @@
 
         function renderNfcReadyStatus(element) {
             element.className = 'status-bar valid';
+            if (nfcTokenStarted || nfcTapUsedForThisAttempt) {
+                clearNfcCountdownTimer();
+                element.innerHTML = '<strong>استمر بإكمال التسجيل</strong>';
+                return;
+            }
+
             element.innerHTML = `
                 <strong>النموذج جاهز الآن</strong>
                 <div class="nfc-countdown" aria-hidden="true">
@@ -852,6 +860,77 @@
             }
         }
 
+        async function startNfcAttendanceAttempt() {
+            if (!ENABLE_NFC_TAP_VALIDATION) {
+                return true;
+            }
+
+            if (!nfcTapData) {
+                nfcTapError = 'المس بطاقة الحضور للبدء.';
+                return false;
+            }
+
+            if (nfcTokenStarted) {
+                return true;
+            }
+
+            if (nfcStartPromise) {
+                return nfcStartPromise;
+            }
+
+            if (!nfcReservationAccepted) {
+                const reserved = await reserveNfcTapToken();
+                if (!reserved) {
+                    return false;
+                }
+            }
+
+            if (!APPS_SCRIPT_LOG_URL) {
+                nfcTapError = 'تعذر تسجيل الحضور. حاول مرة أخرى.';
+                return false;
+            }
+
+            ensureNfcReservationId(nfcTapData);
+            nfcStartPromise = (async () => {
+                const payload = {
+                    nfc: {
+                        uid: nfcTapData.uid || '',
+                        counter: nfcTapData.counter || '',
+                        c: nfcTapData.cmac || '',
+                        reservationId: nfcReservationId || nfcTapData.reservationId || '',
+                        capturedAt: nfcTapData.capturedAt || '',
+                        capturedAtSaudi: nfcTapData.capturedAtSaudi || '',
+                        pageUrl: nfcTapData.pageUrl || '',
+                        rawQuery: nfcTapData.rawQuery || ''
+                    },
+                    pageUrl: window.location.href,
+                    userAgent: navigator.userAgent,
+                    clientTimestampIso: new Date().toISOString(),
+                    clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false })
+                };
+                const result = await callAppsScriptJsonp('start', payload);
+                nfcTokenStarted = Boolean(result?.ok);
+                if (!nfcTokenStarted) {
+                    nfcReservationAccepted = false;
+                }
+                nfcTapError = nfcTokenStarted
+                    ? ''
+                    : getNfcReserveErrorMessage(result);
+                return nfcTokenStarted;
+            })();
+
+            try {
+                return await nfcStartPromise;
+            } catch (error) {
+                console.error('NFC start error:', error);
+                nfcReservationAccepted = false;
+                nfcTapError = 'انتهت مهلة البدء. المس البطاقة مرة أخرى.';
+                return false;
+            } finally {
+                nfcStartPromise = null;
+            }
+        }
+
         function getNfcReserveErrorMessage(result) {
             if (result?.code === 'NFC_DUPLICATE') {
                 return 'انتهت صلاحية الرابط أو تم استخدامه. المس البطاقة مرة أخرى.';
@@ -935,8 +1014,6 @@
                 return;
             }
 
-            nfcTapUsedForThisAttempt = true;
-
             const idStatus = document.getElementById('idStatus');
             const idSpinner = document.getElementById('idSpinner');
             const idButton = document.getElementById('idButton');
@@ -949,6 +1026,15 @@
             idStatus.textContent = 'جاري التحقق من الهوية، الرجاء الانتظار...';
 
             try {
+                const nfcStarted = await startNfcAttendanceAttempt();
+                if (!nfcStarted) {
+                    showError(nfcTapError || 'انتهت مهلة البدء. المس البطاقة مرة أخرى.', idStatus);
+                    return;
+                }
+
+                nfcTapUsedForThisAttempt = true;
+                clearNfcCountdownTimer();
+
                 const response = await fetch(GOOGLE_SHEET_URL);
                 const csvData = await response.text();
 
@@ -1224,6 +1310,8 @@
             nfcReservationAccepted = false;
             nfcReservationPending = false;
             nfcReservePromise = null;
+            nfcStartPromise = null;
+            nfcTokenStarted = false;
             clearNfcCountdownTimer();
             showStep(1);
             applyNfcGateToForm();
@@ -1265,6 +1353,8 @@
             nfcReservationPending = false;
             nfcReservationId = '';
             nfcReservePromise = null;
+            nfcStartPromise = null;
+            nfcTokenStarted = false;
             clearNfcCountdownTimer();
             gpsValidationPassed = false;
             qrValidationPassed = false;
