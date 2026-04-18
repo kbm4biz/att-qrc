@@ -76,6 +76,27 @@
             color: #f44336;
             border-left: 5px solid #f44336;
         }
+        .nfc-countdown {
+            margin: 12px auto 0;
+            width: 100%;
+            height: 10px;
+            background: #e8f5e9;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .nfc-countdown-bar {
+            width: 100%;
+            height: 100%;
+            background: #4CAF50;
+            border-radius: 999px;
+            transition: width 0.2s linear, background 0.2s ease;
+        }
+        .nfc-countdown-text {
+            margin-top: 8px;
+            color: #2e7d32;
+            font-size: 14px;
+            font-weight: bold;
+        }
         button {
             background: #2196F3;
             color: white;
@@ -450,8 +471,8 @@
 
     <script>
         // ================== CONFIGURATIONS ================== //
-        const ENABLE_GPS_VALIDATION = false; // Set to false to skip GPS verification
-        const ENABLE_QR_VALIDATION = false; // Set to true to enable QR scanning
+        const ENABLE_GPS_VALIDATION = true; // Set to false to skip GPS verification
+        const ENABLE_QR_VALIDATION = true; // Set to true to enable QR scanning
         const ENABLE_NFC_TAP_VALIDATION = true; // Set to true to require an Ntag 424 DNA tap before the form opens
         const NFC_TAP_MAX_AGE_MS = 20 * 1000; // NFC tap must be used to start attendance within 20 seconds
         const NFC_UID_PARAM_NAMES = ['uid', 'u'];
@@ -483,6 +504,7 @@
         let nfcReservationAccepted = false;
         let nfcReservationPending = false;
         let nfcReservationId = '';
+        let nfcCountdownTimer = null;
         let gpsValidationPassed = false;
         let qrValidationPassed = false;
 
@@ -511,12 +533,7 @@
             nfcTapData = loadNfcTapData();
             if (ENABLE_NFC_TAP_VALIDATION && nfcTapData) {
                 applyNfcGateToForm();
-                if (isNfcTokenBlockedLocally(nfcTapData)) {
-                    nfcTapError = 'رابط NFC غير صالح أو تم استخدامه. المس البطاقة مرة أخرى.';
-                    nfcReservationAccepted = false;
-                } else {
-                    await reserveNfcTapToken();
-                }
+                await reserveNfcTapToken();
             }
             applyNfcGateToForm();
             if (!isNfcGateSatisfied()) {
@@ -585,19 +602,24 @@
                 return null;
             }
 
+            const storedTap = readSessionJson('nfcTapData', null);
+            const matchingStoredTap = isSameNfcToken(storedTap, { uid, counter, cmac })
+                ? storedTap
+                : null;
+
             const tapData = {
                 uid,
                 counter,
                 cmac,
-                reservationId: createNfcReservationId(),
-                capturedAt: Date.now(),
-                capturedAtSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false }),
+                reservationId: matchingStoredTap?.reservationId || createNfcReservationId(),
+                capturedAt: matchingStoredTap?.capturedAt || Date.now(),
+                capturedAtSaudi: matchingStoredTap?.capturedAtSaudi || getSaudiTime().toLocaleString('ar-SA', { hour12: false }),
                 pageUrl: window.location.href,
                 rawQuery: window.location.search.replace(/^\?/, '')
             };
 
             if (!hasRequiredNfcData(tapData)) {
-                nfcTapError = 'رابط NFC غير مكتمل. يجب أن يحتوي على uid و ctr و c.';
+                nfcTapError = 'تعذر فتح النموذج. المس البطاقة مرة أخرى.';
                 return null;
             }
 
@@ -619,6 +641,16 @@
             return Boolean(tapData && tapData.uid && tapData.counter && tapData.cmac);
         }
 
+        function isSameNfcToken(firstTap, secondTap) {
+            return Boolean(
+                firstTap &&
+                secondTap &&
+                String(firstTap.uid || '').toLowerCase() === String(secondTap.uid || '').toLowerCase() &&
+                String(firstTap.counter || '').toLowerCase() === String(secondTap.counter || '').toLowerCase() &&
+                String(firstTap.cmac || '').toLowerCase() === String(secondTap.cmac || '').toLowerCase()
+            );
+        }
+
         function createNfcReservationId() {
             return window.crypto?.randomUUID
                 ? window.crypto.randomUUID()
@@ -637,26 +669,6 @@
 
             nfcReservationId = tapData.reservationId;
             return nfcReservationId;
-        }
-
-        function getNfcTokenKey(tapData) {
-            if (!hasRequiredNfcData(tapData)) {
-                return '';
-            }
-
-            return `${tapData.uid}|${tapData.counter}|${tapData.cmac}`.toLowerCase();
-        }
-
-        function isNfcTokenBlockedLocally(tapData) {
-            const tokenKey = getNfcTokenKey(tapData);
-            return Boolean(tokenKey && localStorage.getItem(`usedNfcToken:${tokenKey}`));
-        }
-
-        function blockNfcTokenLocally(tapData) {
-            const tokenKey = getNfcTokenKey(tapData);
-            if (tokenKey) {
-                localStorage.setItem(`usedNfcToken:${tokenKey}`, String(Date.now()));
-            }
         }
 
         function isNfcTapFresh(tapData) {
@@ -688,24 +700,80 @@
             nfcStatus.style.display = 'block';
 
             if (nfcReservationPending) {
+                clearNfcCountdownTimer();
                 nfcStatus.className = 'status-bar';
-                nfcStatus.textContent = 'جاري تثبيت رابط NFC لهذا الجهاز...';
+                nfcStatus.textContent = 'جاري فتح النموذج...';
                 idInput.disabled = true;
                 idButton.disabled = true;
                 return;
             }
 
             if (isNfcGateSatisfied()) {
-                nfcStatus.className = 'status-bar valid';
-                nfcStatus.textContent = 'تم فتح النموذج عبر بطاقة NFC. ابدأ تسجيل الحضور خلال 20 ثانية.';
+                renderNfcReadyStatus(nfcStatus);
                 idInput.disabled = false;
                 idButton.disabled = false;
             } else {
+                clearNfcCountdownTimer();
                 nfcStatus.className = 'status-bar invalid';
-                nfcStatus.textContent = nfcTapError || 'تسجيل الحضور متاح فقط بعد لمس بطاقة Ntag 424 DNA برابط uid و ctr و c.';
+                nfcStatus.textContent = nfcTapError || 'المس بطاقة الحضور للبدء.';
                 idInput.disabled = true;
                 idButton.disabled = true;
             }
+        }
+
+        function renderNfcReadyStatus(element) {
+            element.className = 'status-bar valid';
+            element.innerHTML = `
+                <strong>النموذج جاهز الآن</strong>
+                <div class="nfc-countdown" aria-hidden="true">
+                    <div class="nfc-countdown-bar" id="nfcCountdownBar"></div>
+                </div>
+                <div class="nfc-countdown-text" id="nfcCountdownText"></div>
+            `;
+            startNfcCountdown();
+        }
+
+        function startNfcCountdown() {
+            clearNfcCountdownTimer();
+            updateNfcCountdown();
+            nfcCountdownTimer = setInterval(() => {
+                const remainingMs = updateNfcCountdown();
+                if (remainingMs <= 0) {
+                    clearNfcCountdownTimer();
+                    if (!nfcTapUsedForThisAttempt) {
+                        nfcTapError = 'انتهت مهلة البدء. المس البطاقة مرة أخرى.';
+                        nfcReservationAccepted = false;
+                        applyNfcGateToForm();
+                    }
+                }
+            }, 250);
+        }
+
+        function clearNfcCountdownTimer() {
+            if (nfcCountdownTimer) {
+                clearInterval(nfcCountdownTimer);
+                nfcCountdownTimer = null;
+            }
+        }
+
+        function updateNfcCountdown() {
+            const bar = document.getElementById('nfcCountdownBar');
+            const text = document.getElementById('nfcCountdownText');
+            const capturedAt = Number(nfcTapData?.capturedAt) || Date.now();
+            const remainingMs = Math.max(0, NFC_TAP_MAX_AGE_MS - (Date.now() - capturedAt));
+            const remainingSeconds = Math.ceil(remainingMs / 1000);
+            const percent = Math.max(0, Math.min(100, (remainingMs / NFC_TAP_MAX_AGE_MS) * 100));
+
+            if (bar) {
+                bar.style.width = `${percent}%`;
+                bar.style.background = percent <= 30 ? '#f44336' : (percent <= 60 ? '#ff9800' : '#4CAF50');
+            }
+
+            if (text) {
+                text.textContent = `ابدأ خلال ${remainingSeconds} ثانية`;
+            }
+
+            return remainingMs;
         }
 
         async function reserveNfcTapToken() {
@@ -715,7 +783,7 @@
             }
 
             if (!APPS_SCRIPT_LOG_URL) {
-                nfcTapError = 'رابط تسجيل NFC غير مضبوط.';
+                nfcTapError = 'تعذر فتح النموذج. حاول مرة أخرى.';
                 nfcReservationAccepted = false;
                 return false;
             }
@@ -746,14 +814,11 @@
                 nfcTapError = nfcReservationAccepted
                     ? ''
                     : getNfcReserveErrorMessage(result);
-                if (nfcReservationAccepted) {
-                    blockNfcTokenLocally(nfcTapData);
-                }
                 return nfcReservationAccepted;
             } catch (error) {
                 console.error('NFC reservation error:', error);
                 nfcReservationAccepted = false;
-                nfcTapError = 'تعذر تثبيت رابط NFC. حاول لمس البطاقة مرة أخرى.';
+                nfcTapError = 'تعذر فتح النموذج. المس البطاقة مرة أخرى.';
                 return false;
             } finally {
                 nfcReservationPending = false;
@@ -762,18 +827,22 @@
 
         function getNfcReserveErrorMessage(result) {
             if (result?.code === 'NFC_DUPLICATE') {
-                return 'رابط NFC غير صالح أو تم استخدامه. المس البطاقة مرة أخرى.';
+                return 'انتهت صلاحية الرابط أو تم استخدامه. المس البطاقة مرة أخرى.';
             }
 
             if (result?.code === 'NFC_NOT_RESERVED') {
-                return 'رابط NFC غير صالح أو لم يتم تثبيته. المس البطاقة مرة أخرى.';
+                return 'انتهت صلاحية الرابط. المس البطاقة مرة أخرى.';
+            }
+
+            if (result?.code === 'NFC_EXPIRED') {
+                return 'انتهت مهلة البدء. المس البطاقة مرة أخرى.';
             }
 
             if (result?.code === 'NFC_MISSING') {
-                return 'رابط NFC غير مكتمل. المس البطاقة مرة أخرى.';
+                return 'تعذر فتح النموذج. المس البطاقة مرة أخرى.';
             }
 
-            return result?.error || 'تم استخدام رابط NFC هذا أو فتحه مسبقاً. المس البطاقة مرة أخرى.';
+            return result?.error || 'تعذر فتح النموذج. المس البطاقة مرة أخرى.';
         }
 
         function callAppsScriptJsonp(action, payload) {
@@ -1087,7 +1156,7 @@
             const logAccepted = await sendAttendanceLog(trainee);
             if (!logAccepted) {
                 attendanceRecorded = false;
-                rejectNfcAttendance(nfcTapError || 'رابط NFC غير صالح أو تم استخدامه. المس البطاقة مرة أخرى.');
+                rejectNfcAttendance(nfcTapError || 'انتهت صلاحية الرابط أو تم استخدامه. المس البطاقة مرة أخرى.');
                 return;
             }
             
@@ -1127,6 +1196,7 @@
             nfcTapError = message;
             nfcReservationAccepted = false;
             nfcReservationPending = false;
+            clearNfcCountdownTimer();
             showStep(1);
             applyNfcGateToForm();
         }
@@ -1166,6 +1236,7 @@
             nfcReservationAccepted = false;
             nfcReservationPending = false;
             nfcReservationId = '';
+            clearNfcCountdownTimer();
             gpsValidationPassed = false;
             qrValidationPassed = false;
             attendanceRecorded = false;
