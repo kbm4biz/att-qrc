@@ -453,10 +453,7 @@
         const ENABLE_GPS_VALIDATION = true; // Set to false to skip GPS verification
         const ENABLE_QR_VALIDATION = true; // Set to true to enable QR scanning
         const ENABLE_NFC_TAP_VALIDATION = true; // Set to true to require an Ntag 424 DNA tap before the form opens
-        const NFC_REQUIRE_UID = false; // Set to true only if your NFC URL includes a plain uid parameter
         const NFC_TAP_MAX_AGE_MS = 15 * 60 * 1000; // NFC tap must be used within 15 minutes
-        const NFC_E_PARAM_NAMES = ['e', 'picc_data', 'picc', 'enc'];
-        const NFC_C_PARAM_NAMES = ['c', 'sdm', 'cmac', 'mac'];
         const NFC_UID_PARAM_NAMES = ['uid', 'u'];
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
         const RADIUS_KM = 0.2;
@@ -555,17 +552,13 @@
 
         function readNfcTapDataFromUrl() {
             const params = new URLSearchParams(window.location.search);
-            const encryptedPayload = getFirstQueryParam(params, NFC_E_PARAM_NAMES);
-            const cmac = getFirstQueryParam(params, NFC_C_PARAM_NAMES);
             const uid = getFirstQueryParam(params, NFC_UID_PARAM_NAMES);
 
-            if (!encryptedPayload && !cmac && !uid) {
+            if (!uid) {
                 return null;
             }
 
             const tapData = {
-                encryptedPayload,
-                cmac,
                 uid,
                 capturedAt: Date.now(),
                 capturedAtSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false }),
@@ -574,9 +567,7 @@
             };
 
             if (!hasRequiredNfcData(tapData)) {
-                nfcTapError = NFC_REQUIRE_UID
-                    ? 'رابط NFC غير مكتمل. يجب أن يحتوي على e و c و uid.'
-                    : 'رابط NFC غير مكتمل. يجب أن يحتوي على e و c.';
+                nfcTapError = 'رابط NFC غير مكتمل. يجب أن يحتوي على uid.';
                 return null;
             }
 
@@ -595,12 +586,7 @@
         }
 
         function hasRequiredNfcData(tapData) {
-            return Boolean(
-                tapData &&
-                tapData.encryptedPayload &&
-                tapData.cmac &&
-                (!NFC_REQUIRE_UID || tapData.uid)
-            );
+            return Boolean(tapData && tapData.uid);
         }
 
         function isNfcTapFresh(tapData) {
@@ -1210,8 +1196,6 @@
                 },
                 nfc: nfcTapData ? {
                     uid: nfcTapData.uid || '',
-                    e: nfcTapData.encryptedPayload || '',
-                    c: nfcTapData.cmac || '',
                     capturedAt: nfcTapData.capturedAt || '',
                     capturedAtSaudi: nfcTapData.capturedAtSaudi || '',
                     pageUrl: nfcTapData.pageUrl || '',
