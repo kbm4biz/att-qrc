@@ -455,8 +455,8 @@
         const ENABLE_NFC_TAP_VALIDATION = true; // Set to true to require an Ntag 424 DNA tap before the form opens
         const NFC_REQUIRE_UID = false; // Set to true only if your NFC URL includes a plain uid parameter
         const NFC_TAP_MAX_AGE_MS = 15 * 60 * 1000; // NFC tap must be used within 15 minutes
-        const NFC_E_PARAM_NAMES = ['e'];
-        const NFC_C_PARAM_NAMES = ['c'];
+        const NFC_E_PARAM_NAMES = ['e', 'picc_data', 'picc', 'enc'];
+        const NFC_C_PARAM_NAMES = ['c', 'sdm', 'cmac', 'mac'];
         const NFC_UID_PARAM_NAMES = ['uid', 'u'];
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
         const RADIUS_KM = 0.2;
