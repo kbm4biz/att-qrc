@@ -450,8 +450,8 @@
 
     <script>
         // ================== CONFIGURATIONS ================== //
-        const ENABLE_GPS_VALIDATION = false; // Set to false to skip GPS verification
-        const ENABLE_QR_VALIDATION = false; // Set to true to enable QR scanning
+        const ENABLE_GPS_VALIDATION = true; // Set to false to skip GPS verification
+        const ENABLE_QR_VALIDATION = true; // Set to true to enable QR scanning
         const ENABLE_NFC_TAP_VALIDATION = true; // Set to true to require an Ntag 424 DNA tap before the form opens
         const NFC_TAP_MAX_AGE_MS = 8 * 1000; // NFC tap must be used to start attendance within 8 seconds
         const NFC_UID_PARAM_NAMES = ['uid', 'u'];
@@ -510,7 +510,12 @@
             nfcTapData = loadNfcTapData();
             if (ENABLE_NFC_TAP_VALIDATION && nfcTapData) {
                 applyNfcGateToForm();
-                await reserveNfcTapToken();
+                if (isNfcTokenBlockedLocally(nfcTapData)) {
+                    nfcTapError = 'رابط NFC غير صالح أو تم استخدامه. المس البطاقة مرة أخرى.';
+                    nfcReservationAccepted = false;
+                } else {
+                    await reserveNfcTapToken();
+                }
             }
             applyNfcGateToForm();
             if (!isNfcGateSatisfied()) {
@@ -610,6 +615,26 @@
             return Boolean(tapData && tapData.uid && tapData.counter && tapData.cmac);
         }
 
+        function getNfcTokenKey(tapData) {
+            if (!hasRequiredNfcData(tapData)) {
+                return '';
+            }
+
+            return `${tapData.uid}|${tapData.counter}|${tapData.cmac}`.toLowerCase();
+        }
+
+        function isNfcTokenBlockedLocally(tapData) {
+            const tokenKey = getNfcTokenKey(tapData);
+            return Boolean(tokenKey && localStorage.getItem(`usedNfcToken:${tokenKey}`));
+        }
+
+        function blockNfcTokenLocally(tapData) {
+            const tokenKey = getNfcTokenKey(tapData);
+            if (tokenKey) {
+                localStorage.setItem(`usedNfcToken:${tokenKey}`, String(Date.now()));
+            }
+        }
+
         function isNfcTapFresh(tapData) {
             const capturedAt = Number(tapData?.capturedAt);
             return capturedAt && (Date.now() - capturedAt) <= NFC_TAP_MAX_AGE_MS;
@@ -694,7 +719,10 @@
                 nfcReservationAccepted = Boolean(result?.ok);
                 nfcTapError = nfcReservationAccepted
                     ? ''
-                    : (result?.error || 'تم استخدام رابط NFC هذا أو فتحه مسبقاً. المس البطاقة مرة أخرى.');
+                    : getNfcReserveErrorMessage(result);
+                if (nfcReservationAccepted) {
+                    blockNfcTokenLocally(nfcTapData);
+                }
                 return nfcReservationAccepted;
             } catch (error) {
                 console.error('NFC reservation error:', error);
@@ -704,6 +732,18 @@
             } finally {
                 nfcReservationPending = false;
             }
+        }
+
+        function getNfcReserveErrorMessage(result) {
+            if (result?.code === 'NFC_DUPLICATE') {
+                return 'رابط NFC غير صالح أو تم استخدامه. المس البطاقة مرة أخرى.';
+            }
+
+            if (result?.code === 'NFC_MISSING') {
+                return 'رابط NFC غير مكتمل. المس البطاقة مرة أخرى.';
+            }
+
+            return result?.error || 'تم استخدام رابط NFC هذا أو فتحه مسبقاً. المس البطاقة مرة أخرى.';
         }
 
         function callAppsScriptJsonp(action, payload) {
@@ -1360,12 +1400,10 @@
                     return;
                 }
 
-                await fetch(APPS_SCRIPT_LOG_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
-                });
+                const result = await callAppsScriptJsonp('complete', payload);
+                if (!result?.ok) {
+                    throw new Error(result?.error || 'Attendance log was rejected.');
+                }
             } catch (error) {
                 console.error('خطأ في تسجيل بيانات الحضور:', error);
             }
