@@ -944,6 +944,14 @@
                 return 'انتهت مهلة البدء. المس البطاقة مرة أخرى.';
             }
 
+            if (result?.code === 'NFC_CMAC_INVALID') {
+                return 'رابط البطاقة غير صحيح. المس بطاقة الحضور مرة أخرى.';
+            }
+
+            if (result?.code === 'NFC_CMAC_KEY_MISSING') {
+                return 'إعداد البطاقة يحتاج مراجعة. تواصل مع المدرب.';
+            }
+
             if (result?.code === 'NFC_MISSING') {
                 return 'تعذر فتح النموذج. المس البطاقة مرة أخرى.';
             }
