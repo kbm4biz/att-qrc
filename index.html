@@ -414,6 +414,211 @@
             font-size: 14px;
             line-height: 1.7;
         }
+        body.admin-view {
+            background: #eef3f8;
+            padding: 14px;
+        }
+        body.admin-view .container {
+            max-width: 1180px;
+            border-radius: 14px;
+        }
+        body.admin-view .header {
+            background: #12324a;
+        }
+        .teacher-step.active-step {
+            align-items: stretch;
+            justify-content: flex-start;
+            text-align: right;
+            padding: 22px;
+            min-height: 680px;
+        }
+        .teacher-dashboard {
+            width: 100%;
+        }
+        .teacher-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .teacher-topbar h2 {
+            margin: 0;
+            padding-bottom: 8px;
+        }
+        .teacher-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .teacher-actions button,
+        .teacher-filters button {
+            width: auto;
+            min-height: 44px;
+            max-width: none;
+            padding: 10px 16px;
+            margin: 0;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+        .teacher-secondary-button {
+            background: #607d8b;
+            box-shadow: none;
+        }
+        .teacher-secondary-button:hover {
+            background: #455a64;
+        }
+        .teacher-filters {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(140px, 1fr));
+            gap: 10px;
+            align-items: end;
+            margin-bottom: 14px;
+        }
+        .teacher-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 13px;
+            color: #455a64;
+            font-weight: bold;
+        }
+        .teacher-field input,
+        .teacher-field select {
+            min-height: 44px;
+            border: 1px solid #cfd8dc;
+            border-radius: 8px;
+            padding: 9px 10px;
+            font-size: 15px;
+            background: #fff;
+            color: #263238;
+            outline: none;
+        }
+        .teacher-field input:focus,
+        .teacher-field select:focus {
+            border-color: #2196F3;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.14);
+        }
+        .teacher-message {
+            width: 100%;
+            max-width: none;
+            margin: 10px 0;
+            text-align: right;
+        }
+        .teacher-summary {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(130px, 1fr));
+            gap: 10px;
+            margin: 14px 0;
+        }
+        .teacher-stat {
+            background: #fff;
+            border: 1px solid #e0e7ee;
+            border-radius: 8px;
+            padding: 14px;
+            min-height: 86px;
+        }
+        .teacher-stat strong {
+            display: block;
+            color: #102a43;
+            font-size: 28px;
+            line-height: 1.2;
+        }
+        .teacher-stat span {
+            color: #607d8b;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .teacher-list-tools {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            color: #455a64;
+            font-size: 14px;
+            margin: 12px 0;
+        }
+        .teacher-records {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .teacher-record {
+            background: #fff;
+            border: 1px solid #dfe7ef;
+            border-radius: 8px;
+            padding: 14px;
+            display: grid;
+            grid-template-columns: minmax(180px, 1.3fr) repeat(4, minmax(110px, 1fr));
+            gap: 12px;
+            align-items: center;
+        }
+        .teacher-record-main {
+            min-width: 0;
+        }
+        .teacher-name {
+            font-weight: bold;
+            color: #102a43;
+            font-size: 17px;
+            overflow-wrap: anywhere;
+        }
+        .teacher-id {
+            color: #607d8b;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+        .teacher-cell {
+            color: #263238;
+            font-size: 14px;
+            overflow-wrap: anywhere;
+            line-height: 1.5;
+        }
+        .teacher-cell span {
+            display: block;
+            color: #78909c;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .teacher-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 88px;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 12px;
+            font-weight: bold;
+            background: #eceff1;
+            color: #455a64;
+        }
+        .teacher-pill.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .teacher-pill.pending,
+        .teacher-pill.started {
+            background: #fff8e1;
+            color: #8a5b00;
+        }
+        .teacher-attachment-link {
+            color: #1565c0;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .teacher-attachment-link:hover {
+            text-decoration: underline;
+        }
+        .teacher-empty {
+            background: #fff;
+            border: 1px dashed #b0bec5;
+            border-radius: 8px;
+            padding: 28px 16px;
+            color: #607d8b;
+            text-align: center;
+            font-weight: bold;
+        }
         @media (max-width: 600px) {
             body {
                 padding: 8px;
@@ -453,6 +658,38 @@
             .scanner-container {
                 width: 100%;
                 height: 250px;
+            }
+            .teacher-step.active-step {
+                padding: 14px 10px;
+            }
+            .teacher-filters,
+            .teacher-summary {
+                grid-template-columns: 1fr 1fr;
+            }
+            .teacher-record {
+                grid-template-columns: 1fr;
+            }
+            .teacher-actions,
+            .teacher-filters button {
+                width: 100%;
+            }
+            .teacher-actions button,
+            .teacher-filters button {
+                width: 100%;
+            }
+        }
+        @media (min-width: 601px) and (max-width: 900px) {
+            .teacher-filters {
+                grid-template-columns: 1fr 1fr;
+            }
+            .teacher-summary {
+                grid-template-columns: 1fr 1fr;
+            }
+            .teacher-record {
+                grid-template-columns: 1fr 1fr;
+            }
+            .teacher-record-main {
+                grid-column: 1 / -1;
             }
         }
         @media (min-width: 1200px) {
@@ -549,6 +786,62 @@
             </div>
         </div>
 
+        <!-- STEP 7: TEACHER DASHBOARD -->
+        <div id="step7" class="step teacher-step">
+            <div class="teacher-dashboard">
+                <div class="teacher-topbar">
+                    <h2>لوحة المعلم</h2>
+                    <div class="teacher-actions">
+                        <button type="button" onclick="loadTeacherLog()">تحديث السجل</button>
+                        <button type="button" class="teacher-secondary-button" onclick="downloadTeacherCsv()">تنزيل CSV</button>
+                        <button type="button" class="teacher-secondary-button" onclick="openStudentView()">نموذج الطالب</button>
+                    </div>
+                </div>
+
+                <div class="teacher-filters">
+                    <label class="teacher-field">
+                        اليوم
+                        <input type="date" id="teacherDate" onchange="loadTeacherLog()">
+                    </label>
+                    <label class="teacher-field">
+                        الحالة
+                        <select id="teacherStatusFilter" onchange="loadTeacherLog()">
+                            <option value="SUCCESS">الحضور الناجح</option>
+                            <option value="ALL">كل السجلات</option>
+                            <option value="PENDING">روابط مفتوحة</option>
+                            <option value="STARTED">بدأ ولم يكتمل</option>
+                        </select>
+                    </label>
+                    <label class="teacher-field">
+                        اللقاء
+                        <select id="teacherMeetingFilter" onchange="loadTeacherLog()">
+                            <option value="">كل اللقاءات</option>
+                        </select>
+                    </label>
+                    <label class="teacher-field">
+                        بحث
+                        <input type="search" id="teacherSearch" placeholder="اسم، رقم تدريبي، برنامج" oninput="scheduleTeacherLogLoad()">
+                    </label>
+                    <button type="button" onclick="loadTeacherLog()">عرض النتائج</button>
+                </div>
+
+                <div id="teacherMessage" class="status-bar teacher-message waiting">جاري تحميل السجل...</div>
+
+                <div class="teacher-summary" aria-label="ملخص الحضور">
+                    <div class="teacher-stat"><strong id="teacherStatSuccess">0</strong><span>حضور ناجح</span></div>
+                    <div class="teacher-stat"><strong id="teacherStatUnique">0</strong><span>متدربون فريدون</span></div>
+                    <div class="teacher-stat"><strong id="teacherStatPending">0</strong><span>روابط لم تكتمل</span></div>
+                    <div class="teacher-stat"><strong id="teacherStatAttachments">0</strong><span>مرفقات</span></div>
+                </div>
+
+                <div class="teacher-list-tools">
+                    <div id="teacherResultCount">0 سجل</div>
+                    <div id="teacherGeneratedAt"></div>
+                </div>
+                <div id="teacherRows" class="teacher-records"></div>
+            </div>
+        </div>
+
         <button id="adminReset" onclick="forceReset()">إعادة تعيين الجلسة</button>
         
         <div class="footer">
@@ -564,7 +857,7 @@
         const ENABLE_GPS_VALIDATION = false; // Set to false to skip GPS verification
         const ENABLE_QR_VALIDATION = false; // Set to true to enable QR scanning
         const ENABLE_NFC_TAP_VALIDATION = true; // Set to true to require an Ntag 424 DNA tap before the form opens
-        const ENABLE_SUPPORTING_FORM = false; // Set to true to require a short form + attachment before final check-in
+        const ENABLE_SUPPORTING_FORM = true; // Set to true to require a short form + attachment before final check-in
         const REQUIRE_SUPPORTING_ATTACHMENT = true;
         const REQUIRE_SUPPORTING_NOTE = false;
         const SUPPORTING_NOTE_MAX_LENGTH = 300;
@@ -585,8 +878,6 @@
         const MAX_ATTEMPTS = 5;
         const REDIRECT_URL = 'https://tvtc.gov.sa/ar/Pages/default1.aspx';
         const REDIRECT_DELAY = 10000;
-        const ADMIN_PASSWORD = '2030';
-
         let traineeID = '';
         let scannerActive = false;
         let videoStream = null;
@@ -611,17 +902,27 @@
         let supportingFormCompleted = false;
         let supportingFormData = null;
         let supportingFormSubmitting = false;
+        let teacherDashboardPassword = '';
+        let teacherSearchTimer = null;
+        let teacherLastRows = [];
+        let teacherLastResponse = null;
 
         // ================== ON PAGE LOAD ================== //
         window.onload = async () => {
-            if (location.hash === '#admin') {
-                const pass = prompt('أدخل كلمة مرور الإدارة:');
-                if (pass === ADMIN_PASSWORD) {
-                    adminMode = true;
-                } else {
-                    alert('كلمة المرور غير صحيحة!');
+            if (location.hash === '#admin' || location.hash === '#teacher') {
+                const pass = prompt('أدخل كلمة مرور المعلم:');
+                if (!pass) {
+                    alert('لم يتم فتح لوحة المعلم.');
                     history.replaceState(null, '', location.pathname);
+                    showStep(1);
+                    return;
                 }
+
+                adminMode = true;
+                teacherDashboardPassword = pass;
+                sessionStorage.setItem('teacherDashboardPassword', pass);
+                initializeTeacherDashboard();
+                return;
             }
 
             const sessionCookie = getCookie('traineeSession');
@@ -670,6 +971,293 @@
              
             showStep(1);
         };
+
+        // ================== TEACHER DASHBOARD ================== //
+        function initializeTeacherDashboard() {
+            document.body.classList.add('admin-view');
+            document.querySelector('.header h1').textContent = 'لوحة المعلم';
+            showStep(7);
+
+            const dateInput = document.getElementById('teacherDate');
+            if (dateInput && !dateInput.value) {
+                dateInput.value = getDateInputValue(getSaudiTime());
+            }
+
+            loadTeacherLog();
+        }
+
+        async function loadTeacherLog() {
+            const message = document.getElementById('teacherMessage');
+            const dateInput = document.getElementById('teacherDate');
+            const statusInput = document.getElementById('teacherStatusFilter');
+            const meetingInput = document.getElementById('teacherMeetingFilter');
+            const searchInput = document.getElementById('teacherSearch');
+
+            if (!teacherDashboardPassword) {
+                teacherDashboardPassword = sessionStorage.getItem('teacherDashboardPassword') || '';
+            }
+
+            if (!teacherDashboardPassword) {
+                showTeacherMessage('كلمة مرور المعلم مطلوبة.', 'invalid');
+                return;
+            }
+
+            message.className = 'status-bar teacher-message waiting';
+            message.textContent = 'جاري تحميل السجل...';
+
+            try {
+                const result = await callAppsScriptJsonp('teacherLog', {
+                    password: teacherDashboardPassword,
+                    date: dateInput?.value || getDateInputValue(getSaudiTime()),
+                    status: statusInput?.value || 'SUCCESS',
+                    meetingId: meetingInput?.value || '',
+                    query: (searchInput?.value || '').trim()
+                });
+
+                if (!result?.ok) {
+                    if (result?.code === 'TEACHER_AUTH') {
+                        sessionStorage.removeItem('teacherDashboardPassword');
+                        teacherDashboardPassword = '';
+                        showTeacherMessage('كلمة مرور المعلم غير صحيحة. أعد فتح الرابط وأدخل كلمة المرور الصحيحة.', 'invalid');
+                        return;
+                    }
+
+                    throw new Error(result?.error || 'تعذر تحميل السجل.');
+                }
+
+                teacherLastResponse = result;
+                teacherLastRows = Array.isArray(result.rows) ? result.rows : [];
+                updateTeacherMeetingOptions(result.meetings || []);
+                renderTeacherSummary(result.summary || {});
+                renderTeacherRows(teacherLastRows);
+                renderTeacherMeta(result);
+                showTeacherMessage(teacherLastRows.length ? 'تم تحميل السجل بنجاح.' : 'لا توجد سجلات مطابقة لهذا الفلتر.', teacherLastRows.length ? 'valid' : 'waiting');
+            } catch (error) {
+                console.error('Teacher log error:', error);
+                showTeacherMessage(error.message || 'تعذر تحميل السجل.', 'invalid');
+            }
+        }
+
+        function scheduleTeacherLogLoad() {
+            clearTimeout(teacherSearchTimer);
+            teacherSearchTimer = setTimeout(loadTeacherLog, 450);
+        }
+
+        function updateTeacherMeetingOptions(meetings) {
+            const meetingInput = document.getElementById('teacherMeetingFilter');
+            if (!meetingInput) {
+                return;
+            }
+
+            const selectedValue = meetingInput.value;
+            meetingInput.innerHTML = '<option value="">كل اللقاءات</option>';
+            meetings.forEach(meetingId => {
+                const option = document.createElement('option');
+                option.value = meetingId;
+                option.textContent = meetingId;
+                meetingInput.appendChild(option);
+            });
+
+            if (meetings.includes(selectedValue)) {
+                meetingInput.value = selectedValue;
+            }
+        }
+
+        function renderTeacherSummary(summary) {
+            setText('teacherStatSuccess', summary.success || 0);
+            setText('teacherStatUnique', summary.uniqueTrainees || 0);
+            setText('teacherStatPending', (summary.pending || 0) + (summary.started || 0));
+            setText('teacherStatAttachments', summary.attachments || 0);
+        }
+
+        function renderTeacherMeta(result) {
+            const countText = result.limited
+                ? `عرض ${teacherLastRows.length} من ${result.totalFilteredRows} سجل`
+                : `${teacherLastRows.length} سجل`;
+
+            setText('teacherResultCount', countText);
+            setText('teacherGeneratedAt', result.generatedAt ? `آخر تحديث: ${result.generatedAt}` : '');
+        }
+
+        function renderTeacherRows(rows) {
+            const container = document.getElementById('teacherRows');
+            if (!container) {
+                return;
+            }
+
+            if (!rows.length) {
+                container.innerHTML = '<div class="teacher-empty">لا توجد سجلات للعرض.</div>';
+                return;
+            }
+
+            container.innerHTML = rows.map(row => {
+                const statusClass = getTeacherStatusClass(row.status);
+                return `
+                    <div class="teacher-record">
+                        <div class="teacher-record-main">
+                            <div class="teacher-name">${escapeHtml(row.name || 'بدون اسم')}</div>
+                            <div class="teacher-id">${escapeHtml(row.traineeId || 'بدون رقم تدريبي')}</div>
+                        </div>
+                        <div class="teacher-cell"><span>الحالة</span><span class="teacher-pill ${statusClass}">${escapeHtml(formatTeacherStatus(row.status))}</span></div>
+                        <div class="teacher-cell"><span>الوقت</span>${escapeHtml(row.time || '-')}</div>
+                        <div class="teacher-cell"><span>اللقاء</span>${escapeHtml(row.meetingId || '-')}</div>
+                        <div class="teacher-cell"><span>البرنامج</span>${escapeHtml(row.program || '-')}</div>
+                        <div class="teacher-cell"><span>التحقق</span>${escapeHtml(formatGateSummary(row))}</div>
+                        <div class="teacher-cell"><span>الجهاز</span>${escapeHtml(row.deviceFingerprint || row.deviceId || '-')}</div>
+                        <div class="teacher-cell"><span>المرفق</span>${formatTeacherAttachment(row)}</div>
+                        <div class="teacher-cell"><span>ملاحظة</span>${escapeHtml(row.supportNote || '-')}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatGateSummary(row) {
+            return [
+                `GPS: ${formatGateStatus(row.gpsStatus)}`,
+                `QR: ${formatGateStatus(row.qrStatus)}`,
+                `NFC: ${formatGateStatus(row.nfcStatus)}`
+            ].join(' | ');
+        }
+
+        function formatGateStatus(status) {
+            if (status === 'passed') {
+                return 'تم';
+            }
+            if (status === 'disabled') {
+                return 'مغلق';
+            }
+            if (!status) {
+                return '-';
+            }
+            return 'لم يتم';
+        }
+
+        function formatTeacherStatus(status) {
+            if (status === 'SUCCESS') {
+                return 'ناجح';
+            }
+            if (status === 'PENDING') {
+                return 'مفتوح';
+            }
+            if (status === 'STARTED') {
+                return 'بدأ';
+            }
+            return status || 'غير معروف';
+        }
+
+        function getTeacherStatusClass(status) {
+            if (status === 'SUCCESS') {
+                return 'success';
+            }
+            if (status === 'PENDING') {
+                return 'pending';
+            }
+            if (status === 'STARTED') {
+                return 'started';
+            }
+            return '';
+        }
+
+        function formatTeacherAttachment(row) {
+            if (!row.attachmentUrl) {
+                return '-';
+            }
+
+            const safeUrl = escapeAttribute(row.attachmentUrl);
+            const label = escapeHtml(row.attachmentName || 'فتح الملف');
+            return `<a class="teacher-attachment-link" href="${safeUrl}" target="_blank" rel="noopener">فتح الملف</a><div>${label}</div>`;
+        }
+
+        function downloadTeacherCsv() {
+            if (!teacherLastRows.length) {
+                showTeacherMessage('لا توجد سجلات لتنزيلها.', 'waiting');
+                return;
+            }
+
+            const headers = ['التاريخ', 'الوقت', 'الحالة', 'الرقم التدريبي', 'الاسم', 'البرنامج', 'اللقاء', 'GPS', 'QR', 'NFC', 'الجهاز', 'المرفق', 'الملاحظة'];
+            const lines = [
+                headers,
+                ...teacherLastRows.map(row => [
+                    row.date || '',
+                    row.time || '',
+                    formatTeacherStatus(row.status),
+                    row.traineeId || '',
+                    row.name || '',
+                    row.program || '',
+                    row.meetingId || '',
+                    formatGateStatus(row.gpsStatus),
+                    formatGateStatus(row.qrStatus),
+                    formatGateStatus(row.nfcStatus),
+                    row.deviceFingerprint || row.deviceId || '',
+                    row.attachmentUrl || '',
+                    row.supportNote || ''
+                ])
+            ].map(csvLine).join('\n');
+
+            const blob = new Blob(['\ufeff' + lines], { type: 'text/csv;charset=utf-8' });
+            const link = document.createElement('a');
+            const dateValue = document.getElementById('teacherDate')?.value || 'attendance';
+            link.href = URL.createObjectURL(blob);
+            link.download = `attendance-${dateValue}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(link.href);
+        }
+
+        function csvLine(values) {
+            return values.map(value => {
+                const text = String(value ?? '');
+                return `"${text.replace(/"/g, '""')}"`;
+            }).join(',');
+        }
+
+        function openStudentView() {
+            document.body.classList.remove('admin-view');
+            sessionStorage.removeItem('teacherDashboardPassword');
+            history.replaceState(null, '', location.pathname + location.search);
+            location.reload();
+        }
+
+        function showTeacherMessage(message, type) {
+            const element = document.getElementById('teacherMessage');
+            if (!element) {
+                return;
+            }
+            element.className = `status-bar teacher-message ${type || 'waiting'}`;
+            element.textContent = message;
+        }
+
+        function setText(id, value) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            }
+        }
+
+        function getDateInputValue(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeAttribute(value) {
+            const text = String(value || '');
+            if (!/^https?:\/\//i.test(text)) {
+                return '#';
+            }
+            return escapeHtml(text);
+        }
 
         // ================== NFC TAP GATE ================== //
         function loadNfcTapData() {
