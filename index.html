@@ -381,6 +381,39 @@
             max-width: 500px;
             width: 90%;
         }
+        .support-form {
+            width: 90%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: stretch;
+        }
+        .support-form textarea,
+        .support-form input[type="file"] {
+            width: 100%;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 16px;
+            background: #fff;
+            outline: none;
+        }
+        .support-form textarea {
+            min-height: 96px;
+            resize: vertical;
+            line-height: 1.7;
+        }
+        .support-form textarea:focus,
+        .support-form input[type="file"]:focus {
+            border-color: #2196F3;
+            box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.16);
+        }
+        .support-form-hint {
+            color: #555;
+            font-size: 14px;
+            line-height: 1.7;
+        }
         @media (max-width: 600px) {
             body {
                 padding: 8px;
@@ -413,7 +446,7 @@
                 min-height: 64px;
             }
             .checkin-note,
-            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp, .address-info, .location-error, .location-check {
+            .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp, .address-info, .location-error, .location-check, .support-form {
                 width: 100%;
                 max-width: 430px;
             }
@@ -473,6 +506,19 @@
             <button onclick="toggleScanner()" id="controlBtn">بدء الماسح</button>
         </div>
 
+        <!-- STEP 6: SUPPORTING FORM (ONLY IF ENABLED) -->
+        <div id="step6" class="step">
+            <h2>إرفاق المستند</h2>
+            <div class="support-form">
+                <textarea id="supportNote" maxlength="300" placeholder="ملاحظة قصيرة اختيارية" aria-label="ملاحظة قصيرة"></textarea>
+                <input type="file" id="supportAttachment" accept="application/pdf,image/*" aria-label="إرفاق ملف">
+                <div class="support-form-hint">يسمح برفع ملف PDF أو صورة فقط. الحد الأقصى 5 MB.</div>
+                <div id="supportSpinner" class="spinner"></div>
+                <button onclick="submitSupportingForm()" id="supportButton">متابعة التحضير</button>
+                <div id="supportStatus" class="status-bar"></div>
+            </div>
+        </div>
+
         <!-- STEP 4: SUCCESS & INFO -->
         <div id="step4" class="step">
             <div class="emoji-container" aria-hidden="true">
@@ -518,6 +564,11 @@
         const ENABLE_GPS_VALIDATION = false; // Set to false to skip GPS verification
         const ENABLE_QR_VALIDATION = false; // Set to true to enable QR scanning
         const ENABLE_NFC_TAP_VALIDATION = true; // Set to true to require an Ntag 424 DNA tap before the form opens
+        const ENABLE_SUPPORTING_FORM = false; // Set to true to require a short form + attachment before final check-in
+        const REQUIRE_SUPPORTING_ATTACHMENT = true;
+        const REQUIRE_SUPPORTING_NOTE = true;
+        const SUPPORTING_NOTE_MAX_LENGTH = 300;
+        const SUPPORTING_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
         const NFC_TAP_MAX_AGE_MS = 30 * 1000; // NFC tap must be used to start attendance within 30 seconds
         const NFC_UID_PARAM_NAMES = ['uid', 'u'];
         const NFC_COUNTER_PARAM_NAMES = ['ctr', 'counter', 'cnt'];
@@ -555,6 +606,9 @@
         let nfcTokenStarted = false;
         let gpsValidationPassed = false;
         let qrValidationPassed = false;
+        let supportingFormCompleted = false;
+        let supportingFormData = null;
+        let supportingFormSubmitting = false;
 
         // ================== ON PAGE LOAD ================== //
         window.onload = async () => {
@@ -1277,6 +1331,18 @@
             }
 
             qrValidationPassed = false;
+            proceedAfterQrVerification();
+        }
+
+        function proceedAfterQrVerification() {
+            if (ENABLE_SUPPORTING_FORM) {
+                showStep(6);
+                resetSupportingFormState();
+                return;
+            }
+
+            supportingFormCompleted = false;
+            supportingFormData = null;
             completeAttendance();
         }
 
@@ -1491,6 +1557,9 @@
             nfcReservePromise = null;
             nfcStartPromise = null;
             nfcTokenStarted = false;
+            supportingFormCompleted = false;
+            supportingFormData = null;
+            supportingFormSubmitting = false;
             setIdLoadingState(false);
             clearNfcCountdownTimer();
             showStep(1);
@@ -1540,6 +1609,9 @@
             clearNfcCountdownTimer();
             gpsValidationPassed = false;
             qrValidationPassed = false;
+            supportingFormCompleted = false;
+            supportingFormData = null;
+            supportingFormSubmitting = false;
             attendanceRecorded = false;
             document.getElementById('idInput').value = '';
             applyNfcGateToForm();
@@ -1773,7 +1845,7 @@
                     // QR is valid - complete attendance
                     qrValidationPassed = true;
                     stopScanner();
-                    completeAttendance();
+                    proceedAfterQrVerification();
                     return;
                 } else {
                     showError('كود غير صحيح', document.getElementById('scanStatus'));
@@ -1826,6 +1898,226 @@
             return Math.abs(hash).toString(36).slice(-8).padStart(8, '0');
         }
 
+        function resetSupportingFormState() {
+            supportingFormCompleted = false;
+            supportingFormData = null;
+            supportingFormSubmitting = false;
+
+            const button = document.getElementById('supportButton');
+            const spinner = document.getElementById('supportSpinner');
+            const status = document.getElementById('supportStatus');
+            const note = document.getElementById('supportNote');
+            const attachment = document.getElementById('supportAttachment');
+
+            if (button) {
+                button.disabled = false;
+                button.textContent = 'متابعة التحضير';
+            }
+            if (spinner) {
+                spinner.style.display = 'none';
+            }
+            if (status) {
+                status.className = 'status-bar';
+                status.textContent = '';
+            }
+            if (note) {
+                note.disabled = false;
+            }
+            if (attachment) {
+                attachment.disabled = false;
+            }
+        }
+
+        async function submitSupportingForm() {
+            if (supportingFormSubmitting || attendanceRecorded) {
+                return;
+            }
+
+            const noteElement = document.getElementById('supportNote');
+            const fileElement = document.getElementById('supportAttachment');
+            const status = document.getElementById('supportStatus');
+            const spinner = document.getElementById('supportSpinner');
+            const button = document.getElementById('supportButton');
+            const note = (noteElement?.value || '').trim();
+            const file = fileElement?.files?.[0] || null;
+
+            if (REQUIRE_SUPPORTING_NOTE && !note) {
+                showError('يرجى كتابة ملاحظة قصيرة.', status);
+                return;
+            }
+
+            if (note.length > SUPPORTING_NOTE_MAX_LENGTH) {
+                showError(`الملاحظة يجب ألا تتجاوز ${SUPPORTING_NOTE_MAX_LENGTH} حرفاً.`, status);
+                return;
+            }
+
+            if (REQUIRE_SUPPORTING_ATTACHMENT && !file) {
+                showError('يرجى إرفاق ملف PDF أو صورة.', status);
+                return;
+            }
+
+            if (file && !isAllowedSupportingFile(file)) {
+                showError('نوع الملف غير مسموح. استخدم PDF أو صورة فقط.', status);
+                return;
+            }
+
+            if (file && file.size > SUPPORTING_ATTACHMENT_MAX_BYTES) {
+                showError('حجم الملف كبير. الحد الأقصى 5 MB.', status);
+                return;
+            }
+
+            supportingFormSubmitting = true;
+            if (button) {
+                button.disabled = true;
+                button.textContent = 'جاري رفع الملف...';
+            }
+            if (noteElement) {
+                noteElement.disabled = true;
+            }
+            if (fileElement) {
+                fileElement.disabled = true;
+            }
+            if (spinner) {
+                spinner.style.display = 'block';
+            }
+            if (status) {
+                status.className = 'status-bar waiting';
+                status.textContent = 'لا تغلق الصفحة. جاري رفع الملف وإكمال تسجيل الحضور.';
+                status.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+
+            try {
+                const attachment = file ? await uploadSupportingAttachment(file, note) : null;
+                supportingFormData = {
+                    enabled: true,
+                    note,
+                    attachment
+                };
+                supportingFormCompleted = true;
+                completeAttendance();
+            } catch (error) {
+                console.error('Attachment upload error:', error);
+                supportingFormSubmitting = false;
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = 'متابعة التحضير';
+                }
+                if (noteElement) {
+                    noteElement.disabled = false;
+                }
+                if (fileElement) {
+                    fileElement.disabled = false;
+                }
+                if (spinner) {
+                    spinner.style.display = 'none';
+                }
+                showError(error.message || 'تعذر رفع الملف. حاول مرة أخرى.', status);
+            }
+        }
+
+        function isAllowedSupportingFile(file) {
+            return file.type === 'application/pdf' || file.type.startsWith('image/');
+        }
+
+        async function uploadSupportingAttachment(file, note) {
+            const trainee = readSessionJson('traineeDetails', {});
+            const meeting = readSessionJson('currentMeeting', {});
+            const uploadId = window.crypto?.randomUUID
+                ? window.crypto.randomUUID()
+                : `upload-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            const dataUrl = await readFileAsDataUrl(file);
+            const base64Data = dataUrl.split(',')[1] || '';
+            const payload = {
+                uploadId,
+                traineeId: trainee.id || '',
+                meetingId: meeting.meetingId || '',
+                note,
+                fileName: file.name,
+                mimeType: file.type,
+                size: file.size,
+                base64Data,
+                deviceId: getOrCreateDeviceId(),
+                deviceFingerprint: getDeviceFingerprint(),
+                clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false })
+            };
+
+            const result = await postAppsScriptForm('uploadAttachment', payload, uploadId);
+            if (!result?.ok) {
+                throw new Error(getUploadErrorMessage(result));
+            }
+
+            return result.attachment;
+        }
+
+        function readFileAsDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('تعذر قراءة الملف.'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function postAppsScriptForm(action, payload, uploadId) {
+            return new Promise((resolve, reject) => {
+                const iframeName = `uploadFrame_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+                const iframe = document.createElement('iframe');
+                const form = document.createElement('form');
+                const timeoutId = setTimeout(() => {
+                    cleanup();
+                    reject(new Error('انتهت مهلة رفع الملف. حاول مرة أخرى.'));
+                }, 90000);
+
+                function cleanup() {
+                    clearTimeout(timeoutId);
+                    window.removeEventListener('message', onMessage);
+                    form.remove();
+                    iframe.remove();
+                }
+
+                function addField(name, value) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = name;
+                    input.value = value;
+                    form.appendChild(input);
+                }
+
+                function onMessage(event) {
+                    const data = event.data || {};
+                    if (data.source !== 'attendanceAttachmentUpload' || data.uploadId !== uploadId) {
+                        return;
+                    }
+
+                    cleanup();
+                    resolve(data);
+                }
+
+                window.addEventListener('message', onMessage);
+                iframe.name = iframeName;
+                iframe.style.display = 'none';
+                form.method = 'POST';
+                form.action = APPS_SCRIPT_LOG_URL;
+                form.target = iframeName;
+                form.style.display = 'none';
+                addField('action', action);
+                addField('payload', JSON.stringify(payload));
+                document.body.appendChild(iframe);
+                document.body.appendChild(form);
+                form.submit();
+            });
+        }
+
+        function getUploadErrorMessage(result) {
+            if (result?.code === 'UPLOAD_TYPE') {
+                return 'نوع الملف غير مسموح. استخدم PDF أو صورة فقط.';
+            }
+            if (result?.code === 'UPLOAD_SIZE') {
+                return 'حجم الملف كبير. الحد الأقصى 5 MB.';
+            }
+            return result?.error || 'تعذر رفع الملف. حاول مرة أخرى.';
+        }
+
         function buildAttendancePayload(trainee) {
             const currentMeeting = readSessionJson('currentMeeting', null);
             const meetingId = currentMeeting ? currentMeeting.meetingId : null;
@@ -1861,7 +2153,10 @@
                     c: nfcTapData.cmac || '',
                     reservationId: nfcReservationId || nfcTapData.reservationId || '',
                     capturedAtSaudi: nfcTapData.capturedAtSaudi || ''
-                } : null
+                } : null,
+                supportingForm: ENABLE_SUPPORTING_FORM
+                    ? (supportingFormData || { enabled: true, note: '', attachment: null })
+                    : { enabled: false }
             };
         }
 
@@ -1876,7 +2171,8 @@
         function areEnabledGatesSatisfied() {
             return isNfcGateSatisfied() &&
                 (!ENABLE_GPS_VALIDATION || gpsValidationPassed) &&
-                (!ENABLE_QR_VALIDATION || qrValidationPassed);
+                (!ENABLE_QR_VALIDATION || qrValidationPassed) &&
+                (!ENABLE_SUPPORTING_FORM || supportingFormCompleted);
         }
 
         async function sendAttendanceLog(trainee) {
