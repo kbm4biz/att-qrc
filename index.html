@@ -569,6 +569,8 @@
         const REQUIRE_SUPPORTING_NOTE = false;
         const SUPPORTING_NOTE_MAX_LENGTH = 300;
         const SUPPORTING_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+        const SUPPORTING_IMAGE_MAX_DIMENSION = 1600;
+        const SUPPORTING_IMAGE_QUALITY = 0.72;
         const NFC_TAP_MAX_AGE_MS = 30 * 1000; // NFC tap must be used to start attendance within 30 seconds
         const NFC_UID_PARAM_NAMES = ['uid', 'u'];
         const NFC_COUNTER_PARAM_NAMES = ['ctr', 'counter', 'cnt'];
@@ -1961,7 +1963,7 @@
                 return;
             }
 
-            if (file && file.size > SUPPORTING_ATTACHMENT_MAX_BYTES) {
+            if (file && !file.type.startsWith('image/') && file.size > SUPPORTING_ATTACHMENT_MAX_BYTES) {
                 showError('حجم الملف كبير. الحد الأقصى 5 MB.', status);
                 return;
             }
@@ -1982,12 +1984,20 @@
             }
             if (status) {
                 status.className = 'status-bar waiting';
-                status.textContent = 'لا تغلق الصفحة. جاري رفع الملف وإكمال تسجيل الحضور.';
+                status.textContent = 'لا تغلق الصفحة. جاري تجهيز الملف وإكمال تسجيل الحضور.';
                 status.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
 
             try {
-                const attachment = file ? await uploadSupportingAttachment(file, note) : null;
+                const uploadFile = file ? await prepareSupportingAttachment(file) : null;
+                if (uploadFile && uploadFile.size > SUPPORTING_ATTACHMENT_MAX_BYTES) {
+                    throw new Error('حجم الملف كبير. الحد الأقصى 5 MB.');
+                }
+                if (status && uploadFile) {
+                    status.textContent = 'لا تغلق الصفحة. جاري رفع الملف وإكمال تسجيل الحضور.';
+                }
+
+                const attachment = uploadFile ? await uploadSupportingAttachment(uploadFile, note) : null;
                 supportingFormData = {
                     enabled: true,
                     note,
@@ -2017,6 +2027,63 @@
 
         function isAllowedSupportingFile(file) {
             return file.type === 'application/pdf' || file.type.startsWith('image/');
+        }
+
+        async function prepareSupportingAttachment(file) {
+            if (!file.type.startsWith('image/')) {
+                return file;
+            }
+
+            try {
+                return await compressImageAttachment(file);
+            } catch (error) {
+                console.warn('Unable to compress image, uploading original file:', error);
+                return file;
+            }
+        }
+
+        async function compressImageAttachment(file) {
+            const image = await loadImageElement(file);
+            const largestSide = Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height);
+            const scale = Math.min(1, SUPPORTING_IMAGE_MAX_DIMENSION / largestSide);
+            const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+            const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const context = canvas.getContext('2d');
+            context.drawImage(image, 0, 0, width, height);
+
+            const blob = await new Promise(resolve => {
+                canvas.toBlob(resolve, 'image/jpeg', SUPPORTING_IMAGE_QUALITY);
+            });
+
+            URL.revokeObjectURL(image.src);
+            if (!blob) {
+                return file;
+            }
+
+            if (blob.size >= file.size && file.size <= SUPPORTING_ATTACHMENT_MAX_BYTES) {
+                return file;
+            }
+
+            const baseName = (file.name || 'attachment').replace(/\.[^.]+$/, '');
+            return new File([blob], `${baseName}.jpg`, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+            });
+        }
+
+        function loadImageElement(file) {
+            return new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = () => {
+                    URL.revokeObjectURL(image.src);
+                    reject(new Error('تعذر تجهيز الصورة.'));
+                };
+                image.src = URL.createObjectURL(file);
+            });
         }
 
         async function uploadSupportingAttachment(file, note) {
@@ -2058,32 +2125,21 @@
             });
         }
 
-        function postAppsScriptForm(action, payload, uploadId) {
-            return new Promise((resolve, reject) => {
+        async function postAppsScriptForm(action, payload, uploadId) {
+            await callAppsScriptJsonp('uploadInit', { uploadId });
+            const cleanup = submitAppsScriptUploadForm(action, payload, uploadId);
+
+            try {
+                return await waitForUploadStatus(uploadId);
+            } finally {
+                cleanup();
+            }
+        }
+
+        function submitAppsScriptUploadForm(action, payload, uploadId) {
                 const iframeName = `uploadFrame_${Date.now()}_${Math.random().toString(36).slice(2)}`;
                 const iframe = document.createElement('iframe');
                 const form = document.createElement('form');
-                let settled = false;
-                const timeoutId = setTimeout(() => {
-                    finish(reject, new Error('انتهت مهلة رفع الملف. إذا تكرر الخطأ شغّل forceAuthorization من Apps Script ثم أعد النشر.'));
-                }, 45000);
-
-                function finish(handler, value) {
-                    if (settled) {
-                        return;
-                    }
-
-                    settled = true;
-                    cleanup();
-                    handler(value);
-                }
-
-                function cleanup() {
-                    clearTimeout(timeoutId);
-                    window.removeEventListener('message', onMessage);
-                    form.remove();
-                    iframe.remove();
-                }
 
                 function addField(name, value) {
                     const input = document.createElement('input');
@@ -2093,24 +2149,6 @@
                     form.appendChild(input);
                 }
 
-                function onMessage(event) {
-                    let data = event.data || {};
-                    if (typeof data === 'string') {
-                        try {
-                            data = JSON.parse(data);
-                        } catch (error) {
-                            return;
-                        }
-                    }
-
-                    if (data.source !== 'attendanceAttachmentUpload' || data.uploadId !== uploadId) {
-                        return;
-                    }
-
-                    finish(resolve, data);
-                }
-
-                window.addEventListener('message', onMessage);
                 iframe.name = iframeName;
                 iframe.style.position = 'absolute';
                 iframe.style.width = '1px';
@@ -2128,7 +2166,48 @@
                 document.body.appendChild(iframe);
                 document.body.appendChild(form);
                 form.submit();
-            });
+
+                return () => {
+                    form.remove();
+                    iframe.remove();
+                };
+        }
+
+        async function waitForUploadStatus(uploadId) {
+            const timeoutAt = Date.now() + 90000;
+            let lastResult = null;
+
+            while (Date.now() < timeoutAt) {
+                await delay(1500);
+                const result = await callAppsScriptJsonp('uploadStatus', { uploadId });
+                lastResult = result;
+
+                if (result?.state === 'SUCCESS' || result?.attachment) {
+                    return result;
+                }
+
+                if (result?.state === 'ERROR' || result?.ok === false) {
+                    return result;
+                }
+            }
+
+            throw new Error(getUploadTimeoutMessage(lastResult));
+        }
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function getUploadTimeoutMessage(result) {
+            if (!result || result.state === 'PENDING' || result.state === 'NOT_FOUND') {
+                return 'لم يصل الملف إلى الخادم. جرّب ملفاً أصغر أو صورة أقل حجماً، ثم حاول مرة أخرى.';
+            }
+
+            if (result.state === 'RECEIVED' || result.state === 'PROCESSING') {
+                return 'وصل الملف إلى الخادم لكن المعالجة أخذت وقتاً طويلاً. جرّب ملفاً أصغر.';
+            }
+
+            return 'انتهت مهلة رفع الملف. حاول مرة أخرى.';
         }
 
         function getUploadErrorMessage(result) {
