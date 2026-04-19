@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>نظام حضور المتدربين مع تحقق الموقع</title>
+    <title>التحضير الذاتي</title>
     <style>
         * {
             margin: 0;
@@ -68,6 +68,11 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             border: 1px solid #eee;
         }
+        .waiting {
+            color: #0d47a1;
+            background: #e3f2fd;
+            border-left: 5px solid #2196F3;
+        }
         .valid { 
             color: #4CAF50;
             border-left: 5px solid #4CAF50;
@@ -100,26 +105,33 @@
         .checkin-note {
             width: 90%;
             max-width: 500px;
-            margin: 4px 0 12px;
-            padding: 12px 14px;
+            margin: 8px 0 12px;
+            padding: 14px 16px;
             border-radius: 10px;
             background: #fff8e1;
             color: #7a4f00;
             border-left: 5px solid #ff9800;
             font-weight: bold;
             line-height: 1.6;
+            font-size: 16px;
+        }
+        .checkin-note.loading {
+            background: #e3f2fd;
+            color: #0d47a1;
+            border-left-color: #2196F3;
         }
         button {
             background: #2196F3;
             color: white;
             border: none;
-            padding: 15px 30px;
-            border-radius: 25px;
+            padding: 17px 30px;
+            border-radius: 14px;
             margin: 15px 0;
-            font-size: 16px;
+            font-size: 18px;
             cursor: pointer;
             width: 90%;
-            max-width: 300px;
+            max-width: 420px;
+            min-height: 58px;
             transition: all 0.3s ease;
             box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
             font-weight: bold;
@@ -175,20 +187,23 @@
             font-weight: bold;
         }
         #idInput {
-            padding: 15px;
-            margin: 20px 0;
+            padding: 20px 18px;
+            margin: 18px 0 12px;
             width: 90%;
-            font-size: 18px;
+            font-size: 24px;
             border: 2px solid #ddd;
-            border-radius: 25px;
-            text-align: right;
+            border-radius: 14px;
+            text-align: center;
             outline: none;
-            transition: border 0.3s;
-            max-width: 400px;
+            transition: border 0.3s, box-shadow 0.3s;
+            max-width: 420px;
+            min-height: 64px;
+            font-weight: bold;
+            letter-spacing: 0;
         }
         #idInput:focus {
             border-color: #2196F3;
-            box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+            box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.2);
         }
         .scanner-container {
             width: 90%;
@@ -367,6 +382,16 @@
             width: 90%;
         }
         @media (max-width: 600px) {
+            body {
+                padding: 8px;
+            }
+            .container {
+                border-radius: 14px;
+            }
+            .step {
+                min-height: calc(100vh - 130px);
+                padding: 22px 12px;
+            }
             .header h1 {
                 font-size: 1.4rem;
             }
@@ -374,20 +399,26 @@
                 font-size: 1.3em;
             }
             button {
-                padding: 12px 20px;
-                font-size: 14px;
-                width: 95%;
+                padding: 16px 20px;
+                font-size: 18px;
+                width: 100%;
+                max-width: 430px;
+                min-height: 60px;
             }
             #idInput {
-                font-size: 16px;
-                padding: 12px;
-                width: 95%;
+                font-size: 24px;
+                padding: 18px 14px;
+                width: 100%;
+                max-width: 430px;
+                min-height: 64px;
             }
+            .checkin-note,
             .status-bar, .trainee-info, .cooldown-message, .disclaimer, .timestamp, .address-info, .location-error, .location-check {
-                width: 95%;
+                width: 100%;
+                max-width: 430px;
             }
             .scanner-container {
-                width: 95%;
+                width: 100%;
                 height: 250px;
             }
         }
@@ -404,16 +435,16 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>نظام حضور المتدربين مع تحقق الموقع</h1>
+            <h1>التحضير الذاتي</h1>
         </div>
         
         <!-- STEP 1: ID VERIFICATION -->
         <div id="step1" class="step active-step">
             <h2>أدخل رقمك التدريبي</h2>
-            <input type="text" id="idInput" placeholder="441234567" aria-label="رقم المتدرب">
+            <input type="text" id="idInput" placeholder="441234567" aria-label="رقم المتدرب" inputmode="numeric" autocomplete="off">
             <div id="idSpinner" class="spinner"></div>
-            <button onclick="verifyID()" id="idButton" aria-label="تسجيل الحضور">تسجيل الحضور</button>
-            <div class="checkin-note">انتظر حتى تظهر رسالة تم تسجيل الحضور بنجاح.</div>
+            <button onclick="verifyID()" id="idButton" aria-label="تحضير">تحضير</button>
+            <div id="checkinNote" class="checkin-note">لا تغلق الصفحة. انتظر حتى تظهر صفحة تسجيل الحضور بنجاح.</div>
             <div id="nfcTapStatus" class="status-bar" style="display:none"></div>
             <div id="idStatus" class="status-bar"></div>
             <div class="disclaimer">
@@ -511,6 +542,7 @@
         let requiredLocation = '';
         let locationData = null;
         let attendanceRecorded = false; // Flag to prevent duplicate attendance logs
+        let idVerificationInProgress = false;
         let nfcTapData = null;
         let nfcTapError = '';
         let nfcTapUsedForThisAttempt = false;
@@ -708,8 +740,8 @@
 
             if (!ENABLE_NFC_TAP_VALIDATION) {
                 nfcStatus.style.display = 'none';
-                idInput.disabled = false;
-                idButton.disabled = false;
+                idInput.disabled = idVerificationInProgress;
+                idButton.disabled = idVerificationInProgress;
                 return;
             }
 
@@ -726,8 +758,8 @@
 
             if (isNfcGateSatisfied()) {
                 renderNfcReadyStatus(nfcStatus);
-                idInput.disabled = false;
-                idButton.disabled = false;
+                idInput.disabled = idVerificationInProgress;
+                idButton.disabled = idVerificationInProgress;
             } else {
                 clearNfcCountdownTimer();
                 nfcStatus.className = 'status-bar invalid';
@@ -1003,8 +1035,57 @@
             }
         }
 
+        function setIdLoadingState(isLoading, message) {
+            const idInput = document.getElementById('idInput');
+            const idButton = document.getElementById('idButton');
+            const idSpinner = document.getElementById('idSpinner');
+            const idStatus = document.getElementById('idStatus');
+            const checkinNote = document.getElementById('checkinNote');
+
+            if (idInput) {
+                idInput.disabled = isLoading;
+            }
+
+            if (idButton) {
+                idButton.disabled = isLoading;
+                idButton.textContent = isLoading ? 'جاري التحضير...' : 'تحضير';
+            }
+
+            if (idSpinner) {
+                idSpinner.style.display = isLoading ? 'block' : 'none';
+            }
+
+            if (checkinNote) {
+                checkinNote.classList.toggle('loading', isLoading);
+                checkinNote.textContent = isLoading
+                    ? 'لا تغلق الصفحة. انتظر حتى تظهر صفحة تسجيل الحضور بنجاح.'
+                    : 'لا تغلق الصفحة. انتظر حتى تظهر صفحة تسجيل الحضور بنجاح.';
+            }
+
+            if (isLoading && idStatus) {
+                idStatus.className = 'status-bar waiting';
+                idStatus.textContent = message || 'لا تغلق الصفحة. انتظر حتى تظهر صفحة تسجيل الحضور بنجاح.';
+                scrollToAttendanceFeedback();
+            }
+        }
+
+        function scrollToAttendanceFeedback() {
+            const feedbackElement = document.getElementById('idStatus') || document.getElementById('checkinNote');
+            if (!feedbackElement) {
+                return;
+            }
+
+            setTimeout(() => {
+                feedbackElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 80);
+        }
+
         // ================== STEP 1: VERIFY ID ================== //
         async function verifyID() {
+            if (idVerificationInProgress || attendanceRecorded) {
+                return;
+            }
+
             if (!isNfcGateSatisfied()) {
                 nfcTapData = loadNfcTapData();
                 applyNfcGateToForm();
@@ -1025,13 +1106,11 @@
             const idStatus = document.getElementById('idStatus');
             const idSpinner = document.getElementById('idSpinner');
             const idButton = document.getElementById('idButton');
+            let shouldUnlockIdControls = true;
     
             attemptCount++;
-            idSpinner.style.display = 'block';
-            idButton.disabled = true;
-
-            idStatus.classList.remove('invalid','valid');
-            idStatus.textContent = 'جاري التحقق من الهوية، الرجاء الانتظار...';
+            idVerificationInProgress = true;
+            setIdLoadingState(true, 'لا تغلق الصفحة. انتظر حتى تظهر صفحة تسجيل الحضور بنجاح.');
 
             try {
                 const nfcStarted = await startNfcAttendanceAttempt();
@@ -1061,6 +1140,7 @@
                         requiredLocation = foundTrainee.requiredLocation || '';
                         console.log('Required location:', requiredLocation);
                         
+                        shouldUnlockIdControls = false;
                         proceedAfterIdVerification();
                     } else {
                         showError(isMeetingValid.message, idStatus);
@@ -1072,10 +1152,22 @@
                 showError('خدمة التحقق غير متوفرة', idStatus);
                 console.error('خطأ في جلب البيانات:', error);
             } finally {
-                idSpinner.style.display = 'none';
+                idVerificationInProgress = false;
+                if (!shouldUnlockIdControls) {
+                    if (idSpinner) {
+                        idSpinner.style.display = 'none';
+                    }
+                    if (idButton) {
+                        idButton.disabled = true;
+                    }
+                    return;
+                }
+
+                setIdLoadingState(false);
                 if (ENABLE_NFC_TAP_VALIDATION && !isNfcGateSatisfied()) {
                     applyNfcGateToForm();
                 } else {
+                    document.getElementById('idInput').disabled = false;
                     idButton.disabled = false;
                 }
             }
@@ -1314,12 +1406,14 @@
         }
 
         function rejectNfcAttendance(message) {
+            idVerificationInProgress = false;
             nfcTapError = message;
             nfcReservationAccepted = false;
             nfcReservationPending = false;
             nfcReservePromise = null;
             nfcStartPromise = null;
             nfcTokenStarted = false;
+            setIdLoadingState(false);
             clearNfcCountdownTimer();
             showStep(1);
             applyNfcGateToForm();
@@ -1363,6 +1457,8 @@
             nfcReservePromise = null;
             nfcStartPromise = null;
             nfcTokenStarted = false;
+            idVerificationInProgress = false;
+            setIdLoadingState(false);
             clearNfcCountdownTimer();
             gpsValidationPassed = false;
             qrValidationPassed = false;
