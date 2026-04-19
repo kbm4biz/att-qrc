@@ -734,6 +734,37 @@
             return `${platform} | ${userAgent}`.slice(0, 240);
         }
 
+        function getDeviceFingerprintSource() {
+            const screenWidth = Math.min(screen.width || 0, screen.height || 0);
+            const screenHeight = Math.max(screen.width || 0, screen.height || 0);
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+            const languages = Array.isArray(navigator.languages) ? navigator.languages.join(',') : navigator.language;
+            const parts = [
+                navigator.userAgent || '',
+                navigator.platform || '',
+                navigator.vendor || '',
+                navigator.language || '',
+                languages || '',
+                timezone,
+                screenWidth,
+                screenHeight,
+                screen.colorDepth || '',
+                screen.pixelDepth || '',
+                window.devicePixelRatio || '',
+                navigator.hardwareConcurrency || '',
+                navigator.deviceMemory || '',
+                navigator.maxTouchPoints || '',
+                window.matchMedia?.('(pointer: coarse)').matches ? 'coarse' : 'fine',
+                window.matchMedia?.('(hover: none)').matches ? 'no-hover' : 'hover'
+            ];
+
+            return parts.join('|');
+        }
+
+        function getDeviceFingerprint() {
+            return simpleHash(getDeviceFingerprintSource());
+        }
+
         function ensureNfcReservationId(tapData) {
             if (!tapData) {
                 return '';
@@ -899,6 +930,8 @@
                     userAgent: navigator.userAgent,
                     deviceId: getOrCreateDeviceId(),
                     deviceLabel: getDeviceLabel(),
+                    deviceFingerprint: getDeviceFingerprint(),
+                    fingerprintSource: getDeviceFingerprintSource(),
                     clientTimestampIso: new Date().toISOString(),
                     clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false })
                 };
@@ -970,6 +1003,8 @@
                     userAgent: navigator.userAgent,
                     deviceId: getOrCreateDeviceId(),
                     deviceLabel: getDeviceLabel(),
+                    deviceFingerprint: getDeviceFingerprint(),
+                    fingerprintSource: getDeviceFingerprintSource(),
                     clientTimestampIso: new Date().toISOString(),
                     clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false })
                 };
@@ -1717,6 +1752,8 @@
                 requiredLocation,
                 deviceId: getOrCreateDeviceId(),
                 deviceLabel: getDeviceLabel(),
+                deviceFingerprint: getDeviceFingerprint(),
+                fingerprintSource: getDeviceFingerprintSource(),
                 clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false }),
                 verification: {
                     gpsEnabled: ENABLE_GPS_VALIDATION,
