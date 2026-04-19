@@ -506,6 +506,82 @@
             margin: 10px 0;
             text-align: right;
         }
+        .teacher-settings {
+            background: #f8fbfd;
+            border: 1px solid #dbe6ee;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        .teacher-settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .teacher-settings-header h3 {
+            margin: 0;
+            color: #102a43;
+            font-size: 18px;
+        }
+        .teacher-settings-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(180px, 1fr));
+            gap: 10px;
+        }
+        .teacher-toggle {
+            min-height: 58px;
+            border: 1px solid #e0e7ee;
+            border-radius: 8px;
+            background: #fff;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            color: #263238;
+            font-weight: bold;
+        }
+        .teacher-toggle input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .teacher-toggle-switch {
+            width: 50px;
+            height: 28px;
+            border-radius: 999px;
+            background: #b0bec5;
+            position: relative;
+            flex: 0 0 50px;
+            transition: background 0.2s ease;
+        }
+        .teacher-toggle-switch::after {
+            content: '';
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #fff;
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+            transition: right 0.2s ease;
+        }
+        .teacher-toggle input:checked + .teacher-toggle-switch {
+            background: #2e7d32;
+        }
+        .teacher-toggle input:checked + .teacher-toggle-switch::after {
+            right: 25px;
+        }
+        .teacher-settings-note {
+            color: #607d8b;
+            font-size: 13px;
+            line-height: 1.7;
+            margin-top: 10px;
+        }
         .teacher-summary {
             display: grid;
             grid-template-columns: repeat(4, minmax(130px, 1fr));
@@ -663,6 +739,7 @@
                 padding: 14px 10px;
             }
             .teacher-filters,
+            .teacher-settings-grid,
             .teacher-summary {
                 grid-template-columns: 1fr 1fr;
             }
@@ -680,6 +757,9 @@
         }
         @media (min-width: 601px) and (max-width: 900px) {
             .teacher-filters {
+                grid-template-columns: 1fr 1fr;
+            }
+            .teacher-settings-grid {
                 grid-template-columns: 1fr 1fr;
             }
             .teacher-summary {
@@ -798,6 +878,54 @@
                     </div>
                 </div>
 
+                <div class="teacher-settings">
+                    <div class="teacher-settings-header">
+                        <h3>إعدادات نموذج التحضير</h3>
+                        <div class="teacher-actions">
+                            <button type="button" onclick="saveAdminSettings()">حفظ الإعدادات</button>
+                            <button type="button" class="teacher-secondary-button" onclick="loadAdminSettings()">استعادة</button>
+                        </div>
+                    </div>
+                    <div class="teacher-settings-grid">
+                        <label class="teacher-toggle">
+                            <span>GPS الموقع</span>
+                            <input type="checkbox" id="adminGpsToggle" onchange="markAdminSettingsDirty()">
+                            <span class="teacher-toggle-switch"></span>
+                        </label>
+                        <label class="teacher-toggle">
+                            <span>QR Code</span>
+                            <input type="checkbox" id="adminQrToggle" onchange="markAdminSettingsDirty()">
+                            <span class="teacher-toggle-switch"></span>
+                        </label>
+                        <label class="teacher-toggle">
+                            <span>NFC / NTAG</span>
+                            <input type="checkbox" id="adminNfcToggle" onchange="markAdminSettingsDirty()">
+                            <span class="teacher-toggle-switch"></span>
+                        </label>
+                        <label class="teacher-toggle">
+                            <span>نموذج المرفقات</span>
+                            <input type="checkbox" id="adminSupportToggle" onchange="markAdminSettingsDirty()">
+                            <span class="teacher-toggle-switch"></span>
+                        </label>
+                        <label class="teacher-toggle">
+                            <span>إلزام المرفق</span>
+                            <input type="checkbox" id="adminRequireAttachmentToggle" onchange="markAdminSettingsDirty()">
+                            <span class="teacher-toggle-switch"></span>
+                        </label>
+                        <label class="teacher-toggle">
+                            <span>إلزام الملاحظة</span>
+                            <input type="checkbox" id="adminRequireNoteToggle" onchange="markAdminSettingsDirty()">
+                            <span class="teacher-toggle-switch"></span>
+                        </label>
+                        <label class="teacher-field">
+                            نصف قطر GPS بالكيلومتر
+                            <input type="number" id="adminRadiusKm" min="0.02" max="5" step="0.01" onchange="markAdminSettingsDirty()">
+                        </label>
+                    </div>
+                    <div class="teacher-settings-note">هذه الإعدادات تطبق على الطلاب عند فتح الصفحة أو إعادة تحميلها. إذا كانت كل وسائل التحقق مغلقة سيبقى تسجيل الرقم التدريبي فقط.</div>
+                    <div id="teacherSettingsMessage" class="status-bar teacher-message waiting">جاري تحميل الإعدادات...</div>
+                </div>
+
                 <div class="teacher-filters">
                     <label class="teacher-field">
                         اليوم
@@ -854,12 +982,21 @@
 
     <script>
         // ================== CONFIGURATIONS ================== //
-        const ENABLE_GPS_VALIDATION = false; // Set to false to skip GPS verification
-        const ENABLE_QR_VALIDATION = false; // Set to true to enable QR scanning
-        const ENABLE_NFC_TAP_VALIDATION = true; // Set to true to require an Ntag 424 DNA tap before the form opens
-        const ENABLE_SUPPORTING_FORM = true; // Set to true to require a short form + attachment before final check-in
-        const REQUIRE_SUPPORTING_ATTACHMENT = true;
-        const REQUIRE_SUPPORTING_NOTE = false;
+        const DEFAULT_APP_SETTINGS = {
+            enableGpsValidation: true,
+            enableQrValidation: true,
+            enableNfcTapValidation: true,
+            enableSupportingForm: false,
+            requireSupportingAttachment: true,
+            requireSupportingNote: false,
+            radiusKm: 0.2
+        };
+        let ENABLE_GPS_VALIDATION = DEFAULT_APP_SETTINGS.enableGpsValidation;
+        let ENABLE_QR_VALIDATION = DEFAULT_APP_SETTINGS.enableQrValidation;
+        let ENABLE_NFC_TAP_VALIDATION = DEFAULT_APP_SETTINGS.enableNfcTapValidation;
+        let ENABLE_SUPPORTING_FORM = DEFAULT_APP_SETTINGS.enableSupportingForm;
+        let REQUIRE_SUPPORTING_ATTACHMENT = DEFAULT_APP_SETTINGS.requireSupportingAttachment;
+        let REQUIRE_SUPPORTING_NOTE = DEFAULT_APP_SETTINGS.requireSupportingNote;
         const SUPPORTING_NOTE_MAX_LENGTH = 300;
         const SUPPORTING_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
         const SUPPORTING_IMAGE_MAX_DIMENSION = 1600;
@@ -869,7 +1006,7 @@
         const NFC_COUNTER_PARAM_NAMES = ['ctr', 'counter', 'cnt'];
         const NFC_MAC_PARAM_NAMES = ['c', 'cmac', 'mac'];
         const LOCATION_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2cFw2_Jrr1j-Iy48e2BREiBlJ9Bj5vMTh3tl72YtTcnJ2DOXUDrD9I5SeVH0WSHeg9ec_tzXDZgEN/pub?output=csv';
-        const RADIUS_KM = 0.2;
+        let RADIUS_KM = DEFAULT_APP_SETTINGS.radiusKm;
         const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?output=csv';
         const MEETING_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?gid=217527569&single=true&output=csv';
         const APPS_SCRIPT_LOG_URL = 'https://script.google.com/macros/s/AKfycbzQ_qHgTzYTZli-ChD_kU-pcpunvHn_PMv4uJ3C5Coj5DfQM0eswdBDYa_PsLrp4drr2Q/exec'; // Apps Script LOG endpoint
@@ -924,6 +1061,8 @@
                 initializeTeacherDashboard();
                 return;
             }
+
+            await loadRuntimeSettings();
 
             const sessionCookie = getCookie('traineeSession');
             if(sessionCookie) {
@@ -983,7 +1122,180 @@
                 dateInput.value = getDateInputValue(getSaudiTime());
             }
 
+            syncAdminSettingsControls(getCurrentAppSettings());
+            loadAdminSettings();
             loadTeacherLog();
+        }
+
+        async function loadRuntimeSettings() {
+            try {
+                const result = await callAppsScriptJsonp('appConfig', {});
+                if (result?.ok && result.settings) {
+                    applyRuntimeSettings(result.settings);
+                }
+            } catch (error) {
+                console.warn('Using built-in attendance settings because appConfig failed:', error);
+            }
+        }
+
+        async function loadAdminSettings() {
+            setAdminSettingsDisabled(true);
+            showAdminSettingsMessage('جاري تحميل الإعدادات...', 'waiting');
+
+            try {
+                const result = await callAppsScriptJsonp('appConfig', {});
+                if (!result?.ok || !result.settings) {
+                    throw new Error(result?.error || 'تعذر تحميل الإعدادات.');
+                }
+
+                applyRuntimeSettings(result.settings);
+                syncAdminSettingsControls(getCurrentAppSettings());
+                showAdminSettingsMessage('تم تحميل الإعدادات الحالية.', 'valid');
+            } catch (error) {
+                console.error('Settings load error:', error);
+                syncAdminSettingsControls(getCurrentAppSettings());
+                showAdminSettingsMessage('تعذر تحميل الإعدادات من الخادم. تظهر الآن الإعدادات الافتراضية.', 'invalid');
+            } finally {
+                setAdminSettingsDisabled(false);
+            }
+        }
+
+        async function saveAdminSettings() {
+            if (!teacherDashboardPassword) {
+                teacherDashboardPassword = sessionStorage.getItem('teacherDashboardPassword') || '';
+            }
+
+            const settings = readAdminSettingsControls();
+            setAdminSettingsDisabled(true);
+            showAdminSettingsMessage('جاري حفظ الإعدادات...', 'waiting');
+
+            try {
+                const result = await callAppsScriptJsonp('updateAppConfig', {
+                    password: teacherDashboardPassword,
+                    settings
+                });
+
+                if (!result?.ok || !result.settings) {
+                    if (result?.code === 'TEACHER_AUTH') {
+                        throw new Error('كلمة مرور المعلم غير صحيحة.');
+                    }
+                    throw new Error(result?.error || 'تعذر حفظ الإعدادات.');
+                }
+
+                applyRuntimeSettings(result.settings);
+                syncAdminSettingsControls(getCurrentAppSettings());
+                showAdminSettingsMessage(result.savedAt ? `تم حفظ الإعدادات. آخر حفظ: ${result.savedAt}` : 'تم حفظ الإعدادات بنجاح.', 'valid');
+            } catch (error) {
+                console.error('Settings save error:', error);
+                showAdminSettingsMessage(error.message || 'تعذر حفظ الإعدادات.', 'invalid');
+            } finally {
+                setAdminSettingsDisabled(false);
+            }
+        }
+
+        function applyRuntimeSettings(settings) {
+            ENABLE_GPS_VALIDATION = coerceBooleanSetting(settings?.enableGpsValidation, DEFAULT_APP_SETTINGS.enableGpsValidation);
+            ENABLE_QR_VALIDATION = coerceBooleanSetting(settings?.enableQrValidation, DEFAULT_APP_SETTINGS.enableQrValidation);
+            ENABLE_NFC_TAP_VALIDATION = coerceBooleanSetting(settings?.enableNfcTapValidation, DEFAULT_APP_SETTINGS.enableNfcTapValidation);
+            ENABLE_SUPPORTING_FORM = coerceBooleanSetting(settings?.enableSupportingForm, DEFAULT_APP_SETTINGS.enableSupportingForm);
+            REQUIRE_SUPPORTING_ATTACHMENT = coerceBooleanSetting(settings?.requireSupportingAttachment, DEFAULT_APP_SETTINGS.requireSupportingAttachment);
+            REQUIRE_SUPPORTING_NOTE = coerceBooleanSetting(settings?.requireSupportingNote, DEFAULT_APP_SETTINGS.requireSupportingNote);
+            const radiusKm = Number(settings?.radiusKm);
+            RADIUS_KM = Number.isFinite(radiusKm) ? Math.min(Math.max(radiusKm, 0.02), 5) : DEFAULT_APP_SETTINGS.radiusKm;
+        }
+
+        function getCurrentAppSettings() {
+            return {
+                enableGpsValidation: ENABLE_GPS_VALIDATION,
+                enableQrValidation: ENABLE_QR_VALIDATION,
+                enableNfcTapValidation: ENABLE_NFC_TAP_VALIDATION,
+                enableSupportingForm: ENABLE_SUPPORTING_FORM,
+                requireSupportingAttachment: REQUIRE_SUPPORTING_ATTACHMENT,
+                requireSupportingNote: REQUIRE_SUPPORTING_NOTE,
+                radiusKm: RADIUS_KM
+            };
+        }
+
+        function syncAdminSettingsControls(settings) {
+            setChecked('adminGpsToggle', settings.enableGpsValidation);
+            setChecked('adminQrToggle', settings.enableQrValidation);
+            setChecked('adminNfcToggle', settings.enableNfcTapValidation);
+            setChecked('adminSupportToggle', settings.enableSupportingForm);
+            setChecked('adminRequireAttachmentToggle', settings.requireSupportingAttachment);
+            setChecked('adminRequireNoteToggle', settings.requireSupportingNote);
+            const radiusInput = document.getElementById('adminRadiusKm');
+            if (radiusInput) {
+                radiusInput.value = settings.radiusKm;
+            }
+        }
+
+        function readAdminSettingsControls() {
+            const radiusInput = document.getElementById('adminRadiusKm');
+            return {
+                enableGpsValidation: getChecked('adminGpsToggle'),
+                enableQrValidation: getChecked('adminQrToggle'),
+                enableNfcTapValidation: getChecked('adminNfcToggle'),
+                enableSupportingForm: getChecked('adminSupportToggle'),
+                requireSupportingAttachment: getChecked('adminRequireAttachmentToggle'),
+                requireSupportingNote: getChecked('adminRequireNoteToggle'),
+                radiusKm: Number(radiusInput?.value || DEFAULT_APP_SETTINGS.radiusKm)
+            };
+        }
+
+        function markAdminSettingsDirty() {
+            showAdminSettingsMessage('لديك تغييرات غير محفوظة. اضغط حفظ الإعدادات لتطبيقها على الطلاب.', 'waiting');
+        }
+
+        function showAdminSettingsMessage(message, type) {
+            const element = document.getElementById('teacherSettingsMessage');
+            if (!element) {
+                return;
+            }
+            element.className = `status-bar teacher-message ${type || 'waiting'}`;
+            element.textContent = message;
+        }
+
+        function setAdminSettingsDisabled(disabled) {
+            [
+                'adminGpsToggle',
+                'adminQrToggle',
+                'adminNfcToggle',
+                'adminSupportToggle',
+                'adminRequireAttachmentToggle',
+                'adminRequireNoteToggle',
+                'adminRadiusKm'
+            ].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.disabled = disabled;
+                }
+            });
+        }
+
+        function setChecked(id, checked) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.checked = Boolean(checked);
+            }
+        }
+
+        function getChecked(id) {
+            return Boolean(document.getElementById(id)?.checked);
+        }
+
+        function coerceBooleanSetting(value, fallback) {
+            if (value === true || value === false) {
+                return value;
+            }
+
+            const normalized = String(value ?? '').toLowerCase();
+            if (['true', '1', 'yes', 'on'].includes(normalized)) {
+                return true;
+            }
+            if (['false', '0', 'no', 'off'].includes(normalized)) {
+                return false;
+            }
+            return fallback;
         }
 
         async function loadTeacherLog() {
