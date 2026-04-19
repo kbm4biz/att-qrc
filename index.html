@@ -1587,12 +1587,31 @@
                     const startTimeStr = meeting.startClass.trim();
                     const endTimeStr = meeting.endClass.trim();
 
-                    const [year, month, day] = meetingDateStr.split('-').map(part => parseInt(part, 10));
-                    const [startHour, startMinute] = startTimeStr.split(':').map(part => parseInt(part, 10));
-                    const [endHour, endMinute] = endTimeStr.split(':').map(part => parseInt(part, 10));
+                    const meetingDate = parseMeetingDate(meetingDateStr);
+                    const startTime = parseMeetingTime(startTimeStr);
+                    const endTime = parseMeetingTime(endTimeStr);
 
-                    const startDateTime = new Date(year, month - 1, day, startHour, startMinute, 0);
-                    const endDateTime = new Date(year, month - 1, day, endHour, endMinute, 0);
+                    if (!meetingDate || !startTime || !endTime) {
+                        console.warn('Skipping meeting row with unsupported date/time format:', meeting);
+                        continue;
+                    }
+
+                    const startDateTime = new Date(
+                        meetingDate.year,
+                        meetingDate.month - 1,
+                        meetingDate.day,
+                        startTime.hour,
+                        startTime.minute,
+                        0
+                    );
+                    const endDateTime = new Date(
+                        meetingDate.year,
+                        meetingDate.month - 1,
+                        meetingDate.day,
+                        endTime.hour,
+                        endTime.minute,
+                        0
+                    );
 
                     if (currentDate >= startDateTime && currentDate <= endDateTime) {
                         sessionStorage.setItem('currentMeeting', JSON.stringify(meeting));
@@ -1605,6 +1624,79 @@
                 console.error('خطأ في التحقق من جدول الاجتماعات:', error);
                 return { valid: false, message: 'تعذر التحقق من جدول الاجتماعات. حاول مرة أخرى لاحقاً.' };
             }
+        }
+
+        function parseMeetingDate(value) {
+            const dateText = String(value || '').trim();
+            let year;
+            let month;
+            let day;
+
+            let match = dateText.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+            if (match) {
+                year = parseInt(match[1], 10);
+                month = parseInt(match[2], 10);
+                day = parseInt(match[3], 10);
+                return isValidDateParts(year, month, day) ? { year, month, day } : null;
+            }
+
+            match = dateText.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+            if (!match) {
+                return null;
+            }
+
+            const first = parseInt(match[1], 10);
+            const second = parseInt(match[2], 10);
+            year = parseInt(match[3], 10);
+
+            if (second > 12) {
+                month = first;
+                day = second;
+            } else if (first > 12) {
+                day = first;
+                month = second;
+            } else {
+                // Ambiguous slash dates now follow the sheet's current MM/DD/YYYY format.
+                month = first;
+                day = second;
+            }
+
+            return isValidDateParts(year, month, day) ? { year, month, day } : null;
+        }
+
+        function isValidDateParts(year, month, day) {
+            if (!year || !month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
+                return false;
+            }
+
+            const date = new Date(year, month - 1, day);
+            return date.getFullYear() === year &&
+                date.getMonth() === month - 1 &&
+                date.getDate() === day;
+        }
+
+        function parseMeetingTime(value) {
+            const timeText = String(value || '').trim().toUpperCase();
+            const match = timeText.match(/^(\d{1,2})(?::(\d{1,2}))?(?::\d{1,2})?\s*(AM|PM)?$/);
+            if (!match) {
+                return null;
+            }
+
+            let hour = parseInt(match[1], 10);
+            const minute = match[2] ? parseInt(match[2], 10) : 0;
+            const meridiem = match[3];
+
+            if (meridiem === 'PM' && hour < 12) {
+                hour += 12;
+            } else if (meridiem === 'AM' && hour === 12) {
+                hour = 0;
+            }
+
+            if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+                return null;
+            }
+
+            return { hour, minute };
         }
 
         function processMeetingCSV(csvData) {
