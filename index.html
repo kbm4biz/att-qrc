@@ -565,8 +565,8 @@
         const ENABLE_QR_VALIDATION = false; // Set to true to enable QR scanning
         const ENABLE_NFC_TAP_VALIDATION = true; // Set to true to require an Ntag 424 DNA tap before the form opens
         const ENABLE_SUPPORTING_FORM = true; // Set to true to require a short form + attachment before final check-in
-        const REQUIRE_SUPPORTING_ATTACHMENT = false;
-        const REQUIRE_SUPPORTING_NOTE = true;
+        const REQUIRE_SUPPORTING_ATTACHMENT = true;
+        const REQUIRE_SUPPORTING_NOTE = false;
         const SUPPORTING_NOTE_MAX_LENGTH = 300;
         const SUPPORTING_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
         const NFC_TAP_MAX_AGE_MS = 30 * 1000; // NFC tap must be used to start attendance within 30 seconds
@@ -2063,10 +2063,20 @@
                 const iframeName = `uploadFrame_${Date.now()}_${Math.random().toString(36).slice(2)}`;
                 const iframe = document.createElement('iframe');
                 const form = document.createElement('form');
+                let settled = false;
                 const timeoutId = setTimeout(() => {
+                    finish(reject, new Error('انتهت مهلة رفع الملف. إذا تكرر الخطأ شغّل forceAuthorization من Apps Script ثم أعد النشر.'));
+                }, 45000);
+
+                function finish(handler, value) {
+                    if (settled) {
+                        return;
+                    }
+
+                    settled = true;
                     cleanup();
-                    reject(new Error('انتهت مهلة رفع الملف. حاول مرة أخرى.'));
-                }, 90000);
+                    handler(value);
+                }
 
                 function cleanup() {
                     clearTimeout(timeoutId);
@@ -2084,23 +2094,36 @@
                 }
 
                 function onMessage(event) {
-                    const data = event.data || {};
+                    let data = event.data || {};
+                    if (typeof data === 'string') {
+                        try {
+                            data = JSON.parse(data);
+                        } catch (error) {
+                            return;
+                        }
+                    }
+
                     if (data.source !== 'attendanceAttachmentUpload' || data.uploadId !== uploadId) {
                         return;
                     }
 
-                    cleanup();
-                    resolve(data);
+                    finish(resolve, data);
                 }
 
                 window.addEventListener('message', onMessage);
                 iframe.name = iframeName;
-                iframe.style.display = 'none';
+                iframe.style.position = 'absolute';
+                iframe.style.width = '1px';
+                iframe.style.height = '1px';
+                iframe.style.opacity = '0';
+                iframe.style.pointerEvents = 'none';
+                iframe.style.border = '0';
                 form.method = 'POST';
                 form.action = APPS_SCRIPT_LOG_URL;
                 form.target = iframeName;
                 form.style.display = 'none';
                 addField('action', action);
+                addField('uploadId', uploadId);
                 addField('payload', JSON.stringify(payload));
                 document.body.appendChild(iframe);
                 document.body.appendChild(form);
