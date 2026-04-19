@@ -705,6 +705,35 @@
                 : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
         }
 
+        function getOrCreateDeviceId() {
+            const storageKey = 'attendanceDeviceId';
+            try {
+                let deviceId = localStorage.getItem(storageKey);
+                if (!deviceId) {
+                    deviceId = window.crypto?.randomUUID
+                        ? window.crypto.randomUUID()
+                        : `device-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                    localStorage.setItem(storageKey, deviceId);
+                }
+                return deviceId;
+            } catch (error) {
+                let deviceId = sessionStorage.getItem(storageKey);
+                if (!deviceId) {
+                    deviceId = window.crypto?.randomUUID
+                        ? window.crypto.randomUUID()
+                        : `session-device-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                    sessionStorage.setItem(storageKey, deviceId);
+                }
+                return deviceId;
+            }
+        }
+
+        function getDeviceLabel() {
+            const userAgent = navigator.userAgent || '';
+            const platform = navigator.platform || '';
+            return `${platform} | ${userAgent}`.slice(0, 240);
+        }
+
         function ensureNfcReservationId(tapData) {
             if (!tapData) {
                 return '';
@@ -868,6 +897,8 @@
                     },
                     pageUrl: window.location.href,
                     userAgent: navigator.userAgent,
+                    deviceId: getOrCreateDeviceId(),
+                    deviceLabel: getDeviceLabel(),
                     clientTimestampIso: new Date().toISOString(),
                     clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false })
                 };
@@ -937,6 +968,8 @@
                     },
                     pageUrl: window.location.href,
                     userAgent: navigator.userAgent,
+                    deviceId: getOrCreateDeviceId(),
+                    deviceLabel: getDeviceLabel(),
                     clientTimestampIso: new Date().toISOString(),
                     clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false })
                 };
@@ -982,6 +1015,14 @@
 
             if (result?.code === 'NFC_CMAC_KEY_MISSING') {
                 return 'إعداد البطاقة يحتاج مراجعة. تواصل مع المدرب.';
+            }
+
+            if (result?.code === 'ATTENDANCE_DUPLICATE') {
+                return 'تم تسجيل حضور هذا الرقم مسبقاً لهذه المحاضرة.';
+            }
+
+            if (result?.code === 'DEVICE_DUPLICATE') {
+                return 'تم استخدام هذا الجهاز لتسجيل متدرب آخر في هذه المحاضرة.';
             }
 
             if (result?.code === 'NFC_MISSING') {
@@ -1134,7 +1175,9 @@
                         // Store trainee details
                         traineeID = inputID;
                         sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
-                        showSuccess(idStatus, `تم التحقق: ${foundTrainee.name}`);
+                        idStatus.className = 'status-bar waiting';
+                        idStatus.textContent = 'تم التحقق من الرقم. جاري إكمال تسجيل الحضور، لا تغلق الصفحة.';
+                        scrollToAttendanceFeedback();
                         
                         // Get required location for this trainee
                         requiredLocation = foundTrainee.requiredLocation || '';
@@ -1672,6 +1715,8 @@
                 meetingId,
                 address,
                 requiredLocation,
+                deviceId: getOrCreateDeviceId(),
+                deviceLabel: getDeviceLabel(),
                 clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false }),
                 verification: {
                     gpsEnabled: ENABLE_GPS_VALIDATION,
