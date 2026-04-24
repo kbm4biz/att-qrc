@@ -390,6 +390,7 @@
             align-items: stretch;
         }
         .support-form textarea,
+        .support-form input[type="text"],
         .support-form input[type="file"] {
             width: 100%;
             border: 2px solid #ddd;
@@ -399,12 +400,24 @@
             background: #fff;
             outline: none;
         }
+        .support-custom-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            text-align: right;
+            color: #334e68;
+            font-weight: bold;
+        }
+        .support-custom-field span {
+            font-size: 14px;
+        }
         .support-form textarea {
             min-height: 96px;
             resize: vertical;
             line-height: 1.7;
         }
         .support-form textarea:focus,
+        .support-form input[type="text"]:focus,
         .support-form input[type="file"]:focus {
             border-color: #2196F3;
             box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.16);
@@ -990,6 +1003,7 @@
         <div id="step6" class="step">
             <h2>إرفاق المستند</h2>
             <div class="support-form">
+                <div id="supportCustomFields"></div>
                 <textarea id="supportNote" maxlength="300" placeholder="ملاحظة قصيرة اختيارية" aria-label="ملاحظة قصيرة"></textarea>
                 <input type="file" id="supportAttachment" accept="application/pdf,image/*" aria-label="إرفاق ملف">
                 <div class="support-form-hint">يسمح برفع ملف PDF أو صورة فقط. الحد الأقصى 5 MB.</div>
@@ -1084,8 +1098,20 @@
                             نصف قطر GPS بالكيلومتر
                             <input type="number" id="adminRadiusKm" min="0.02" max="5" step="0.01" onchange="markAdminSettingsDirty()">
                         </label>
+                        <label class="teacher-field teacher-form-wide">
+                            اسم الحقل المخصص 1
+                            <input type="text" id="adminSupportField1" maxlength="60" placeholder="اتركه فارغاً لإخفائه" oninput="markAdminSettingsDirty()">
+                        </label>
+                        <label class="teacher-field teacher-form-wide">
+                            اسم الحقل المخصص 2
+                            <input type="text" id="adminSupportField2" maxlength="60" placeholder="اتركه فارغاً لإخفائه" oninput="markAdminSettingsDirty()">
+                        </label>
+                        <label class="teacher-field teacher-form-wide">
+                            اسم الحقل المخصص 3
+                            <input type="text" id="adminSupportField3" maxlength="60" placeholder="اتركه فارغاً لإخفائه" oninput="markAdminSettingsDirty()">
+                        </label>
                     </div>
-                    <div class="teacher-settings-note">هذه الإعدادات تطبق على الطلاب عند فتح الصفحة أو إعادة تحميلها. إذا كانت كل وسائل التحقق مغلقة سيبقى تسجيل الرقم التدريبي فقط.</div>
+                    <div class="teacher-settings-note">هذه الإعدادات تطبق على الطلاب عند فتح الصفحة أو إعادة تحميلها. إذا كانت كل وسائل التحقق مغلقة سيبقى تسجيل الرقم التدريبي فقط. الحقول المخصصة في النموذج تظهر فقط إذا كتبت لها أسماء هنا.</div>
                     <div id="teacherSettingsMessage" class="status-bar teacher-message waiting">جاري تحميل الإعدادات...</div>
                 </div>
 
@@ -1365,7 +1391,8 @@
             enableSupportingForm: false,
             requireSupportingAttachment: true,
             requireSupportingNote: false,
-            radiusKm: 0.2
+            radiusKm: 0.2,
+            supportingCustomFields: ['', '', '']
         };
         let ENABLE_GPS_VALIDATION = DEFAULT_APP_SETTINGS.enableGpsValidation;
         let ENABLE_QR_VALIDATION = DEFAULT_APP_SETTINGS.enableQrValidation;
@@ -1373,6 +1400,7 @@
         let ENABLE_SUPPORTING_FORM = DEFAULT_APP_SETTINGS.enableSupportingForm;
         let REQUIRE_SUPPORTING_ATTACHMENT = DEFAULT_APP_SETTINGS.requireSupportingAttachment;
         let REQUIRE_SUPPORTING_NOTE = DEFAULT_APP_SETTINGS.requireSupportingNote;
+        let SUPPORTING_CUSTOM_FIELDS = [...DEFAULT_APP_SETTINGS.supportingCustomFields];
         const SUPPORTING_NOTE_MAX_LENGTH = 300;
         const SUPPORTING_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
         const SUPPORTING_IMAGE_MAX_DIMENSION = 1600;
@@ -1776,7 +1804,7 @@
                     <td>
                         <div class="teacher-table-actions">
                             <button type="button" class="teacher-secondary-button" data-id="${escapeAttribute(course.courseId || '')}" onclick="editCourse(this.dataset.id)">تعديل</button>
-                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(course.courseId || '')}" onclick="deleteCourse(this.dataset.id)">حذف</button>
+                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(course.courseId || '')}" data-row="${escapeAttribute(String(course.rowNumber || ''))}" onclick="deleteCourse(this.dataset.id, this.dataset.row)">حذف</button>
                         </div>
                     </td>
                 </tr>
@@ -1833,7 +1861,7 @@
                     <td>
                         <div class="teacher-table-actions">
                             <button type="button" class="teacher-secondary-button" data-id="${escapeAttribute(location.locationId || '')}" onclick="editLocation(this.dataset.id)">تعديل</button>
-                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(location.locationId || '')}" onclick="deleteLocation(this.dataset.id)">حذف</button>
+                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(location.locationId || '')}" data-row="${escapeAttribute(String(location.rowNumber || ''))}" onclick="deleteLocation(this.dataset.id, this.dataset.row)">حذف</button>
                         </div>
                     </td>
                 </tr>
@@ -1895,7 +1923,7 @@
                     <td>
                         <div class="teacher-table-actions">
                             <button type="button" class="teacher-secondary-button" data-id="${escapeAttribute(student.traineeId || '')}" onclick="editStudent(this.dataset.id)">تعديل</button>
-                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(student.traineeId || '')}" onclick="deleteStudent(this.dataset.id)">حذف</button>
+                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(student.traineeId || '')}" data-row="${escapeAttribute(String(student.rowNumber || ''))}" onclick="deleteStudent(this.dataset.id, this.dataset.row)">حذف</button>
                         </div>
                     </td>
                 </tr>
@@ -1959,7 +1987,7 @@
                     <td>
                         <div class="teacher-table-actions">
                             <button type="button" class="teacher-secondary-button" data-id="${escapeAttribute(schedule.scheduleId || '')}" onclick="editSchedule(this.dataset.id)">تعديل</button>
-                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(schedule.scheduleId || '')}" onclick="deleteSchedule(this.dataset.id)">حذف</button>
+                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(schedule.scheduleId || '')}" data-row="${escapeAttribute(String(schedule.rowNumber || ''))}" onclick="deleteSchedule(this.dataset.id, this.dataset.row)">حذف</button>
                         </div>
                     </td>
                 </tr>
@@ -2249,20 +2277,20 @@
             }
         }
 
-        async function deleteCourse(courseId) {
-            await deleteTeacherEntity('deleteCourse', { courseId }, 'teacherCourseMessage', 'تم حذف الدورة بنجاح.');
+        async function deleteCourse(courseId, rowNumber) {
+            await deleteTeacherEntity('deleteCourse', { courseId, rowNumber: Number(rowNumber || 0) }, 'teacherCourseMessage', 'تم حذف الدورة بنجاح.');
         }
 
-        async function deleteLocation(locationId) {
-            await deleteTeacherEntity('deleteLocation', { locationId }, 'teacherLocationMessage', 'تم حذف الموقع بنجاح.');
+        async function deleteLocation(locationId, rowNumber) {
+            await deleteTeacherEntity('deleteLocation', { locationId, rowNumber: Number(rowNumber || 0) }, 'teacherLocationMessage', 'تم حذف الموقع بنجاح.');
         }
 
-        async function deleteStudent(traineeId) {
-            await deleteTeacherEntity('deleteStudent', { traineeId }, 'teacherStudentsMessage', 'تم حذف الطالب بنجاح.');
+        async function deleteStudent(traineeId, rowNumber) {
+            await deleteTeacherEntity('deleteStudent', { traineeId, rowNumber: Number(rowNumber || 0) }, 'teacherStudentsMessage', 'تم حذف الطالب بنجاح.');
         }
 
-        async function deleteSchedule(scheduleId) {
-            await deleteTeacherEntity('deleteSchedule', { scheduleId }, 'teacherScheduleMessage', 'تم حذف الجدول بنجاح.');
+        async function deleteSchedule(scheduleId, rowNumber) {
+            await deleteTeacherEntity('deleteSchedule', { scheduleId, rowNumber: Number(rowNumber || 0) }, 'teacherScheduleMessage', 'تم حذف الجدول بنجاح.');
         }
 
         async function deleteTeacherEntity(action, payload, statusId, successMessage) {
@@ -2455,6 +2483,17 @@
             element.textContent = message;
         }
 
+        function normalizeSupportingCustomFieldLabels(fields) {
+            const source = Array.isArray(fields) ? fields : [];
+            const normalized = [];
+
+            for (let index = 0; index < 3; index++) {
+                normalized.push(String(source[index] ?? '').trim().slice(0, 60));
+            }
+
+            return normalized;
+        }
+
         function applyRuntimeSettings(settings) {
             ENABLE_GPS_VALIDATION = coerceBooleanSetting(settings?.enableGpsValidation, DEFAULT_APP_SETTINGS.enableGpsValidation);
             ENABLE_QR_VALIDATION = coerceBooleanSetting(settings?.enableQrValidation, DEFAULT_APP_SETTINGS.enableQrValidation);
@@ -2462,8 +2501,10 @@
             ENABLE_SUPPORTING_FORM = coerceBooleanSetting(settings?.enableSupportingForm, DEFAULT_APP_SETTINGS.enableSupportingForm);
             REQUIRE_SUPPORTING_ATTACHMENT = coerceBooleanSetting(settings?.requireSupportingAttachment, DEFAULT_APP_SETTINGS.requireSupportingAttachment);
             REQUIRE_SUPPORTING_NOTE = coerceBooleanSetting(settings?.requireSupportingNote, DEFAULT_APP_SETTINGS.requireSupportingNote);
+            SUPPORTING_CUSTOM_FIELDS = normalizeSupportingCustomFieldLabels(settings?.supportingCustomFields ?? DEFAULT_APP_SETTINGS.supportingCustomFields);
             const radiusKm = Number(settings?.radiusKm);
             RADIUS_KM = Number.isFinite(radiusKm) ? Math.min(Math.max(radiusKm, 0.02), 5) : DEFAULT_APP_SETTINGS.radiusKm;
+            renderSupportingCustomFields();
         }
 
         function getCurrentAppSettings() {
@@ -2474,11 +2515,13 @@
                 enableSupportingForm: ENABLE_SUPPORTING_FORM,
                 requireSupportingAttachment: REQUIRE_SUPPORTING_ATTACHMENT,
                 requireSupportingNote: REQUIRE_SUPPORTING_NOTE,
-                radiusKm: RADIUS_KM
+                radiusKm: RADIUS_KM,
+                supportingCustomFields: [...SUPPORTING_CUSTOM_FIELDS]
             };
         }
 
         function syncAdminSettingsControls(settings) {
+            const customFields = normalizeSupportingCustomFieldLabels(settings.supportingCustomFields);
             setChecked('adminGpsToggle', settings.enableGpsValidation);
             setChecked('adminQrToggle', settings.enableQrValidation);
             setChecked('adminNfcToggle', settings.enableNfcTapValidation);
@@ -2489,6 +2532,9 @@
             if (radiusInput) {
                 radiusInput.value = settings.radiusKm;
             }
+            setValue('adminSupportField1', customFields[0] || '');
+            setValue('adminSupportField2', customFields[1] || '');
+            setValue('adminSupportField3', customFields[2] || '');
         }
 
         function readAdminSettingsControls() {
@@ -2500,7 +2546,12 @@
                 enableSupportingForm: getChecked('adminSupportToggle'),
                 requireSupportingAttachment: getChecked('adminRequireAttachmentToggle'),
                 requireSupportingNote: getChecked('adminRequireNoteToggle'),
-                radiusKm: Number(radiusInput?.value || DEFAULT_APP_SETTINGS.radiusKm)
+                radiusKm: Number(radiusInput?.value || DEFAULT_APP_SETTINGS.radiusKm),
+                supportingCustomFields: normalizeSupportingCustomFieldLabels([
+                    document.getElementById('adminSupportField1')?.value || '',
+                    document.getElementById('adminSupportField2')?.value || '',
+                    document.getElementById('adminSupportField3')?.value || ''
+                ])
             };
         }
 
@@ -2525,7 +2576,10 @@
                 'adminSupportToggle',
                 'adminRequireAttachmentToggle',
                 'adminRequireNoteToggle',
-                'adminRadiusKm'
+                'adminRadiusKm',
+                'adminSupportField1',
+                'adminSupportField2',
+                'adminSupportField3'
             ].forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
@@ -2543,6 +2597,13 @@
 
         function getChecked(id) {
             return Boolean(document.getElementById(id)?.checked);
+        }
+
+        function setValue(id, value) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = value ?? '';
+            }
         }
 
         function coerceBooleanSetting(value, fallback) {
@@ -2679,7 +2740,7 @@
                         <div class="teacher-cell"><span>التحقق</span>${escapeHtml(formatGateSummary(row))}</div>
                         <div class="teacher-cell"><span>الجهاز</span>${escapeHtml(row.deviceFingerprint || row.deviceId || '-')}</div>
                         <div class="teacher-cell"><span>المرفق</span>${formatTeacherAttachment(row)}</div>
-                        <div class="teacher-cell"><span>ملاحظة</span>${escapeHtml(row.supportNote || '-')}</div>
+                        <div class="teacher-cell"><span>النموذج</span>${formatTeacherSupportDetails(row)}</div>
                     </div>
                 `;
             }).join('');
@@ -2742,13 +2803,27 @@
             return `<a class="teacher-attachment-link" href="${safeUrl}" target="_blank" rel="noopener">فتح الملف</a><div>${label}</div>`;
         }
 
+        function formatTeacherSupportDetails(row) {
+            const parts = [];
+            if (row.supportNote) {
+                parts.push(`<div>${escapeHtml(row.supportNote)}</div>`);
+            }
+            if (Array.isArray(row.supportFields)) {
+                row.supportFields.filter(Boolean).forEach(item => {
+                    parts.push(`<div>${escapeHtml(item)}</div>`);
+                });
+            }
+
+            return parts.length ? parts.join('') : '-';
+        }
+
         function downloadTeacherCsv() {
             if (!teacherLastRows.length) {
                 showTeacherMessage('لا توجد سجلات لتنزيلها.', 'waiting');
                 return;
             }
 
-            const headers = ['التاريخ', 'الوقت', 'الحالة', 'الرقم التدريبي', 'الاسم', 'البرنامج', 'اللقاء', 'GPS', 'QR', 'NFC', 'الجهاز', 'المرفق', 'الملاحظة'];
+            const headers = ['التاريخ', 'الوقت', 'الحالة', 'الرقم التدريبي', 'الاسم', 'البرنامج', 'اللقاء', 'GPS', 'QR', 'NFC', 'الجهاز', 'المرفق', 'الملاحظة', 'الحقول المخصصة'];
             const lines = [
                 headers,
                 ...teacherLastRows.map(row => [
@@ -2764,7 +2839,8 @@
                     formatGateStatus(row.nfcStatus),
                     row.deviceFingerprint || row.deviceId || '',
                     row.attachmentUrl || '',
-                    row.supportNote || ''
+                    row.supportNote || '',
+                    row.supportFieldsSummary || ''
                 ])
             ].map(csvLine).join('\n');
 
@@ -4204,6 +4280,44 @@
             return Math.abs(hash).toString(36).slice(-8).padStart(8, '0');
         }
 
+        function getConfiguredSupportingCustomFields() {
+            return normalizeSupportingCustomFieldLabels(SUPPORTING_CUSTOM_FIELDS)
+                .map((label, index) => ({ index, label }))
+                .filter(field => field.label);
+        }
+
+        function renderSupportingCustomFields() {
+            const container = document.getElementById('supportCustomFields');
+            if (!container) {
+                return;
+            }
+
+            const fields = getConfiguredSupportingCustomFields();
+            if (!fields.length) {
+                container.innerHTML = '';
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+            container.style.gap = '12px';
+            container.innerHTML = fields.map(field => `
+                <label class="support-custom-field">
+                    <span>${escapeHtml(field.label)}</span>
+                    <input type="text" id="supportCustomField${field.index + 1}" maxlength="160" placeholder="اكتب ${escapeAttribute(field.label)}" aria-label="${escapeAttribute(field.label)}">
+                </label>
+            `).join('');
+        }
+
+        function readSupportingCustomFieldValues() {
+            return getConfiguredSupportingCustomFields().map(field => ({
+                index: field.index,
+                label: field.label,
+                value: (document.getElementById(`supportCustomField${field.index + 1}`)?.value || '').trim()
+            }));
+        }
+
         function resetSupportingFormState() {
             supportingFormCompleted = false;
             supportingFormData = null;
@@ -4227,11 +4341,20 @@
                 status.textContent = '';
             }
             if (note) {
+                note.value = '';
                 note.disabled = false;
             }
             if (attachment) {
+                attachment.value = '';
                 attachment.disabled = false;
             }
+            getConfiguredSupportingCustomFields().forEach(field => {
+                const input = document.getElementById(`supportCustomField${field.index + 1}`);
+                if (input) {
+                    input.value = '';
+                    input.disabled = false;
+                }
+            });
         }
 
         async function submitSupportingForm() {
@@ -4246,9 +4369,16 @@
             const button = document.getElementById('supportButton');
             const note = (noteElement?.value || '').trim();
             const file = fileElement?.files?.[0] || null;
+            const customFields = readSupportingCustomFieldValues();
 
             if (REQUIRE_SUPPORTING_NOTE && !note) {
                 showError('يرجى كتابة ملاحظة قصيرة.', status);
+                return;
+            }
+
+            const missingCustomField = customFields.find(field => !field.value);
+            if (missingCustomField) {
+                showError(`يرجى تعبئة الحقل: ${missingCustomField.label}`, status);
                 return;
             }
 
@@ -4283,6 +4413,12 @@
             if (fileElement) {
                 fileElement.disabled = true;
             }
+            customFields.forEach(field => {
+                const input = document.getElementById(`supportCustomField${field.index + 1}`);
+                if (input) {
+                    input.disabled = true;
+                }
+            });
             if (spinner) {
                 spinner.style.display = 'block';
             }
@@ -4305,6 +4441,7 @@
                 supportingFormData = {
                     enabled: true,
                     note,
+                    customFields,
                     attachment
                 };
                 supportingFormCompleted = true;
@@ -4322,6 +4459,12 @@
                 if (fileElement) {
                     fileElement.disabled = false;
                 }
+                customFields.forEach(field => {
+                    const input = document.getElementById(`supportCustomField${field.index + 1}`);
+                    if (input) {
+                        input.disabled = false;
+                    }
+                });
                 if (spinner) {
                     spinner.style.display = 'none';
                 }
@@ -4561,7 +4704,7 @@
                     capturedAtSaudi: nfcTapData.capturedAtSaudi || ''
                 } : null,
                 supportingForm: ENABLE_SUPPORTING_FORM
-                    ? (supportingFormData || { enabled: true, note: '', attachment: null })
+                    ? (supportingFormData || { enabled: true, note: '', customFields: [], attachment: null })
                     : { enabled: false }
             };
         }
