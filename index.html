@@ -448,6 +448,60 @@
         .teacher-dashboard {
             width: 100%;
         }
+        .teacher-shell {
+            display: grid;
+            grid-template-columns: 220px minmax(0, 1fr);
+            gap: 16px;
+            align-items: start;
+        }
+        .teacher-sidebar {
+            position: sticky;
+            top: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: #f8fbfd;
+            border: 1px solid #dbe6ee;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        .teacher-tab-button {
+            width: 100%;
+            max-width: none;
+            min-height: 44px;
+            margin: 0;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #d7e3ec;
+            background: #fff;
+            color: #334e68;
+            text-align: right;
+            font-size: 15px;
+            font-weight: bold;
+            box-shadow: none;
+        }
+        .teacher-tab-button:hover {
+            background: #eef6ff;
+        }
+        .teacher-tab-button.active {
+            background: #12324a;
+            color: #fff;
+            border-color: #12324a;
+        }
+        .teacher-panels {
+            min-width: 0;
+        }
+        .teacher-panel {
+            display: none;
+        }
+        .teacher-panel.active {
+            display: block;
+        }
+        .teacher-panel-title {
+            margin: 0 0 12px;
+            color: #102a43;
+            font-size: 22px;
+        }
         .teacher-topbar {
             display: flex;
             justify-content: space-between;
@@ -910,6 +964,20 @@
             .teacher-step.active-step {
                 padding: 14px 10px;
             }
+            .teacher-shell {
+                grid-template-columns: 1fr;
+            }
+            .teacher-sidebar {
+                position: static;
+                flex-direction: row;
+                overflow-x: auto;
+                padding: 8px;
+            }
+            .teacher-tab-button {
+                flex: 0 0 auto;
+                width: auto;
+                min-width: 130px;
+            }
             .teacher-filters,
             .teacher-settings-grid,
             .teacher-summary,
@@ -930,6 +998,9 @@
             }
         }
         @media (min-width: 601px) and (max-width: 900px) {
+            .teacher-shell {
+                grid-template-columns: 180px minmax(0, 1fr);
+            }
             .teacher-filters {
                 grid-template-columns: 1fr 1fr;
             }
@@ -1448,6 +1519,8 @@
         let teacherSearchTimer = null;
         let teacherLastRows = [];
         let teacherLastResponse = null;
+        let teacherLayoutReady = false;
+        let activeTeacherTab = 'dashboard';
         let teacherAdminData = {
             courses: [],
             locations: [],
@@ -1518,10 +1591,118 @@
         };
 
         // ================== TEACHER DASHBOARD ================== //
+        function setupTeacherAdminLayout() {
+            if (teacherLayoutReady) {
+                return;
+            }
+
+            const dashboard = document.querySelector('#step7 .teacher-dashboard');
+            if (!dashboard) {
+                return;
+            }
+
+            const topbar = dashboard.querySelector('.teacher-topbar');
+            const settingsBlock = dashboard.querySelector('.teacher-settings');
+            const teacherBlocks = Array.from(dashboard.children).filter(child => child.classList && child.classList.contains('teacher-block'));
+            const filters = dashboard.querySelector('.teacher-filters');
+            const message = dashboard.querySelector('#teacherMessage');
+            const summary = dashboard.querySelector('.teacher-summary');
+            const listTools = dashboard.querySelector('.teacher-list-tools');
+            const rows = dashboard.querySelector('#teacherRows');
+
+            const shell = document.createElement('div');
+            shell.className = 'teacher-shell';
+
+            const sidebar = document.createElement('aside');
+            sidebar.className = 'teacher-sidebar';
+
+            const panels = document.createElement('div');
+            panels.className = 'teacher-panels';
+
+            const tabDefinitions = [
+                { id: 'dashboard', label: 'لوحة المتابعة', title: 'نتائج الحضور', nodes: [filters, message, summary, listTools, rows] },
+                { id: 'settings', label: 'الإعدادات', title: 'إعدادات النموذج', nodes: [settingsBlock] },
+                { id: 'setup', label: 'التهيئة', title: 'تهيئة البيانات', nodes: [teacherBlocks[0]] },
+                { id: 'courses', label: 'الدورات', title: 'إدارة الدورات', nodes: [teacherBlocks[1]] },
+                { id: 'locations', label: 'المواقع', title: 'إدارة المواقع', nodes: [teacherBlocks[2]] },
+                { id: 'students', label: 'الطلاب', title: 'إدارة الطلاب', nodes: [teacherBlocks[3]] },
+                { id: 'schedules', label: 'الجداول', title: 'إدارة الجداول', nodes: [teacherBlocks[4]] }
+            ];
+
+            tabDefinitions.forEach(tab => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'teacher-tab-button';
+                button.dataset.teacherTab = tab.id;
+                button.textContent = tab.label;
+                button.onclick = () => switchTeacherTab(tab.id);
+                sidebar.appendChild(button);
+
+                const panel = document.createElement('section');
+                panel.className = 'teacher-panel';
+                panel.dataset.teacherTab = tab.id;
+
+                if (tab.id === 'dashboard') {
+                    const title = document.createElement('h3');
+                    title.className = 'teacher-panel-title';
+                    title.textContent = tab.title;
+                    panel.appendChild(title);
+                }
+
+                tab.nodes.filter(Boolean).forEach(node => {
+                    panel.appendChild(node);
+                });
+
+                panels.appendChild(panel);
+            });
+
+            shell.appendChild(sidebar);
+            shell.appendChild(panels);
+
+            if (topbar && topbar.nextSibling) {
+                dashboard.insertBefore(shell, topbar.nextSibling);
+            } else {
+                dashboard.appendChild(shell);
+            }
+
+            teacherLayoutReady = true;
+        }
+
+        function switchTeacherTab(tabId) {
+            activeTeacherTab = tabId || 'dashboard';
+
+            document.querySelectorAll('.teacher-tab-button').forEach(button => {
+                button.classList.toggle('active', button.dataset.teacherTab === activeTeacherTab);
+            });
+
+            document.querySelectorAll('.teacher-panel').forEach(panel => {
+                panel.classList.toggle('active', panel.dataset.teacherTab === activeTeacherTab);
+            });
+        }
+
+        function activateTeacherEditTab(tabId, statusId, message, focusId) {
+            switchTeacherTab(tabId);
+            if (statusId && message) {
+                setTeacherStatus(statusId, message, 'waiting');
+            }
+
+            const focusElement = document.getElementById(focusId);
+            if (focusElement) {
+                setTimeout(() => {
+                    focusElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (typeof focusElement.focus === 'function') {
+                        focusElement.focus({ preventScroll: true });
+                    }
+                }, 80);
+            }
+        }
+
         function initializeTeacherDashboard() {
             document.body.classList.add('admin-view');
             document.querySelector('.header h1').textContent = 'لوحة المعلم';
             showStep(7);
+            setupTeacherAdminLayout();
+            switchTeacherTab('dashboard');
 
             const dateInput = document.getElementById('teacherDate');
             if (dateInput && !dateInput.value) {
@@ -2022,8 +2203,7 @@
             document.getElementById('courseNameInput').value = course.courseName || '';
             document.getElementById('courseNotesInput').value = course.notes || '';
             document.getElementById('courseActiveInput').checked = Boolean(course.active);
-            setTeacherStatus('teacherCourseMessage', 'وضع التعديل مفعل. عدل البيانات ثم اضغط حفظ الدورة.', 'waiting');
-            document.getElementById('courseNameInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            activateTeacherEditTab('courses', 'teacherCourseMessage', 'وضع التعديل مفعل. عدل البيانات ثم اضغط حفظ الدورة.', 'courseNameInput');
         }
 
         function editLocation(locationId) {
@@ -2038,8 +2218,7 @@
             document.getElementById('locationRadiusInput').value = location.radiusKm ?? '';
             document.getElementById('locationNotesInput').value = location.notes || '';
             document.getElementById('locationActiveInput').checked = Boolean(location.active);
-            setTeacherStatus('teacherLocationMessage', 'وضع التعديل مفعل. عدل البيانات ثم اضغط حفظ الموقع.', 'waiting');
-            document.getElementById('locationNameInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            activateTeacherEditTab('locations', 'teacherLocationMessage', 'وضع التعديل مفعل. عدل البيانات ثم اضغط حفظ الموقع.', 'locationNameInput');
         }
 
         function editStudent(traineeId) {
@@ -2047,14 +2226,14 @@
             if (!student) {
                 return;
             }
+            populateTeacherReferenceSelects();
             document.getElementById('studentIdInput').value = student.traineeId || '';
             document.getElementById('studentNameInput').value = student.name || '';
             document.getElementById('studentCourseSelect').value = student.courseId || '';
             document.getElementById('studentLocationSelect').value = student.locationId || '';
             document.getElementById('studentNotesInput').value = student.notes || '';
             document.getElementById('studentActiveInput').checked = Boolean(student.active);
-            setTeacherStatus('teacherStudentsMessage', 'وضع تعديل الطالب مفعل. عدل البيانات ثم اضغط حفظ الطالب.', 'waiting');
-            document.getElementById('studentIdInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            activateTeacherEditTab('students', 'teacherStudentsMessage', 'وضع تعديل الطالب مفعل. عدل البيانات ثم اضغط حفظ الطالب.', 'studentIdInput');
         }
 
         function editSchedule(scheduleId) {
@@ -2062,6 +2241,7 @@
             if (!schedule) {
                 return;
             }
+            populateTeacherReferenceSelects();
             document.getElementById('scheduleIdInput').value = schedule.scheduleId || '';
             document.getElementById('scheduleCourseSelect').value = schedule.courseId || '';
             document.getElementById('scheduleLocationSelect').value = schedule.locationId || '';
@@ -2078,8 +2258,7 @@
             document.getElementById('scheduleThuInput').checked = Boolean(schedule.weekdays?.thu);
             document.getElementById('scheduleFriInput').checked = Boolean(schedule.weekdays?.fri);
             document.getElementById('scheduleSatInput').checked = Boolean(schedule.weekdays?.sat);
-            setTeacherStatus('teacherScheduleMessage', 'وضع التعديل مفعل. عدل الجدول ثم اضغط حفظ الجدول.', 'waiting');
-            document.getElementById('scheduleCourseSelect').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            activateTeacherEditTab('schedules', 'teacherScheduleMessage', 'وضع التعديل مفعل. عدل الجدول ثم اضغط حفظ الجدول.', 'scheduleCourseSelect');
         }
 
         async function saveTeacherCourse() {
