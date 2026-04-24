@@ -775,6 +775,85 @@
             line-height: 1.6;
             overflow-wrap: anywhere;
         }
+        .teacher-grid-wrap {
+            overflow-x: auto;
+            border: 1px solid #dfe7ef;
+            border-radius: 8px;
+            background: #fff;
+            margin-top: 10px;
+        }
+        .teacher-list-toolbar {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .teacher-search-field {
+            flex: 1 1 260px;
+        }
+        .teacher-list-count {
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 12px;
+            border: 1px solid #dfe7ef;
+            border-radius: 8px;
+            background: #f8fbfd;
+            color: #486581;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .teacher-grid-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 760px;
+        }
+        .teacher-grid-table th,
+        .teacher-grid-table td {
+            border-bottom: 1px solid #edf2f7;
+            padding: 10px 8px;
+            text-align: right;
+            vertical-align: top;
+            font-size: 14px;
+            color: #243b53;
+        }
+        .teacher-grid-table th {
+            background: #f8fbfd;
+            color: #486581;
+            font-size: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .teacher-grid-table tr:last-child td {
+            border-bottom: none;
+        }
+        .teacher-grid-table tbody tr:hover {
+            background: #f8fbfd;
+        }
+        .teacher-table-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .teacher-table-actions button {
+            width: auto;
+            min-height: 34px;
+            padding: 7px 10px;
+            font-size: 13px;
+            max-width: none;
+            margin: 0;
+            border-radius: 7px;
+            box-shadow: none;
+        }
+        .teacher-danger-button {
+            background: #d32f2f;
+        }
+        .teacher-danger-button:hover {
+            background: #b71c1c;
+        }
         @media (max-width: 600px) {
             body {
                 padding: 8px;
@@ -1023,6 +1102,7 @@
                 <div class="teacher-block">
                     <h3>الدورات</h3>
                     <div class="teacher-form-grid">
+                        <input type="hidden" id="courseIdInput">
                         <label class="teacher-field">
                             اسم الدورة
                             <input type="text" id="courseNameInput" placeholder="مثال: أساسيات الكهرباء">
@@ -1037,15 +1117,24 @@
                         </label>
                         <div class="teacher-actions">
                             <button type="button" onclick="saveTeacherCourse()">حفظ الدورة</button>
+                            <button type="button" class="teacher-secondary-button" onclick="resetCourseForm()">جديد</button>
                         </div>
                     </div>
                     <div id="teacherCourseMessage" class="status-bar teacher-message waiting">أضف الدورات التي سينتسب إليها المتدربون.</div>
-                    <div id="teacherCoursesList" class="teacher-entity-list"></div>
+                    <div class="teacher-list-toolbar">
+                        <label class="teacher-field teacher-search-field">
+                            بحث في الدورات
+                            <input type="search" id="teacherCourseSearch" placeholder="اسم الدورة أو المعرّف" oninput="renderTeacherCoursesList()">
+                        </label>
+                        <div id="teacherCoursesCount" class="teacher-list-count">0</div>
+                    </div>
+                    <div id="teacherCoursesList" class="teacher-grid-wrap"></div>
                 </div>
 
                 <div class="teacher-block">
                     <h3>المواقع</h3>
                     <div class="teacher-form-grid">
+                        <input type="hidden" id="locationIdInput">
                         <label class="teacher-field">
                             اسم الموقع
                             <input type="text" id="locationNameInput" placeholder="مثال: ورشة 1">
@@ -1072,16 +1161,32 @@
                         </label>
                         <div class="teacher-actions">
                             <button type="button" onclick="saveTeacherLocation()">حفظ الموقع</button>
+                            <button type="button" class="teacher-secondary-button" onclick="resetLocationForm()">جديد</button>
                         </div>
                     </div>
                     <div id="teacherLocationMessage" class="status-bar teacher-message waiting">المواقع هنا ستكون مصدر التحقق الجغرافي.</div>
-                    <div id="teacherLocationsList" class="teacher-entity-list"></div>
+                    <div class="teacher-list-toolbar">
+                        <label class="teacher-field teacher-search-field">
+                            بحث في المواقع
+                            <input type="search" id="teacherLocationSearch" placeholder="اسم الموقع أو المعرّف" oninput="renderTeacherLocationsList()">
+                        </label>
+                        <div id="teacherLocationsCount" class="teacher-list-count">0</div>
+                    </div>
+                    <div id="teacherLocationsList" class="teacher-grid-wrap"></div>
                 </div>
 
                 <div class="teacher-block">
-                    <h3>الطلاب - إضافة فردية أو جماعية</h3>
-                    <div class="teacher-block-note">اختر الدورة والموقع مرة واحدة، ثم الصق قائمة الطلاب. كل سطر بالشكل: الرقم التدريبي, الاسم</div>
+                    <h3>الطلاب - إضافة وتعديل جماعي</h3>
+                    <div class="teacher-block-note">يمكنك حفظ طالب واحد من النموذج، أو لصق مجموعة كبيرة. كل سطر بالشكل: الرقم التدريبي, الاسم</div>
                     <div class="teacher-form-grid">
+                        <label class="teacher-field">
+                            الرقم التدريبي
+                            <input type="text" id="studentIdInput" placeholder="441234567" inputmode="numeric">
+                        </label>
+                        <label class="teacher-field">
+                            الاسم
+                            <input type="text" id="studentNameInput" placeholder="اسم المتدرب">
+                        </label>
                         <label class="teacher-field">
                             الدورة
                             <select id="studentCourseSelect"></select>
@@ -1090,12 +1195,34 @@
                             الموقع
                             <select id="studentLocationSelect"></select>
                         </label>
+                        <label class="teacher-field teacher-form-wide">
+                            ملاحظات
+                            <input type="text" id="studentNotesInput" placeholder="اختياري">
+                        </label>
                         <label class="teacher-checkbox">
                             <input type="checkbox" id="studentActiveInput" checked>
+                            <span>الطالب فعال</span>
+                        </label>
+                        <div class="teacher-actions">
+                            <button type="button" onclick="saveTeacherStudent()">حفظ الطالب</button>
+                            <button type="button" class="teacher-secondary-button" onclick="resetStudentForm()">جديد</button>
+                        </div>
+                    </div>
+                    <div class="teacher-form-grid">
+                        <label class="teacher-field">
+                            الدورة
+                            <select id="studentBulkCourseSelect"></select>
+                        </label>
+                        <label class="teacher-field">
+                            الموقع
+                            <select id="studentBulkLocationSelect"></select>
+                        </label>
+                        <label class="teacher-checkbox">
+                            <input type="checkbox" id="studentBulkActiveInput" checked>
                             <span>الطلاب فعالون</span>
                         </label>
                         <div class="teacher-actions">
-                            <button type="button" onclick="bulkAddStudents()">حفظ الطلاب</button>
+                            <button type="button" onclick="bulkAddStudents()">استيراد دفعة</button>
                         </div>
                         <label class="teacher-field teacher-form-wide">
                             القائمة
@@ -1103,13 +1230,21 @@
                         </label>
                     </div>
                     <div id="teacherStudentsMessage" class="status-bar teacher-message waiting">يمكنك إضافة طالب واحد أو عدة طلاب دفعة واحدة.</div>
-                    <div id="teacherStudentsList" class="teacher-entity-list"></div>
+                    <div class="teacher-list-toolbar">
+                        <label class="teacher-field teacher-search-field">
+                            بحث في الطلاب
+                            <input type="search" id="teacherStudentSearch" placeholder="رقم تدريبي، اسم، دورة، موقع" oninput="renderTeacherStudentsList()">
+                        </label>
+                        <div id="teacherStudentsCount" class="teacher-list-count">0</div>
+                    </div>
+                    <div id="teacherStudentsList" class="teacher-grid-wrap"></div>
                 </div>
 
                 <div class="teacher-block">
                     <h3>الجداول المتكررة</h3>
                     <div class="teacher-block-note">أنشئ لقاءات متكررة حسب أيام الأسبوع. مثال: كل أحد واثنين من 08:00 إلى 10:00.</div>
                     <div class="teacher-form-grid">
+                        <input type="hidden" id="scheduleIdInput">
                         <label class="teacher-field">
                             الدورة
                             <select id="scheduleCourseSelect"></select>
@@ -1153,10 +1288,18 @@
                         </label>
                         <div class="teacher-actions">
                             <button type="button" onclick="saveTeacherSchedule()">حفظ الجدول</button>
+                            <button type="button" class="teacher-secondary-button" onclick="resetScheduleForm()">جديد</button>
                         </div>
                     </div>
                     <div id="teacherScheduleMessage" class="status-bar teacher-message waiting">الجداول هنا هي المصدر الأساسي لتحديد هل يوجد لقاء الآن أم لا.</div>
-                    <div id="teacherSchedulesList" class="teacher-entity-list"></div>
+                    <div class="teacher-list-toolbar">
+                        <label class="teacher-field teacher-search-field">
+                            بحث في الجداول
+                            <input type="search" id="teacherScheduleSearch" placeholder="دورة، موقع، وقت، يوم" oninput="renderTeacherSchedulesList()">
+                        </label>
+                        <div id="teacherSchedulesCount" class="teacher-list-count">0</div>
+                    </div>
+                    <div id="teacherSchedulesList" class="teacher-grid-wrap"></div>
                 </div>
 
                 <div class="teacher-filters">
@@ -1505,14 +1648,80 @@
             populateTeacherReferenceSelects();
         }
 
-        function populateTeacherReferenceSelects() {
-            populateSelect('studentCourseSelect', teacherAdminData.courses.filter(item => item.active), 'courseId', 'courseName', 'اختر الدورة');
-            populateSelect('studentLocationSelect', teacherAdminData.locations.filter(item => item.active), 'locationId', 'locationName', 'اختر الموقع');
-            populateSelect('scheduleCourseSelect', teacherAdminData.courses.filter(item => item.active), 'courseId', 'courseName', 'اختر الدورة');
-            populateSelect('scheduleLocationSelect', teacherAdminData.locations.filter(item => item.active), 'locationId', 'locationName', 'اختر الموقع');
+        function normalizeArabicDigits(value) {
+            return String(value ?? '')
+                .replace(/[٠-٩]/g, character => String(character.charCodeAt(0) - 1632))
+                .replace(/[۰-۹]/g, character => String(character.charCodeAt(0) - 1776));
         }
 
-        function populateSelect(id, items, valueKey, labelKey, placeholder) {
+        function normalizeTraineeIdValue(value) {
+            return normalizeArabicDigits(value).replace(/[^\d]/g, '');
+        }
+
+        function normalizeTeacherSearchValue(value) {
+            return normalizeArabicDigits(String(value ?? '')).trim().toLowerCase();
+        }
+
+        function getTeacherSearchValue(id) {
+            return normalizeTeacherSearchValue(document.getElementById(id)?.value || '');
+        }
+
+        function filterTeacherItems(items, searchId, projector) {
+            const query = getTeacherSearchValue(searchId);
+            if (!query) {
+                return items;
+            }
+
+            return items.filter(item => normalizeTeacherSearchValue(projector(item)).includes(query));
+        }
+
+        function updateTeacherListCount(id, visibleCount, totalCount, label) {
+            const element = document.getElementById(id);
+            if (!element) {
+                return;
+            }
+
+            if (!totalCount) {
+                element.textContent = `${label}: 0`;
+                return;
+            }
+
+            element.textContent = visibleCount === totalCount
+                ? `${label}: ${totalCount}`
+                : `${label}: ${visibleCount} من ${totalCount}`;
+        }
+
+        function sortTeacherItems(items, projector) {
+            return [...items].sort((left, right) => {
+                const leftValue = normalizeTeacherSearchValue(projector(left));
+                const rightValue = normalizeTeacherSearchValue(projector(right));
+                return leftValue.localeCompare(rightValue, 'ar');
+            });
+        }
+
+        function formatTeacherReferenceLabel(label, active) {
+            const normalizedLabel = label || '';
+            return active ? normalizedLabel : `${normalizedLabel} (موقوف)`;
+        }
+
+        function populateTeacherReferenceSelects() {
+            const courses = sortTeacherItems(teacherAdminData.courses, item => `${item.courseName || ''} ${item.courseId || ''}`);
+            const locations = sortTeacherItems(teacherAdminData.locations, item => `${item.locationName || ''} ${item.locationId || ''}`);
+            const selectOptions = {
+                labelBuilder(item, labelKey) {
+                    return formatTeacherReferenceLabel(item[labelKey] || item.courseId || item.locationId || '', item.active);
+                }
+            };
+
+            populateSelect('studentCourseSelect', courses, 'courseId', 'courseName', 'اختر الدورة', selectOptions);
+            populateSelect('studentLocationSelect', locations, 'locationId', 'locationName', 'بدون موقع / اختر الموقع', selectOptions);
+            populateSelect('studentBulkCourseSelect', courses, 'courseId', 'courseName', 'اختر الدورة', selectOptions);
+            populateSelect('studentBulkLocationSelect', locations, 'locationId', 'locationName', 'بدون موقع / اختر الموقع', selectOptions);
+            populateSelect('scheduleCourseSelect', courses, 'courseId', 'courseName', 'اختر الدورة', selectOptions);
+            populateSelect('scheduleLocationSelect', locations, 'locationId', 'locationName', 'من ملف الطالب / اختر الموقع', selectOptions);
+        }
+
+        function populateSelect(id, items, valueKey, labelKey, placeholder, options) {
             const element = document.getElementById(id);
             if (!element) {
                 return;
@@ -1523,7 +1732,9 @@
             items.forEach(item => {
                 const option = document.createElement('option');
                 option.value = item[valueKey] || '';
-                option.textContent = item[labelKey] || item[valueKey] || '';
+                option.textContent = typeof options?.labelBuilder === 'function'
+                    ? options.labelBuilder(item, labelKey, valueKey)
+                    : item[labelKey] || item[valueKey] || '';
                 element.appendChild(option);
             });
 
@@ -1538,19 +1749,53 @@
                 return;
             }
 
-            if (!teacherAdminData.courses.length) {
+            const allCourses = sortTeacherItems(teacherAdminData.courses, course => `${course.courseName || ''} ${course.courseId || ''}`);
+            const filteredCourses = filterTeacherItems(
+                allCourses,
+                'teacherCourseSearch',
+                course => `${course.courseId || ''} ${course.courseName || ''} ${course.notes || ''} ${course.active ? 'فعالة' : 'موقوفة'}`
+            );
+
+            updateTeacherListCount('teacherCoursesCount', filteredCourses.length, allCourses.length, 'الدورات');
+
+            if (!allCourses.length) {
                 container.innerHTML = '<div class="teacher-empty">لا توجد دورات حتى الآن.</div>';
                 return;
             }
+            if (!filteredCourses.length) {
+                container.innerHTML = '<div class="teacher-empty">لا توجد نتائج مطابقة في الدورات.</div>';
+                return;
+            }
 
-            container.innerHTML = teacherAdminData.courses.map(course => `
-                <div class="teacher-entity-card">
-                    <strong>${escapeHtml(course.courseName)}</strong>
-                    <div>المعرّف: ${escapeHtml(course.courseId || '-')}</div>
-                    <div>الحالة: ${course.active ? 'فعالة' : 'موقوفة'}</div>
-                    <div>${escapeHtml(course.notes || '')}</div>
-                </div>
+            const rows = filteredCourses.map(course => `
+                <tr>
+                    <td>${escapeHtml(course.courseId || '-')}</td>
+                    <td>${escapeHtml(course.courseName || '-')}</td>
+                    <td>${course.active ? 'فعالة' : 'موقوفة'}</td>
+                    <td>${escapeHtml(course.notes || '-')}</td>
+                    <td>
+                        <div class="teacher-table-actions">
+                            <button type="button" class="teacher-secondary-button" data-id="${escapeAttribute(course.courseId || '')}" onclick="editCourse(this.dataset.id)">تعديل</button>
+                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(course.courseId || '')}" onclick="deleteCourse(this.dataset.id)">حذف</button>
+                        </div>
+                    </td>
+                </tr>
             `).join('');
+
+            container.innerHTML = `
+                <table class="teacher-grid-table">
+                    <thead>
+                        <tr>
+                            <th>المعرّف</th>
+                            <th>اسم الدورة</th>
+                            <th>الحالة</th>
+                            <th>ملاحظات</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
         }
 
         function renderTeacherLocationsList() {
@@ -1559,20 +1804,57 @@
                 return;
             }
 
-            if (!teacherAdminData.locations.length) {
+            const allLocations = sortTeacherItems(teacherAdminData.locations, location => `${location.locationName || ''} ${location.locationId || ''}`);
+            const filteredLocations = filterTeacherItems(
+                allLocations,
+                'teacherLocationSearch',
+                location => `${location.locationId || ''} ${location.locationName || ''} ${location.latitude || ''} ${location.longitude || ''} ${location.notes || ''} ${location.active ? 'فعال' : 'موقوف'}`
+            );
+
+            updateTeacherListCount('teacherLocationsCount', filteredLocations.length, allLocations.length, 'المواقع');
+
+            if (!allLocations.length) {
                 container.innerHTML = '<div class="teacher-empty">لا توجد مواقع حتى الآن.</div>';
                 return;
             }
+            if (!filteredLocations.length) {
+                container.innerHTML = '<div class="teacher-empty">لا توجد نتائج مطابقة في المواقع.</div>';
+                return;
+            }
 
-            container.innerHTML = teacherAdminData.locations.map(location => `
-                <div class="teacher-entity-card">
-                    <strong>${escapeHtml(location.locationName)}</strong>
-                    <div>المعرّف: ${escapeHtml(location.locationId || '-')}</div>
-                    <div>(${escapeHtml(location.latitude)}, ${escapeHtml(location.longitude)})</div>
-                    <div>Radius: ${escapeHtml(location.radiusKm)} كم</div>
-                    <div>الحالة: ${location.active ? 'فعال' : 'موقوف'}</div>
-                </div>
+            const rows = filteredLocations.map(location => `
+                <tr>
+                    <td>${escapeHtml(location.locationId || '-')}</td>
+                    <td>${escapeHtml(location.locationName || '-')}</td>
+                    <td>${escapeHtml(location.latitude)}</td>
+                    <td>${escapeHtml(location.longitude)}</td>
+                    <td>${escapeHtml(location.radiusKm)} كم</td>
+                    <td>${location.active ? 'فعال' : 'موقوف'}</td>
+                    <td>
+                        <div class="teacher-table-actions">
+                            <button type="button" class="teacher-secondary-button" data-id="${escapeAttribute(location.locationId || '')}" onclick="editLocation(this.dataset.id)">تعديل</button>
+                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(location.locationId || '')}" onclick="deleteLocation(this.dataset.id)">حذف</button>
+                        </div>
+                    </td>
+                </tr>
             `).join('');
+
+            container.innerHTML = `
+                <table class="teacher-grid-table">
+                    <thead>
+                        <tr>
+                            <th>المعرّف</th>
+                            <th>الموقع</th>
+                            <th>Latitude</th>
+                            <th>Longitude</th>
+                            <th>Radius</th>
+                            <th>الحالة</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
         }
 
         function renderTeacherStudentsList() {
@@ -1581,21 +1863,60 @@
                 return;
             }
 
-            if (!teacherAdminData.students.length) {
+            const allStudents = sortTeacherItems(
+                teacherAdminData.students,
+                student => `${student.traineeId || ''} ${student.name || ''} ${student.courseName || student.courseId || ''}`
+            );
+            const filteredStudents = filterTeacherItems(
+                allStudents,
+                'teacherStudentSearch',
+                student => `${student.traineeId || ''} ${student.name || ''} ${student.courseName || student.courseId || ''} ${student.locationName || student.locationId || ''} ${student.notes || ''} ${student.active ? 'فعال' : 'موقوف'}`
+            );
+
+            updateTeacherListCount('teacherStudentsCount', filteredStudents.length, allStudents.length, 'الطلاب');
+
+            if (!allStudents.length) {
                 container.innerHTML = '<div class="teacher-empty">لا توجد بيانات طلاب بعد.</div>';
                 return;
             }
+            if (!filteredStudents.length) {
+                container.innerHTML = '<div class="teacher-empty">لا توجد نتائج مطابقة في الطلاب.</div>';
+                return;
+            }
 
-            const students = [...teacherAdminData.students].sort((a, b) => String(a.traineeId).localeCompare(String(b.traineeId))).slice(0, 120);
-            container.innerHTML = students.map(student => `
-                <div class="teacher-entity-card">
-                    <strong>${escapeHtml(student.name)}</strong>
-                    <div>الرقم: ${escapeHtml(student.traineeId)}</div>
-                    <div>الدورة: ${escapeHtml(student.courseName || student.courseId || '-')}</div>
-                    <div>الموقع: ${escapeHtml(student.locationName || student.locationId || '-')}</div>
-                    <div>الحالة: ${student.active ? 'فعال' : 'موقوف'}</div>
-                </div>
+            const rows = filteredStudents.map(student => `
+                <tr>
+                    <td>${escapeHtml(student.traineeId || '-')}</td>
+                    <td>${escapeHtml(student.name || '-')}</td>
+                    <td>${escapeHtml(student.courseName || student.courseId || '-')}</td>
+                    <td>${escapeHtml(student.locationName || student.locationId || '-')}</td>
+                    <td>${student.active ? 'فعال' : 'موقوف'}</td>
+                    <td>${escapeHtml(student.notes || '-')}</td>
+                    <td>
+                        <div class="teacher-table-actions">
+                            <button type="button" class="teacher-secondary-button" data-id="${escapeAttribute(student.traineeId || '')}" onclick="editStudent(this.dataset.id)">تعديل</button>
+                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(student.traineeId || '')}" onclick="deleteStudent(this.dataset.id)">حذف</button>
+                        </div>
+                    </td>
+                </tr>
             `).join('');
+
+            container.innerHTML = `
+                <table class="teacher-grid-table">
+                    <thead>
+                        <tr>
+                            <th>الرقم التدريبي</th>
+                            <th>الاسم</th>
+                            <th>الدورة</th>
+                            <th>الموقع</th>
+                            <th>الحالة</th>
+                            <th>ملاحظات</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
         }
 
         function renderTeacherSchedulesList() {
@@ -1604,24 +1925,137 @@
                 return;
             }
 
-            if (!teacherAdminData.schedules.length) {
+            const allSchedules = sortTeacherItems(
+                teacherAdminData.schedules,
+                schedule => `${schedule.courseName || schedule.courseId || ''} ${schedule.startTime || ''} ${schedule.scheduleId || ''}`
+            );
+            const filteredSchedules = filterTeacherItems(
+                allSchedules,
+                'teacherScheduleSearch',
+                schedule => `${schedule.scheduleId || ''} ${schedule.courseName || schedule.courseId || ''} ${schedule.locationName || schedule.locationId || ''} ${schedule.startTime || ''} ${schedule.endTime || ''} ${formatScheduleWeekdays(schedule.weekdays) || ''} ${schedule.activeFrom || ''} ${schedule.activeTo || ''} ${schedule.notes || ''} ${schedule.active ? 'فعال' : 'موقوف'}`
+            );
+
+            updateTeacherListCount('teacherSchedulesCount', filteredSchedules.length, allSchedules.length, 'الجداول');
+
+            if (!allSchedules.length) {
                 container.innerHTML = '<div class="teacher-empty">لا توجد جداول متكررة بعد.</div>';
                 return;
             }
+            if (!filteredSchedules.length) {
+                container.innerHTML = '<div class="teacher-empty">لا توجد نتائج مطابقة في الجداول.</div>';
+                return;
+            }
 
-            container.innerHTML = teacherAdminData.schedules.map(schedule => `
-                <div class="teacher-entity-card">
-                    <strong>${escapeHtml(schedule.courseName || schedule.courseId || 'بدون دورة')}</strong>
-                    <div>الموقع: ${escapeHtml(schedule.locationName || schedule.locationId || 'من ملف الطالب')}</div>
-                    <div>الوقت: ${escapeHtml(schedule.startTime || '-')} - ${escapeHtml(schedule.endTime || '-')}</div>
-                    <div>الأيام: ${escapeHtml(formatScheduleWeekdays(schedule.weekdays))}</div>
-                    <div>الفترة: ${escapeHtml(schedule.activeFrom || 'مفتوح')} / ${escapeHtml(schedule.activeTo || 'مفتوح')}</div>
-                    <div>الحالة: ${schedule.active ? 'فعال' : 'موقوف'}</div>
-                </div>
+            const rows = filteredSchedules.map(schedule => `
+                <tr>
+                    <td>${escapeHtml(schedule.scheduleId || '-')}</td>
+                    <td>${escapeHtml(schedule.courseName || schedule.courseId || '-')}</td>
+                    <td>${escapeHtml(schedule.locationName || schedule.locationId || 'من ملف الطالب')}</td>
+                    <td>${escapeHtml(schedule.startTime || '-')} - ${escapeHtml(schedule.endTime || '-')}</td>
+                    <td>${escapeHtml(formatScheduleWeekdays(schedule.weekdays))}</td>
+                    <td>${escapeHtml(schedule.activeFrom || 'مفتوح')}</td>
+                    <td>${escapeHtml(schedule.activeTo || 'مفتوح')}</td>
+                    <td>${schedule.active ? 'فعال' : 'موقوف'}</td>
+                    <td>
+                        <div class="teacher-table-actions">
+                            <button type="button" class="teacher-secondary-button" data-id="${escapeAttribute(schedule.scheduleId || '')}" onclick="editSchedule(this.dataset.id)">تعديل</button>
+                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(schedule.scheduleId || '')}" onclick="deleteSchedule(this.dataset.id)">حذف</button>
+                        </div>
+                    </td>
+                </tr>
             `).join('');
+
+            container.innerHTML = `
+                <table class="teacher-grid-table">
+                    <thead>
+                        <tr>
+                            <th>المعرّف</th>
+                            <th>الدورة</th>
+                            <th>الموقع</th>
+                            <th>الوقت</th>
+                            <th>الأيام</th>
+                            <th>من</th>
+                            <th>إلى</th>
+                            <th>الحالة</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+        }
+
+        function editCourse(courseId) {
+            const course = teacherAdminData.courses.find(item => item.courseId === courseId);
+            if (!course) {
+                return;
+            }
+            document.getElementById('courseIdInput').value = course.courseId || '';
+            document.getElementById('courseNameInput').value = course.courseName || '';
+            document.getElementById('courseNotesInput').value = course.notes || '';
+            document.getElementById('courseActiveInput').checked = Boolean(course.active);
+            setTeacherStatus('teacherCourseMessage', 'وضع التعديل مفعل. عدل البيانات ثم اضغط حفظ الدورة.', 'waiting');
+            document.getElementById('courseNameInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function editLocation(locationId) {
+            const location = teacherAdminData.locations.find(item => item.locationId === locationId);
+            if (!location) {
+                return;
+            }
+            document.getElementById('locationIdInput').value = location.locationId || '';
+            document.getElementById('locationNameInput').value = location.locationName || '';
+            document.getElementById('locationLatInput').value = location.latitude ?? '';
+            document.getElementById('locationLonInput').value = location.longitude ?? '';
+            document.getElementById('locationRadiusInput').value = location.radiusKm ?? '';
+            document.getElementById('locationNotesInput').value = location.notes || '';
+            document.getElementById('locationActiveInput').checked = Boolean(location.active);
+            setTeacherStatus('teacherLocationMessage', 'وضع التعديل مفعل. عدل البيانات ثم اضغط حفظ الموقع.', 'waiting');
+            document.getElementById('locationNameInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function editStudent(traineeId) {
+            const student = teacherAdminData.students.find(item => item.traineeId === traineeId);
+            if (!student) {
+                return;
+            }
+            document.getElementById('studentIdInput').value = student.traineeId || '';
+            document.getElementById('studentNameInput').value = student.name || '';
+            document.getElementById('studentCourseSelect').value = student.courseId || '';
+            document.getElementById('studentLocationSelect').value = student.locationId || '';
+            document.getElementById('studentNotesInput').value = student.notes || '';
+            document.getElementById('studentActiveInput').checked = Boolean(student.active);
+            setTeacherStatus('teacherStudentsMessage', 'وضع تعديل الطالب مفعل. عدل البيانات ثم اضغط حفظ الطالب.', 'waiting');
+            document.getElementById('studentIdInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function editSchedule(scheduleId) {
+            const schedule = teacherAdminData.schedules.find(item => item.scheduleId === scheduleId);
+            if (!schedule) {
+                return;
+            }
+            document.getElementById('scheduleIdInput').value = schedule.scheduleId || '';
+            document.getElementById('scheduleCourseSelect').value = schedule.courseId || '';
+            document.getElementById('scheduleLocationSelect').value = schedule.locationId || '';
+            document.getElementById('scheduleStartInput').value = schedule.startTime || '';
+            document.getElementById('scheduleEndInput').value = schedule.endTime || '';
+            document.getElementById('scheduleActiveFromInput').value = schedule.activeFrom || '';
+            document.getElementById('scheduleActiveToInput').value = schedule.activeTo || '';
+            document.getElementById('scheduleNotesInput').value = schedule.notes || '';
+            document.getElementById('scheduleActiveInput').checked = Boolean(schedule.active);
+            document.getElementById('scheduleSunInput').checked = Boolean(schedule.weekdays?.sun);
+            document.getElementById('scheduleMonInput').checked = Boolean(schedule.weekdays?.mon);
+            document.getElementById('scheduleTueInput').checked = Boolean(schedule.weekdays?.tue);
+            document.getElementById('scheduleWedInput').checked = Boolean(schedule.weekdays?.wed);
+            document.getElementById('scheduleThuInput').checked = Boolean(schedule.weekdays?.thu);
+            document.getElementById('scheduleFriInput').checked = Boolean(schedule.weekdays?.fri);
+            document.getElementById('scheduleSatInput').checked = Boolean(schedule.weekdays?.sat);
+            setTeacherStatus('teacherScheduleMessage', 'وضع التعديل مفعل. عدل الجدول ثم اضغط حفظ الجدول.', 'waiting');
+            document.getElementById('scheduleCourseSelect').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         async function saveTeacherCourse() {
+            const courseId = document.getElementById('courseIdInput')?.value.trim() || '';
             const courseName = document.getElementById('courseNameInput')?.value.trim();
             const notes = document.getElementById('courseNotesInput')?.value.trim() || '';
             const active = Boolean(document.getElementById('courseActiveInput')?.checked);
@@ -1635,16 +2069,14 @@
             try {
                 const result = await callAppsScriptJsonp('saveCourse', {
                     password: teacherDashboardPassword,
-                    course: { courseName, notes, active }
+                    course: { courseId, courseName, notes, active }
                 });
 
                 if (!result?.ok) {
                     throw new Error(result?.error || 'تعذر حفظ الدورة.');
                 }
 
-                document.getElementById('courseNameInput').value = '';
-                document.getElementById('courseNotesInput').value = '';
-                document.getElementById('courseActiveInput').checked = true;
+                resetCourseForm();
                 await loadTeacherAdminData();
                 setTeacherStatus('teacherCourseMessage', 'تم حفظ الدورة بنجاح.', 'valid');
             } catch (error) {
@@ -1654,6 +2086,7 @@
         }
 
         async function saveTeacherLocation() {
+            const locationId = document.getElementById('locationIdInput')?.value.trim() || '';
             const locationName = document.getElementById('locationNameInput')?.value.trim();
             const latitude = Number(document.getElementById('locationLatInput')?.value);
             const longitude = Number(document.getElementById('locationLonInput')?.value);
@@ -1670,20 +2103,14 @@
             try {
                 const result = await callAppsScriptJsonp('saveLocation', {
                     password: teacherDashboardPassword,
-                    location: { locationName, latitude, longitude, radiusKm, notes, active }
+                    location: { locationId, locationName, latitude, longitude, radiusKm, notes, active }
                 });
 
                 if (!result?.ok) {
                     throw new Error(result?.error || 'تعذر حفظ الموقع.');
                 }
 
-                ['locationNameInput', 'locationLatInput', 'locationLonInput', 'locationRadiusInput', 'locationNotesInput'].forEach(id => {
-                    const element = document.getElementById(id);
-                    if (element) {
-                        element.value = '';
-                    }
-                });
-                document.getElementById('locationActiveInput').checked = true;
+                resetLocationForm();
                 await loadTeacherAdminData();
                 setTeacherStatus('teacherLocationMessage', 'تم حفظ الموقع بنجاح.', 'valid');
             } catch (error) {
@@ -1692,7 +2119,43 @@
             }
         }
 
+        async function saveTeacherStudent() {
+            const traineeId = normalizeTraineeIdValue(document.getElementById('studentIdInput')?.value || '');
+            const name = document.getElementById('studentNameInput')?.value.trim() || '';
+            const courseId = document.getElementById('studentCourseSelect')?.value || '';
+            const locationId = document.getElementById('studentLocationSelect')?.value || '';
+            const notes = document.getElementById('studentNotesInput')?.value.trim() || '';
+            const active = Boolean(document.getElementById('studentActiveInput')?.checked);
+
+            document.getElementById('studentIdInput').value = traineeId;
+
+            if (!traineeId || !name || !courseId) {
+                setTeacherStatus('teacherStudentsMessage', 'يرجى تعبئة الرقم التدريبي والاسم والدورة.', 'invalid');
+                return;
+            }
+
+            setTeacherStatus('teacherStudentsMessage', 'جاري حفظ الطالب...', 'waiting');
+            try {
+                const result = await callAppsScriptJsonp('saveStudent', {
+                    password: teacherDashboardPassword,
+                    student: { traineeId, name, courseId, locationId, notes, active }
+                });
+
+                if (!result?.ok) {
+                    throw new Error(result?.error || 'تعذر حفظ الطالب.');
+                }
+
+                resetStudentForm();
+                await loadTeacherAdminData();
+                setTeacherStatus('teacherStudentsMessage', 'تم حفظ الطالب بنجاح.', 'valid');
+            } catch (error) {
+                console.error('Student save error:', error);
+                setTeacherStatus('teacherStudentsMessage', error.message || 'تعذر حفظ الطالب.', 'invalid');
+            }
+        }
+
         async function saveTeacherSchedule() {
+            const scheduleId = document.getElementById('scheduleIdInput')?.value.trim() || '';
             const courseId = document.getElementById('scheduleCourseSelect')?.value || '';
             const locationId = document.getElementById('scheduleLocationSelect')?.value || '';
             const startTime = document.getElementById('scheduleStartInput')?.value || '';
@@ -1711,8 +2174,8 @@
                 sat: Boolean(document.getElementById('scheduleSatInput')?.checked)
             };
 
-            if (!courseId || !locationId || !startTime || !endTime) {
-                setTeacherStatus('teacherScheduleMessage', 'يرجى اختيار الدورة والموقع ووقت البداية والنهاية.', 'invalid');
+            if (!courseId || !startTime || !endTime) {
+                setTeacherStatus('teacherScheduleMessage', 'يرجى اختيار الدورة ووقت البداية والنهاية.', 'invalid');
                 return;
             }
 
@@ -1721,6 +2184,7 @@
                 const result = await callAppsScriptJsonp('saveSchedule', {
                     password: teacherDashboardPassword,
                     schedule: {
+                        scheduleId,
                         courseId,
                         locationId,
                         startTime,
@@ -1747,14 +2211,14 @@
         }
 
         async function bulkAddStudents() {
-            const courseId = document.getElementById('studentCourseSelect')?.value || '';
-            const locationId = document.getElementById('studentLocationSelect')?.value || '';
-            const active = Boolean(document.getElementById('studentActiveInput')?.checked);
+            const courseId = document.getElementById('studentBulkCourseSelect')?.value || '';
+            const locationId = document.getElementById('studentBulkLocationSelect')?.value || '';
+            const active = Boolean(document.getElementById('studentBulkActiveInput')?.checked);
             const bulkText = document.getElementById('studentsBulkInput')?.value || '';
             const students = parseBulkStudentsInput(bulkText);
 
-            if (!courseId || !locationId) {
-                setTeacherStatus('teacherStudentsMessage', 'يرجى اختيار الدورة والموقع قبل حفظ الطلاب.', 'invalid');
+            if (!courseId) {
+                setTeacherStatus('teacherStudentsMessage', 'يرجى اختيار الدورة قبل حفظ الطلاب.', 'invalid');
                 return;
             }
             if (!students.length) {
@@ -1785,6 +2249,77 @@
             }
         }
 
+        async function deleteCourse(courseId) {
+            await deleteTeacherEntity('deleteCourse', { courseId }, 'teacherCourseMessage', 'تم حذف الدورة بنجاح.');
+        }
+
+        async function deleteLocation(locationId) {
+            await deleteTeacherEntity('deleteLocation', { locationId }, 'teacherLocationMessage', 'تم حذف الموقع بنجاح.');
+        }
+
+        async function deleteStudent(traineeId) {
+            await deleteTeacherEntity('deleteStudent', { traineeId }, 'teacherStudentsMessage', 'تم حذف الطالب بنجاح.');
+        }
+
+        async function deleteSchedule(scheduleId) {
+            await deleteTeacherEntity('deleteSchedule', { scheduleId }, 'teacherScheduleMessage', 'تم حذف الجدول بنجاح.');
+        }
+
+        async function deleteTeacherEntity(action, payload, statusId, successMessage) {
+            if (!confirm('هل أنت متأكد من الحذف؟')) {
+                return;
+            }
+
+            setTeacherStatus(statusId, 'جاري تنفيذ الحذف...', 'waiting');
+            try {
+                const result = await callAppsScriptJsonp(action, Object.assign({ password: teacherDashboardPassword }, payload));
+                if (!result?.ok) {
+                    throw new Error(result?.error || 'تعذر تنفيذ الحذف.');
+                }
+                resetTeacherForms();
+                await loadTeacherAdminData();
+                setTeacherStatus(statusId, successMessage, 'valid');
+            } catch (error) {
+                console.error(`${action} error:`, error);
+                setTeacherStatus(statusId, error.message || 'تعذر تنفيذ الحذف.', 'invalid');
+            }
+        }
+
+        function resetCourseForm() {
+            document.getElementById('courseIdInput').value = '';
+            document.getElementById('courseNameInput').value = '';
+            document.getElementById('courseNotesInput').value = '';
+            document.getElementById('courseActiveInput').checked = true;
+        }
+
+        function resetLocationForm() {
+            document.getElementById('locationIdInput').value = '';
+            ['locationNameInput', 'locationLatInput', 'locationLonInput', 'locationRadiusInput', 'locationNotesInput'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.value = '';
+                }
+            });
+            document.getElementById('locationRadiusInput').value = RADIUS_KM;
+            document.getElementById('locationActiveInput').checked = true;
+        }
+
+        function resetStudentForm() {
+            document.getElementById('studentIdInput').value = '';
+            document.getElementById('studentNameInput').value = '';
+            document.getElementById('studentCourseSelect').value = '';
+            document.getElementById('studentLocationSelect').value = '';
+            document.getElementById('studentNotesInput').value = '';
+            document.getElementById('studentActiveInput').checked = true;
+        }
+
+        function resetTeacherForms() {
+            resetCourseForm();
+            resetLocationForm();
+            resetStudentForm();
+            resetScheduleForm();
+        }
+
         function parseBulkStudentsInput(text) {
             return String(text || '')
                 .split(/\r?\n/)
@@ -1793,7 +2328,7 @@
                 .map(line => {
                     const parts = line.split(/[,;\t|]/).map(part => part.trim()).filter(Boolean);
                     return {
-                        traineeId: parts[0] || '',
+                        traineeId: normalizeTraineeIdValue(parts[0] || ''),
                         name: parts.slice(1).join(' ')
                     };
                 })
@@ -1870,6 +2405,11 @@
         }
 
         function resetScheduleForm() {
+            const scheduleIdInput = document.getElementById('scheduleIdInput');
+            if (scheduleIdInput) {
+                scheduleIdInput.value = '';
+            }
+
             ['scheduleStartInput', 'scheduleEndInput', 'scheduleActiveFromInput', 'scheduleActiveToInput', 'scheduleNotesInput'].forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
@@ -2799,11 +3339,24 @@
         }
 
         async function lookupTraineeAttendanceContext(traineeId) {
+            const normalizedTraineeId = normalizeTraineeIdValue(traineeId);
             let lastAppsScriptError = null;
 
             try {
-                const result = await callAppsScriptJsonp('lookupTrainee', { traineeId });
+                const result = await callAppsScriptJsonp('lookupTrainee', { traineeId: normalizedTraineeId });
                 if (result?.ok && result.trainee) {
+                    return result;
+                }
+                if (result?.code === 'TRAINEE_INACTIVE') {
+                    return {
+                        ...result,
+                        error: 'هذا الرقم التدريبي موقوف حالياً.'
+                    };
+                }
+                if (result?.code === 'NO_ACTIVE_MEETING' && result?.trainee) {
+                    return await attachLegacyMeetingToContext(result);
+                }
+                if (result?.code && !['DATA_NOT_READY', 'TRAINEE_NOT_FOUND'].includes(result.code)) {
                     return result;
                 }
                 lastAppsScriptError = result;
@@ -2811,10 +3364,29 @@
                 lastAppsScriptError = error;
             }
 
-            return lookupTraineeFromLegacySheets(traineeId, lastAppsScriptError);
+            return lookupTraineeFromLegacySheets(normalizedTraineeId, lastAppsScriptError);
+        }
+
+        async function attachLegacyMeetingToContext(baseContext) {
+            const meetingResult = await verifyMeetingTime();
+            if (!meetingResult.valid) {
+                return {
+                    ...baseContext,
+                    error: meetingResult.message || 'لا يوجد لقاء نشط لهذا المتدرب حالياً.'
+                };
+            }
+
+            return {
+                ok: true,
+                trainee: baseContext.trainee,
+                meeting: readSessionJson('currentMeeting', null),
+                requiredLocation: baseContext.requiredLocation || null,
+                source: 'hybrid_apps_script_legacy_meeting'
+            };
         }
 
         async function lookupTraineeFromLegacySheets(traineeId, upstreamError) {
+            const normalizedTraineeId = normalizeTraineeIdValue(traineeId);
             try {
                 const response = await fetch(GOOGLE_SHEET_URL);
                 if (!response.ok) {
@@ -2823,7 +3395,7 @@
 
                 const csvData = await response.text();
                 const trainees = processCSV(csvData);
-                const foundTrainee = trainees.find(t => t.id === traineeId);
+                const foundTrainee = trainees.find(t => t.id === normalizedTraineeId);
 
                 if (!foundTrainee) {
                     return {
@@ -2934,10 +3506,12 @@
             }
 
             const inputID = document.getElementById('idInput').value.trim();
-            if (!inputID) {
+            const normalizedInputID = normalizeTraineeIdValue(inputID);
+            if (!normalizedInputID) {
                 showError('يرجى إدخال رقم المتدرب', document.getElementById('idStatus'));
                 return;
             }
+            document.getElementById('idInput').value = normalizedInputID;
 
             const idStatus = document.getElementById('idStatus');
             const idSpinner = document.getElementById('idSpinner');
@@ -2958,10 +3532,10 @@
                 nfcTapUsedForThisAttempt = true;
                 clearNfcCountdownTimer();
 
-                const attendanceContext = await lookupTraineeAttendanceContext(inputID);
+                const attendanceContext = await lookupTraineeAttendanceContext(normalizedInputID);
 
                 if (attendanceContext?.ok && attendanceContext.trainee) {
-                    traineeID = inputID;
+                    traineeID = normalizedInputID;
                     sessionStorage.setItem('traineeDetails', JSON.stringify(attendanceContext.trainee));
                     if (attendanceContext.meeting) {
                         sessionStorage.setItem('currentMeeting', JSON.stringify(attendanceContext.meeting));
@@ -3359,7 +3933,7 @@
                 .map(row => {
                     const columns = row.split(',');
                     return {
-                        id: columns[0]?.replace(/['"]/g, '').trim(),
+                        id: normalizeTraineeIdValue(columns[0]?.replace(/['"]/g, '').trim()),
                         name: columns[1]?.replace(/['"]/g, '').trim(),
                         program: columns[2]?.replace(/['"]/g, '').trim(),
                         requiredLocation: columns[3]?.replace(/['"]/g, '').trim() || ''
