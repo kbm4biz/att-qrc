@@ -695,6 +695,86 @@
             text-align: center;
             font-weight: bold;
         }
+        .teacher-block {
+            background: #fff;
+            border: 1px solid #dfe7ef;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        .teacher-block h3 {
+            margin: 0 0 10px;
+            color: #102a43;
+            font-size: 18px;
+        }
+        .teacher-block-note {
+            color: #607d8b;
+            font-size: 13px;
+            line-height: 1.7;
+            margin-bottom: 10px;
+        }
+        .teacher-form-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(140px, 1fr));
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .teacher-form-grid textarea {
+            width: 100%;
+            min-height: 120px;
+            border: 1px solid #cfd8dc;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 15px;
+            line-height: 1.6;
+            resize: vertical;
+        }
+        .teacher-form-wide {
+            grid-column: 1 / -1;
+        }
+        .teacher-inline-checks {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .teacher-checkbox {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f8fbfd;
+            border: 1px solid #dfe7ef;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 14px;
+            font-weight: bold;
+            color: #334e68;
+        }
+        .teacher-entity-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(220px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .teacher-entity-card {
+            background: #f8fbfd;
+            border: 1px solid #dfe7ef;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: right;
+        }
+        .teacher-entity-card strong {
+            display: block;
+            color: #102a43;
+            margin-bottom: 6px;
+            overflow-wrap: anywhere;
+        }
+        .teacher-entity-card div {
+            color: #52606d;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+        }
         @media (max-width: 600px) {
             body {
                 padding: 8px;
@@ -740,7 +820,9 @@
             }
             .teacher-filters,
             .teacher-settings-grid,
-            .teacher-summary {
+            .teacher-summary,
+            .teacher-form-grid,
+            .teacher-entity-list {
                 grid-template-columns: 1fr 1fr;
             }
             .teacher-record {
@@ -762,7 +844,9 @@
             .teacher-settings-grid {
                 grid-template-columns: 1fr 1fr;
             }
-            .teacher-summary {
+            .teacher-summary,
+            .teacher-form-grid,
+            .teacher-entity-list {
                 grid-template-columns: 1fr 1fr;
             }
             .teacher-record {
@@ -926,6 +1010,155 @@
                     <div id="teacherSettingsMessage" class="status-bar teacher-message waiting">جاري تحميل الإعدادات...</div>
                 </div>
 
+                <div class="teacher-block">
+                    <h3>تهيئة البيانات</h3>
+                    <div class="teacher-block-note">استخدم هذا الزر مرة واحدة لإنشاء الجداول الجديدة داخل نفس ملف Google Sheet إذا لم تكن موجودة بعد.</div>
+                    <div class="teacher-actions">
+                        <button type="button" onclick="runTeacherSetup()">تهيئة الجداول</button>
+                        <button type="button" class="teacher-secondary-button" onclick="loadTeacherAdminData()">تحديث البيانات</button>
+                    </div>
+                    <div id="teacherSetupMessage" class="status-bar teacher-message waiting">جاهز.</div>
+                </div>
+
+                <div class="teacher-block">
+                    <h3>الدورات</h3>
+                    <div class="teacher-form-grid">
+                        <label class="teacher-field">
+                            اسم الدورة
+                            <input type="text" id="courseNameInput" placeholder="مثال: أساسيات الكهرباء">
+                        </label>
+                        <label class="teacher-field teacher-form-wide">
+                            ملاحظات
+                            <input type="text" id="courseNotesInput" placeholder="اختياري">
+                        </label>
+                        <label class="teacher-checkbox">
+                            <input type="checkbox" id="courseActiveInput" checked>
+                            <span>الدورة فعالة</span>
+                        </label>
+                        <div class="teacher-actions">
+                            <button type="button" onclick="saveTeacherCourse()">حفظ الدورة</button>
+                        </div>
+                    </div>
+                    <div id="teacherCourseMessage" class="status-bar teacher-message waiting">أضف الدورات التي سينتسب إليها المتدربون.</div>
+                    <div id="teacherCoursesList" class="teacher-entity-list"></div>
+                </div>
+
+                <div class="teacher-block">
+                    <h3>المواقع</h3>
+                    <div class="teacher-form-grid">
+                        <label class="teacher-field">
+                            اسم الموقع
+                            <input type="text" id="locationNameInput" placeholder="مثال: ورشة 1">
+                        </label>
+                        <label class="teacher-field">
+                            Latitude
+                            <input type="number" id="locationLatInput" step="0.000001" placeholder="24.123456">
+                        </label>
+                        <label class="teacher-field">
+                            Longitude
+                            <input type="number" id="locationLonInput" step="0.000001" placeholder="46.123456">
+                        </label>
+                        <label class="teacher-field">
+                            Radius KM
+                            <input type="number" id="locationRadiusInput" min="0.02" max="5" step="0.01" placeholder="0.2">
+                        </label>
+                        <label class="teacher-field teacher-form-wide">
+                            ملاحظات
+                            <input type="text" id="locationNotesInput" placeholder="اختياري">
+                        </label>
+                        <label class="teacher-checkbox">
+                            <input type="checkbox" id="locationActiveInput" checked>
+                            <span>الموقع فعال</span>
+                        </label>
+                        <div class="teacher-actions">
+                            <button type="button" onclick="saveTeacherLocation()">حفظ الموقع</button>
+                        </div>
+                    </div>
+                    <div id="teacherLocationMessage" class="status-bar teacher-message waiting">المواقع هنا ستكون مصدر التحقق الجغرافي.</div>
+                    <div id="teacherLocationsList" class="teacher-entity-list"></div>
+                </div>
+
+                <div class="teacher-block">
+                    <h3>الطلاب - إضافة فردية أو جماعية</h3>
+                    <div class="teacher-block-note">اختر الدورة والموقع مرة واحدة، ثم الصق قائمة الطلاب. كل سطر بالشكل: الرقم التدريبي, الاسم</div>
+                    <div class="teacher-form-grid">
+                        <label class="teacher-field">
+                            الدورة
+                            <select id="studentCourseSelect"></select>
+                        </label>
+                        <label class="teacher-field">
+                            الموقع
+                            <select id="studentLocationSelect"></select>
+                        </label>
+                        <label class="teacher-checkbox">
+                            <input type="checkbox" id="studentActiveInput" checked>
+                            <span>الطلاب فعالون</span>
+                        </label>
+                        <div class="teacher-actions">
+                            <button type="button" onclick="bulkAddStudents()">حفظ الطلاب</button>
+                        </div>
+                        <label class="teacher-field teacher-form-wide">
+                            القائمة
+                            <textarea id="studentsBulkInput" placeholder="441234567, أحمد محمد&#10;441234568, خالد علي"></textarea>
+                        </label>
+                    </div>
+                    <div id="teacherStudentsMessage" class="status-bar teacher-message waiting">يمكنك إضافة طالب واحد أو عدة طلاب دفعة واحدة.</div>
+                    <div id="teacherStudentsList" class="teacher-entity-list"></div>
+                </div>
+
+                <div class="teacher-block">
+                    <h3>الجداول المتكررة</h3>
+                    <div class="teacher-block-note">أنشئ لقاءات متكررة حسب أيام الأسبوع. مثال: كل أحد واثنين من 08:00 إلى 10:00.</div>
+                    <div class="teacher-form-grid">
+                        <label class="teacher-field">
+                            الدورة
+                            <select id="scheduleCourseSelect"></select>
+                        </label>
+                        <label class="teacher-field">
+                            الموقع
+                            <select id="scheduleLocationSelect"></select>
+                        </label>
+                        <label class="teacher-field">
+                            بداية الحصة
+                            <input type="time" id="scheduleStartInput">
+                        </label>
+                        <label class="teacher-field">
+                            نهاية الحصة
+                            <input type="time" id="scheduleEndInput">
+                        </label>
+                        <label class="teacher-field">
+                            فعال من
+                            <input type="date" id="scheduleActiveFromInput">
+                        </label>
+                        <label class="teacher-field">
+                            فعال إلى
+                            <input type="date" id="scheduleActiveToInput">
+                        </label>
+                        <div class="teacher-inline-checks teacher-form-wide">
+                            <label class="teacher-checkbox"><input type="checkbox" id="scheduleSunInput">أحد</label>
+                            <label class="teacher-checkbox"><input type="checkbox" id="scheduleMonInput">اثنين</label>
+                            <label class="teacher-checkbox"><input type="checkbox" id="scheduleTueInput">ثلاثاء</label>
+                            <label class="teacher-checkbox"><input type="checkbox" id="scheduleWedInput">أربعاء</label>
+                            <label class="teacher-checkbox"><input type="checkbox" id="scheduleThuInput">خميس</label>
+                            <label class="teacher-checkbox"><input type="checkbox" id="scheduleFriInput">جمعة</label>
+                            <label class="teacher-checkbox"><input type="checkbox" id="scheduleSatInput">سبت</label>
+                        </div>
+                        <label class="teacher-field teacher-form-wide">
+                            ملاحظات
+                            <input type="text" id="scheduleNotesInput" placeholder="اختياري">
+                        </label>
+                        <label class="teacher-checkbox">
+                            <input type="checkbox" id="scheduleActiveInput" checked>
+                            <span>الجدول فعال</span>
+                        </label>
+                        <div class="teacher-actions">
+                            <button type="button" onclick="saveTeacherSchedule()">حفظ الجدول</button>
+                        </div>
+                    </div>
+                    <div id="teacherScheduleMessage" class="status-bar teacher-message waiting">الجداول هنا هي المصدر الأساسي لتحديد هل يوجد لقاء الآن أم لا.</div>
+                    <div id="teacherSchedulesList" class="teacher-entity-list"></div>
+                </div>
+
                 <div class="teacher-filters">
                     <label class="teacher-field">
                         اليوم
@@ -1021,6 +1254,7 @@
         let attemptCount = 0;
         let adminMode = false;
         let requiredLocation = '';
+        let requiredLocationId = '';
         let locationData = null;
         let attendanceRecorded = false; // Flag to prevent duplicate attendance logs
         let idVerificationInProgress = false;
@@ -1043,6 +1277,12 @@
         let teacherSearchTimer = null;
         let teacherLastRows = [];
         let teacherLastResponse = null;
+        let teacherAdminData = {
+            courses: [],
+            locations: [],
+            students: [],
+            schedules: []
+        };
 
         // ================== ON PAGE LOAD ================== //
         window.onload = async () => {
@@ -1094,15 +1334,10 @@
             }
 
             // Preload location data only when GPS verification is enabled
-            if (ENABLE_GPS_VALIDATION) {
+            if (ENABLE_GPS_VALIDATION && (!Array.isArray(locationData) || !locationData.length)) {
                 try {
-                    const response = await fetch(LOCATION_SHEET_URL);
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    const csvText = await response.text();
-                    locationData = processLocationCSV(csvText);
-                    console.log('Location data loaded:', locationData);
+                    locationData = await loadLegacyLocationData();
+                    console.log('Location data loaded from fallback CSV:', locationData);
                 } catch (error) {
                     console.error('Error loading location data:', error);
                 }
@@ -1124,10 +1359,32 @@
 
             syncAdminSettingsControls(getCurrentAppSettings());
             loadAdminSettings();
+            loadTeacherAdminData();
             loadTeacherLog();
         }
 
         async function loadRuntimeSettings() {
+            try {
+                const result = await callAppsScriptJsonp('attendanceBootstrap', {});
+                if (result?.ok) {
+                    if (result.settings) {
+                        applyRuntimeSettings(result.settings);
+                    }
+                    if (Array.isArray(result.locations) && result.locations.length) {
+                        locationData = result.locations.map(location => ({
+                            id: location.locationId || '',
+                            lat: Number(location.latitude),
+                            lon: Number(location.longitude),
+                            address: location.locationName || '',
+                            radiusKm: Number(location.radiusKm || RADIUS_KM)
+                        })).filter(location => Number.isFinite(location.lat) && Number.isFinite(location.lon));
+                    }
+                    return;
+                }
+            } catch (error) {
+                console.warn('Using fallback runtime settings because attendanceBootstrap failed:', error);
+            }
+
             try {
                 const result = await callAppsScriptJsonp('appConfig', {});
                 if (result?.ok && result.settings) {
@@ -1191,6 +1448,471 @@
             } finally {
                 setAdminSettingsDisabled(false);
             }
+        }
+
+        async function runTeacherSetup() {
+            setTeacherStatus('teacherSetupMessage', 'جاري تهيئة الجداول...', 'waiting');
+
+            try {
+                const result = await callAppsScriptJsonp('setupDataSheets', {
+                    password: teacherDashboardPassword
+                });
+
+                if (!result?.ok) {
+                    throw new Error(result?.error || 'تعذر تهيئة الجداول.');
+                }
+
+                await loadTeacherAdminData();
+                setTeacherStatus('teacherSetupMessage', result.savedAt ? `تمت التهيئة بنجاح. ${result.savedAt}` : 'تمت تهيئة الجداول بنجاح.', 'valid');
+            } catch (error) {
+                console.error('Setup error:', error);
+                setTeacherStatus('teacherSetupMessage', error.message || 'تعذر تهيئة الجداول.', 'invalid');
+            }
+        }
+
+        async function loadTeacherAdminData() {
+            setTeacherStatus('teacherSetupMessage', 'جاري تحميل بيانات الدورات والمواقع والطلاب والجداول...', 'waiting');
+
+            try {
+                const result = await callAppsScriptJsonp('teacherAdminData', {
+                    password: teacherDashboardPassword
+                });
+
+                if (!result?.ok) {
+                    throw new Error(result?.error || 'تعذر تحميل بيانات الإدارة.');
+                }
+
+                teacherAdminData = {
+                    courses: Array.isArray(result.courses) ? result.courses : [],
+                    locations: Array.isArray(result.locations) ? result.locations : [],
+                    students: Array.isArray(result.students) ? result.students : [],
+                    schedules: Array.isArray(result.schedules) ? result.schedules : []
+                };
+
+                renderTeacherAdminData();
+                setTeacherStatus('teacherSetupMessage', 'تم تحميل بيانات الإدارة.', 'valid');
+            } catch (error) {
+                console.error('Teacher admin data error:', error);
+                setTeacherStatus('teacherSetupMessage', error.message || 'تعذر تحميل بيانات الإدارة.', 'invalid');
+            }
+        }
+
+        function renderTeacherAdminData() {
+            renderTeacherCoursesList();
+            renderTeacherLocationsList();
+            renderTeacherStudentsList();
+            renderTeacherSchedulesList();
+            populateTeacherReferenceSelects();
+        }
+
+        function populateTeacherReferenceSelects() {
+            populateSelect('studentCourseSelect', teacherAdminData.courses.filter(item => item.active), 'courseId', 'courseName', 'اختر الدورة');
+            populateSelect('studentLocationSelect', teacherAdminData.locations.filter(item => item.active), 'locationId', 'locationName', 'اختر الموقع');
+            populateSelect('scheduleCourseSelect', teacherAdminData.courses.filter(item => item.active), 'courseId', 'courseName', 'اختر الدورة');
+            populateSelect('scheduleLocationSelect', teacherAdminData.locations.filter(item => item.active), 'locationId', 'locationName', 'اختر الموقع');
+        }
+
+        function populateSelect(id, items, valueKey, labelKey, placeholder) {
+            const element = document.getElementById(id);
+            if (!element) {
+                return;
+            }
+
+            const previousValue = element.value;
+            element.innerHTML = `<option value="">${placeholder || 'اختر'}</option>`;
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item[valueKey] || '';
+                option.textContent = item[labelKey] || item[valueKey] || '';
+                element.appendChild(option);
+            });
+
+            if (items.some(item => String(item[valueKey] || '') === String(previousValue || ''))) {
+                element.value = previousValue;
+            }
+        }
+
+        function renderTeacherCoursesList() {
+            const container = document.getElementById('teacherCoursesList');
+            if (!container) {
+                return;
+            }
+
+            if (!teacherAdminData.courses.length) {
+                container.innerHTML = '<div class="teacher-empty">لا توجد دورات حتى الآن.</div>';
+                return;
+            }
+
+            container.innerHTML = teacherAdminData.courses.map(course => `
+                <div class="teacher-entity-card">
+                    <strong>${escapeHtml(course.courseName)}</strong>
+                    <div>المعرّف: ${escapeHtml(course.courseId || '-')}</div>
+                    <div>الحالة: ${course.active ? 'فعالة' : 'موقوفة'}</div>
+                    <div>${escapeHtml(course.notes || '')}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderTeacherLocationsList() {
+            const container = document.getElementById('teacherLocationsList');
+            if (!container) {
+                return;
+            }
+
+            if (!teacherAdminData.locations.length) {
+                container.innerHTML = '<div class="teacher-empty">لا توجد مواقع حتى الآن.</div>';
+                return;
+            }
+
+            container.innerHTML = teacherAdminData.locations.map(location => `
+                <div class="teacher-entity-card">
+                    <strong>${escapeHtml(location.locationName)}</strong>
+                    <div>المعرّف: ${escapeHtml(location.locationId || '-')}</div>
+                    <div>(${escapeHtml(location.latitude)}, ${escapeHtml(location.longitude)})</div>
+                    <div>Radius: ${escapeHtml(location.radiusKm)} كم</div>
+                    <div>الحالة: ${location.active ? 'فعال' : 'موقوف'}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderTeacherStudentsList() {
+            const container = document.getElementById('teacherStudentsList');
+            if (!container) {
+                return;
+            }
+
+            if (!teacherAdminData.students.length) {
+                container.innerHTML = '<div class="teacher-empty">لا توجد بيانات طلاب بعد.</div>';
+                return;
+            }
+
+            const students = [...teacherAdminData.students].sort((a, b) => String(a.traineeId).localeCompare(String(b.traineeId))).slice(0, 120);
+            container.innerHTML = students.map(student => `
+                <div class="teacher-entity-card">
+                    <strong>${escapeHtml(student.name)}</strong>
+                    <div>الرقم: ${escapeHtml(student.traineeId)}</div>
+                    <div>الدورة: ${escapeHtml(student.courseName || student.courseId || '-')}</div>
+                    <div>الموقع: ${escapeHtml(student.locationName || student.locationId || '-')}</div>
+                    <div>الحالة: ${student.active ? 'فعال' : 'موقوف'}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderTeacherSchedulesList() {
+            const container = document.getElementById('teacherSchedulesList');
+            if (!container) {
+                return;
+            }
+
+            if (!teacherAdminData.schedules.length) {
+                container.innerHTML = '<div class="teacher-empty">لا توجد جداول متكررة بعد.</div>';
+                return;
+            }
+
+            container.innerHTML = teacherAdminData.schedules.map(schedule => `
+                <div class="teacher-entity-card">
+                    <strong>${escapeHtml(schedule.courseName || schedule.courseId || 'بدون دورة')}</strong>
+                    <div>الموقع: ${escapeHtml(schedule.locationName || schedule.locationId || 'من ملف الطالب')}</div>
+                    <div>الوقت: ${escapeHtml(schedule.startTime || '-')} - ${escapeHtml(schedule.endTime || '-')}</div>
+                    <div>الأيام: ${escapeHtml(formatScheduleWeekdays(schedule.weekdays))}</div>
+                    <div>الفترة: ${escapeHtml(schedule.activeFrom || 'مفتوح')} / ${escapeHtml(schedule.activeTo || 'مفتوح')}</div>
+                    <div>الحالة: ${schedule.active ? 'فعال' : 'موقوف'}</div>
+                </div>
+            `).join('');
+        }
+
+        async function saveTeacherCourse() {
+            const courseName = document.getElementById('courseNameInput')?.value.trim();
+            const notes = document.getElementById('courseNotesInput')?.value.trim() || '';
+            const active = Boolean(document.getElementById('courseActiveInput')?.checked);
+
+            if (!courseName) {
+                setTeacherStatus('teacherCourseMessage', 'يرجى إدخال اسم الدورة.', 'invalid');
+                return;
+            }
+
+            setTeacherStatus('teacherCourseMessage', 'جاري حفظ الدورة...', 'waiting');
+            try {
+                const result = await callAppsScriptJsonp('saveCourse', {
+                    password: teacherDashboardPassword,
+                    course: { courseName, notes, active }
+                });
+
+                if (!result?.ok) {
+                    throw new Error(result?.error || 'تعذر حفظ الدورة.');
+                }
+
+                document.getElementById('courseNameInput').value = '';
+                document.getElementById('courseNotesInput').value = '';
+                document.getElementById('courseActiveInput').checked = true;
+                await loadTeacherAdminData();
+                setTeacherStatus('teacherCourseMessage', 'تم حفظ الدورة بنجاح.', 'valid');
+            } catch (error) {
+                console.error('Course save error:', error);
+                setTeacherStatus('teacherCourseMessage', error.message || 'تعذر حفظ الدورة.', 'invalid');
+            }
+        }
+
+        async function saveTeacherLocation() {
+            const locationName = document.getElementById('locationNameInput')?.value.trim();
+            const latitude = Number(document.getElementById('locationLatInput')?.value);
+            const longitude = Number(document.getElementById('locationLonInput')?.value);
+            const radiusKm = Number(document.getElementById('locationRadiusInput')?.value || RADIUS_KM);
+            const notes = document.getElementById('locationNotesInput')?.value.trim() || '';
+            const active = Boolean(document.getElementById('locationActiveInput')?.checked);
+
+            if (!locationName || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+                setTeacherStatus('teacherLocationMessage', 'يرجى تعبئة اسم الموقع والإحداثيات بشكل صحيح.', 'invalid');
+                return;
+            }
+
+            setTeacherStatus('teacherLocationMessage', 'جاري حفظ الموقع...', 'waiting');
+            try {
+                const result = await callAppsScriptJsonp('saveLocation', {
+                    password: teacherDashboardPassword,
+                    location: { locationName, latitude, longitude, radiusKm, notes, active }
+                });
+
+                if (!result?.ok) {
+                    throw new Error(result?.error || 'تعذر حفظ الموقع.');
+                }
+
+                ['locationNameInput', 'locationLatInput', 'locationLonInput', 'locationRadiusInput', 'locationNotesInput'].forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.value = '';
+                    }
+                });
+                document.getElementById('locationActiveInput').checked = true;
+                await loadTeacherAdminData();
+                setTeacherStatus('teacherLocationMessage', 'تم حفظ الموقع بنجاح.', 'valid');
+            } catch (error) {
+                console.error('Location save error:', error);
+                setTeacherStatus('teacherLocationMessage', error.message || 'تعذر حفظ الموقع.', 'invalid');
+            }
+        }
+
+        async function saveTeacherSchedule() {
+            const courseId = document.getElementById('scheduleCourseSelect')?.value || '';
+            const locationId = document.getElementById('scheduleLocationSelect')?.value || '';
+            const startTime = document.getElementById('scheduleStartInput')?.value || '';
+            const endTime = document.getElementById('scheduleEndInput')?.value || '';
+            const activeFrom = document.getElementById('scheduleActiveFromInput')?.value || '';
+            const activeTo = document.getElementById('scheduleActiveToInput')?.value || '';
+            const notes = document.getElementById('scheduleNotesInput')?.value.trim() || '';
+            const active = Boolean(document.getElementById('scheduleActiveInput')?.checked);
+            const weekdays = {
+                sun: Boolean(document.getElementById('scheduleSunInput')?.checked),
+                mon: Boolean(document.getElementById('scheduleMonInput')?.checked),
+                tue: Boolean(document.getElementById('scheduleTueInput')?.checked),
+                wed: Boolean(document.getElementById('scheduleWedInput')?.checked),
+                thu: Boolean(document.getElementById('scheduleThuInput')?.checked),
+                fri: Boolean(document.getElementById('scheduleFriInput')?.checked),
+                sat: Boolean(document.getElementById('scheduleSatInput')?.checked)
+            };
+
+            if (!courseId || !locationId || !startTime || !endTime) {
+                setTeacherStatus('teacherScheduleMessage', 'يرجى اختيار الدورة والموقع ووقت البداية والنهاية.', 'invalid');
+                return;
+            }
+
+            setTeacherStatus('teacherScheduleMessage', 'جاري حفظ الجدول...', 'waiting');
+            try {
+                const result = await callAppsScriptJsonp('saveSchedule', {
+                    password: teacherDashboardPassword,
+                    schedule: {
+                        courseId,
+                        locationId,
+                        startTime,
+                        endTime,
+                        activeFrom,
+                        activeTo,
+                        weekdays,
+                        active,
+                        notes
+                    }
+                });
+
+                if (!result?.ok) {
+                    throw new Error(result?.error || 'تعذر حفظ الجدول.');
+                }
+
+                resetScheduleForm();
+                await loadTeacherAdminData();
+                setTeacherStatus('teacherScheduleMessage', 'تم حفظ الجدول بنجاح.', 'valid');
+            } catch (error) {
+                console.error('Schedule save error:', error);
+                setTeacherStatus('teacherScheduleMessage', error.message || 'تعذر حفظ الجدول.', 'invalid');
+            }
+        }
+
+        async function bulkAddStudents() {
+            const courseId = document.getElementById('studentCourseSelect')?.value || '';
+            const locationId = document.getElementById('studentLocationSelect')?.value || '';
+            const active = Boolean(document.getElementById('studentActiveInput')?.checked);
+            const bulkText = document.getElementById('studentsBulkInput')?.value || '';
+            const students = parseBulkStudentsInput(bulkText);
+
+            if (!courseId || !locationId) {
+                setTeacherStatus('teacherStudentsMessage', 'يرجى اختيار الدورة والموقع قبل حفظ الطلاب.', 'invalid');
+                return;
+            }
+            if (!students.length) {
+                setTeacherStatus('teacherStudentsMessage', 'الصق طالباً واحداً على الأقل بصيغة الرقم,الاسم.', 'invalid');
+                return;
+            }
+
+            setTeacherStatus('teacherStudentsMessage', 'جاري حفظ الطلاب دفعة واحدة...', 'waiting');
+            try {
+                const result = await postAppsScriptBackgroundTask('bulkUpsertStudents', {
+                    password: teacherDashboardPassword,
+                    courseId,
+                    locationId,
+                    active,
+                    students
+                });
+
+                if (!result?.ok) {
+                    throw new Error(result?.error || 'تعذر حفظ الطلاب.');
+                }
+
+                document.getElementById('studentsBulkInput').value = '';
+                await loadTeacherAdminData();
+                setTeacherStatus('teacherStudentsMessage', `تم حفظ الطلاب. جديد: ${result.inserted || 0} | تحديث: ${result.updated || 0}`, 'valid');
+            } catch (error) {
+                console.error('Bulk students error:', error);
+                setTeacherStatus('teacherStudentsMessage', error.message || 'تعذر حفظ الطلاب.', 'invalid');
+            }
+        }
+
+        function parseBulkStudentsInput(text) {
+            return String(text || '')
+                .split(/\r?\n/)
+                .map(line => line.trim())
+                .filter(Boolean)
+                .map(line => {
+                    const parts = line.split(/[,;\t|]/).map(part => part.trim()).filter(Boolean);
+                    return {
+                        traineeId: parts[0] || '',
+                        name: parts.slice(1).join(' ')
+                    };
+                })
+                .filter(student => student.traineeId && student.name);
+        }
+
+        async function postAppsScriptBackgroundTask(action, payload) {
+            const taskId = window.crypto?.randomUUID
+                ? window.crypto.randomUUID()
+                : `task-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            const cleanup = submitBackgroundAppsScriptForm(action, payload, taskId);
+
+            try {
+                return await waitForBackgroundTask(taskId);
+            } finally {
+                cleanup();
+            }
+        }
+
+        function submitBackgroundAppsScriptForm(action, payload, taskId) {
+            const iframeName = `taskFrame_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+            const iframe = document.createElement('iframe');
+            const form = document.createElement('form');
+
+            function addField(name, value) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = value;
+                form.appendChild(input);
+            }
+
+            iframe.name = iframeName;
+            iframe.style.position = 'absolute';
+            iframe.style.width = '1px';
+            iframe.style.height = '1px';
+            iframe.style.opacity = '0';
+            iframe.style.pointerEvents = 'none';
+            iframe.style.border = '0';
+            form.method = 'POST';
+            form.action = APPS_SCRIPT_LOG_URL;
+            form.target = iframeName;
+            form.style.display = 'none';
+            addField('action', action);
+            addField('taskId', taskId);
+            addField('payload', JSON.stringify(payload));
+            document.body.appendChild(iframe);
+            document.body.appendChild(form);
+            form.submit();
+
+            return () => {
+                form.remove();
+                iframe.remove();
+            };
+        }
+
+        async function waitForBackgroundTask(taskId) {
+            const timeoutAt = Date.now() + 90000;
+
+            while (Date.now() < timeoutAt) {
+                await delay(1200);
+                const result = await callAppsScriptJsonp('taskStatus', { taskId });
+
+                if (result?.state === 'SUCCESS') {
+                    return result;
+                }
+
+                if (result?.state === 'ERROR' || result?.ok === false) {
+                    return result;
+                }
+            }
+
+            throw new Error('انتهت مهلة العملية. حاول مرة أخرى.');
+        }
+
+        function resetScheduleForm() {
+            ['scheduleStartInput', 'scheduleEndInput', 'scheduleActiveFromInput', 'scheduleActiveToInput', 'scheduleNotesInput'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.value = '';
+                }
+            });
+
+            ['scheduleSunInput', 'scheduleMonInput', 'scheduleTueInput', 'scheduleWedInput', 'scheduleThuInput', 'scheduleFriInput', 'scheduleSatInput', 'scheduleActiveInput'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.checked = id === 'scheduleActiveInput';
+                }
+            });
+
+            const courseSelect = document.getElementById('scheduleCourseSelect');
+            const locationSelect = document.getElementById('scheduleLocationSelect');
+            if (courseSelect) {
+                courseSelect.value = '';
+            }
+            if (locationSelect) {
+                locationSelect.value = '';
+            }
+        }
+
+        function formatScheduleWeekdays(weekdays) {
+            const labels = [];
+            if (weekdays?.sun) labels.push('أحد');
+            if (weekdays?.mon) labels.push('اثنين');
+            if (weekdays?.tue) labels.push('ثلاثاء');
+            if (weekdays?.wed) labels.push('أربعاء');
+            if (weekdays?.thu) labels.push('خميس');
+            if (weekdays?.fri) labels.push('جمعة');
+            if (weekdays?.sat) labels.push('سبت');
+            return labels.join('، ') || '-';
+        }
+
+        function setTeacherStatus(id, message, type) {
+            const element = document.getElementById(id);
+            if (!element) {
+                return;
+            }
+            element.className = `status-bar teacher-message ${type || 'waiting'}`;
+            element.textContent = message;
         }
 
         function applyRuntimeSettings(settings) {
@@ -2067,6 +2789,88 @@
             }
         }
 
+        async function loadLegacyLocationData() {
+            const response = await fetch(LOCATION_SHEET_URL);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const csvText = await response.text();
+            return processLocationCSV(csvText);
+        }
+
+        async function lookupTraineeAttendanceContext(traineeId) {
+            let lastAppsScriptError = null;
+
+            try {
+                const result = await callAppsScriptJsonp('lookupTrainee', { traineeId });
+                if (result?.ok && result.trainee) {
+                    return result;
+                }
+                lastAppsScriptError = result;
+            } catch (error) {
+                lastAppsScriptError = error;
+            }
+
+            return lookupTraineeFromLegacySheets(traineeId, lastAppsScriptError);
+        }
+
+        async function lookupTraineeFromLegacySheets(traineeId, upstreamError) {
+            try {
+                const response = await fetch(GOOGLE_SHEET_URL);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const csvData = await response.text();
+                const trainees = processCSV(csvData);
+                const foundTrainee = trainees.find(t => t.id === traineeId);
+
+                if (!foundTrainee) {
+                    return {
+                        ok: false,
+                        code: 'TRAINEE_NOT_FOUND',
+                        error: 'رقم المتدرب غير صحيح'
+                    };
+                }
+
+                const meetingResult = await verifyMeetingTime();
+                if (!meetingResult.valid) {
+                    return {
+                        ok: false,
+                        code: 'NO_ACTIVE_MEETING',
+                        error: meetingResult.message
+                    };
+                }
+
+                return {
+                    ok: true,
+                    trainee: {
+                        id: foundTrainee.id,
+                        name: foundTrainee.name,
+                        program: foundTrainee.program,
+                        courseId: '',
+                        requiredLocationId: '',
+                        requiredLocation: foundTrainee.requiredLocation || ''
+                    },
+                    meeting: readSessionJson('currentMeeting', null),
+                    requiredLocation: foundTrainee.requiredLocation
+                        ? {
+                            locationId: '',
+                            locationName: foundTrainee.requiredLocation
+                        }
+                        : null,
+                    source: 'legacy_csv'
+                };
+            } catch (fallbackError) {
+                console.error('Legacy CSV lookup failed:', fallbackError, upstreamError);
+                return {
+                    ok: false,
+                    code: 'LOOKUP_UNAVAILABLE',
+                    error: 'خدمة التحقق غير متوفرة'
+                };
+            }
+        }
+
         function setIdLoadingState(isLoading, message) {
             const idInput = document.getElementById('idInput');
             const idButton = document.getElementById('idButton');
@@ -2154,33 +2958,31 @@
                 nfcTapUsedForThisAttempt = true;
                 clearNfcCountdownTimer();
 
-                const response = await fetch(GOOGLE_SHEET_URL);
-                const csvData = await response.text();
+                const attendanceContext = await lookupTraineeAttendanceContext(inputID);
 
-                const trainees = processCSV(csvData);
-                const foundTrainee = trainees.find(t => t.id === inputID);
-
-                if (foundTrainee) {
-                    const isMeetingValid = await verifyMeetingTime();
-                    if (isMeetingValid.valid) {
-                        // Store trainee details
-                        traineeID = inputID;
-                        sessionStorage.setItem('traineeDetails', JSON.stringify(foundTrainee));
-                        idStatus.className = 'status-bar waiting';
-                        idStatus.textContent = 'تم التحقق من الرقم. جاري إكمال تسجيل الحضور، لا تغلق الصفحة.';
-                        scrollToAttendanceFeedback();
-                        
-                        // Get required location for this trainee
-                        requiredLocation = foundTrainee.requiredLocation || '';
-                        console.log('Required location:', requiredLocation);
-                        
-                        shouldUnlockIdControls = false;
-                        proceedAfterIdVerification();
-                    } else {
-                        showError(isMeetingValid.message, idStatus);
+                if (attendanceContext?.ok && attendanceContext.trainee) {
+                    traineeID = inputID;
+                    sessionStorage.setItem('traineeDetails', JSON.stringify(attendanceContext.trainee));
+                    if (attendanceContext.meeting) {
+                        sessionStorage.setItem('currentMeeting', JSON.stringify(attendanceContext.meeting));
                     }
+
+                    requiredLocation = attendanceContext.trainee.requiredLocation ||
+                        attendanceContext.requiredLocation?.locationName ||
+                        '';
+                    requiredLocationId = attendanceContext.trainee.requiredLocationId ||
+                        attendanceContext.requiredLocation?.locationId ||
+                        '';
+
+                    idStatus.className = 'status-bar waiting';
+                    idStatus.textContent = 'تم التحقق من الرقم. جاري إكمال تسجيل الحضور، لا تغلق الصفحة.';
+                    scrollToAttendanceFeedback();
+                    console.log('Required location:', requiredLocation, requiredLocationId);
+
+                    shouldUnlockIdControls = false;
+                    proceedAfterIdVerification();
                 } else {
-                    showError('رقم المتدرب غير صحيح', idStatus);
+                    showError(attendanceContext?.error || 'رقم المتدرب غير صحيح', idStatus);
                 }
             } catch (error) {
                 showError('خدمة التحقق غير متوفرة', idStatus);
@@ -2273,15 +3075,14 @@
                         const userLon = position.coords.longitude;
                         
                         // If we don't have location data, try to reload it
-                        if (!locationData) {
-                            const response = await fetch(LOCATION_SHEET_URL);
-                            if (!response.ok) throw new Error('Network response was not ok');
-                            const csvText = await response.text();
-                            locationData = processLocationCSV(csvText);
+                        if (!Array.isArray(locationData) || !locationData.length) {
+                            locationData = await loadLegacyLocationData();
                         }
-                        
-                        // Find nearest location
-                        const nearestLocation = findNearestLocation(userLat, userLon);
+
+                        const requiredLocationEntry = requiredLocationId ? findLocationById(requiredLocationId) : null;
+                        const nearestLocation = requiredLocationEntry
+                            ? findSpecificLocation(userLat, userLon, requiredLocationEntry)
+                            : findNearestLocation(userLat, userLon);
                         
                         if (!nearestLocation) {
                             locationStatus.innerHTML = 'عذراً، لا يمكنك المتابعة. الموقع الحالي خارج النطاق المسموح به.';
@@ -2294,7 +3095,7 @@
                         sessionStorage.setItem('attendanceAddress', nearestLocation.address);
                         
                         // Check if location matches required location
-                        if (requiredLocation && nearestLocation.address !== requiredLocation) {
+                        if (!requiredLocationEntry && requiredLocation && nearestLocation.address !== requiredLocation) {
                             showLocationError(`أنت لست في الموقع المطلوب للحضور. الموقع الحالي: ${nearestLocation.address}<br>المطلوب: ${requiredLocation}`);
                             return;
                         }
@@ -2341,14 +3142,40 @@
                 
                 const lat = parseFloat(cols[0]?.trim());
                 const lon = parseFloat(cols[1]?.trim());
+                const id = cols[2]?.trim() || '';
                 const address = cols[3]?.trim() || 'غير معروف';
                 
                 if (!isNaN(lat) && !isNaN(lon)) {
-                    locations.push({ lat, lon, address });
+                    locations.push({ id, lat, lon, address, radiusKm: RADIUS_KM });
                 }
             }
             
             return locations;
+        }
+
+        function findLocationById(locationId) {
+            if (!locationId || !Array.isArray(locationData)) {
+                return null;
+            }
+
+            return locationData.find(location => String(location.id || '') === String(locationId)) || null;
+        }
+
+        function findSpecificLocation(userLat, userLon, location) {
+            if (!location) {
+                return null;
+            }
+
+            const distance = getDistanceFromLatLonInKm(userLat, userLon, location.lat, location.lon);
+            const allowedRadius = Number(location.radiusKm || RADIUS_KM);
+            if (distance > allowedRadius) {
+                return null;
+            }
+
+            return {
+                ...location,
+                distance
+            };
         }
         
         function findNearestLocation(userLat, userLon) {
@@ -2369,7 +3196,8 @@
                 }
             }
             
-            if (minDistance <= RADIUS_KM) {
+            const allowedRadius = Number(nearestLocation?.radiusKm || RADIUS_KM);
+            if (minDistance <= allowedRadius) {
                 return nearestLocation;
             }
             
@@ -2515,6 +3343,8 @@
             supportingFormData = null;
             supportingFormSubmitting = false;
             attendanceRecorded = false;
+            requiredLocation = '';
+            requiredLocationId = '';
             document.getElementById('idInput').value = '';
             applyNfcGateToForm();
             
