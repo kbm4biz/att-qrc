@@ -1025,6 +1025,58 @@
         .teacher-grid-table tbody tr:hover {
             background: #f8fbfd;
         }
+        .teacher-grid-input,
+        .teacher-grid-select {
+            width: 100%;
+            min-height: 38px;
+            border: 1px solid #d3dde6;
+            border-radius: 10px;
+            padding: 8px 10px;
+            background: #fff;
+            color: #17324d;
+            font-family: inherit;
+            font-size: 14px;
+        }
+        .teacher-grid-input:focus,
+        .teacher-grid-select:focus {
+            outline: none;
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 3px rgba(14, 90, 138, 0.12);
+        }
+        .teacher-grid-cell-note {
+            min-width: 180px;
+        }
+        .teacher-grid-checkbox {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--brand-primary);
+        }
+        .teacher-grid-days {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            min-width: 170px;
+        }
+        .teacher-grid-days label {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--brand-muted);
+            background: #f5f8fb;
+            border: 1px solid #dfe7ef;
+            border-radius: 999px;
+            padding: 4px 8px;
+        }
+        .teacher-row-saving {
+            opacity: 0.68;
+        }
+        .teacher-grid-autosave {
+            display: block;
+            margin-top: 6px;
+            color: var(--brand-muted);
+            font-size: 12px;
+        }
         .teacher-table-actions {
             display: flex;
             gap: 6px;
@@ -1370,7 +1422,7 @@
                             <span>الدورة فعالة</span>
                         </label>
                         <div class="teacher-actions">
-                            <button type="button" onclick="saveTeacherCourse()">حفظ الدورة</button>
+                            <button type="button" id="saveTeacherCourseButton" onclick="saveTeacherCourse()">حفظ الدورة</button>
                             <button type="button" class="teacher-secondary-button" onclick="resetCourseForm()">جديد</button>
                         </div>
                     </div>
@@ -1414,7 +1466,7 @@
                             <span>الموقع فعال</span>
                         </label>
                         <div class="teacher-actions">
-                            <button type="button" onclick="saveTeacherLocation()">حفظ الموقع</button>
+                            <button type="button" id="saveTeacherLocationButton" onclick="saveTeacherLocation()">حفظ الموقع</button>
                             <button type="button" class="teacher-secondary-button" onclick="resetLocationForm()">جديد</button>
                         </div>
                     </div>
@@ -1458,7 +1510,7 @@
                             <span>الطالب فعال</span>
                         </label>
                         <div class="teacher-actions">
-                            <button type="button" onclick="saveTeacherStudent()">حفظ الطالب</button>
+                            <button type="button" id="saveTeacherStudentButton" onclick="saveTeacherStudent()">حفظ الطالب</button>
                             <button type="button" class="teacher-secondary-button" onclick="resetStudentForm()">جديد</button>
                         </div>
                     </div>
@@ -1541,7 +1593,7 @@
                             <span>الجدول فعال</span>
                         </label>
                         <div class="teacher-actions">
-                            <button type="button" onclick="saveTeacherSchedule()">حفظ الجدول</button>
+                            <button type="button" id="saveTeacherScheduleButton" onclick="saveTeacherSchedule()">حفظ الجدول</button>
                             <button type="button" class="teacher-secondary-button" onclick="resetScheduleForm()">جديد</button>
                         </div>
                     </div>
@@ -1688,6 +1740,8 @@
         let teacherSearchTimer = null;
         let teacherLastRows = [];
         let teacherLastResponse = null;
+        let teacherInlineSaveLocks = {};
+        let teacherActionLocks = {};
         let teacherLayoutReady = false;
         let activeTeacherTab = 'dashboard';
         let bootstrapActiveMeetingNow = null;
@@ -2185,19 +2239,193 @@
             }
         }
 
-        function renderTeacherCoursesList() {
-            const container = document.getElementById('teacherCoursesList');
-            if (!container) {
+        function teacherCellId(entity, rowNumber, field) {
+            return `${entity}_${field}_${rowNumber}`;
+        }
+
+        function getTeacherEntityByRow(items, rowNumber) {
+            return items.find(item => Number(item.rowNumber) === Number(rowNumber)) || null;
+        }
+
+        function handleTeacherGridEnter(event) {
+            if (event.key !== 'Enter') {
                 return;
             }
 
-            const allCourses = sortTeacherItems(teacherAdminData.courses, course => `${course.courseName || ''} ${course.courseId || ''}`);
-            const filteredCourses = filterTeacherItems(
-                allCourses,
-                'teacherCourseSearch',
-                course => `${course.courseId || ''} ${course.courseName || ''} ${course.notes || ''} ${course.active ? 'فعالة' : 'موقوفة'}`
-            );
+            event.preventDefault();
+            if (typeof event.target?.blur === 'function') {
+                event.target.blur();
+            }
+        }
 
+        function markTeacherRowSaving(entity, rowNumber, isSaving) {
+            const row = document.getElementById(`${entity}Row_${rowNumber}`);
+            if (row) {
+                row.classList.toggle('teacher-row-saving', Boolean(isSaving));
+            }
+        }
+
+        function isTeacherRowLocked(lockKey) {
+            return Boolean(teacherInlineSaveLocks[lockKey]);
+        }
+
+        function isTeacherActionLocked(lockKey) {
+            return Boolean(teacherActionLocks[lockKey]);
+        }
+
+        function setTeacherActionLock(lockKey, isLocked) {
+            if (!lockKey) {
+                return;
+            }
+
+            if (isLocked) {
+                teacherActionLocks[lockKey] = true;
+            } else {
+                delete teacherActionLocks[lockKey];
+            }
+        }
+
+        function setTeacherRowControlsDisabled(entity, rowNumber, isDisabled) {
+            const row = document.getElementById(`${entity}Row_${rowNumber}`);
+            if (!row) {
+                return;
+            }
+
+            row.querySelectorAll('input, select, button, textarea').forEach(control => {
+                control.disabled = Boolean(isDisabled);
+            });
+        }
+
+        function setTeacherRowLock(lockKey, entity, rowNumber, isLocked) {
+            if (isLocked) {
+                teacherInlineSaveLocks[lockKey] = true;
+            } else {
+                delete teacherInlineSaveLocks[lockKey];
+            }
+            markTeacherRowSaving(entity, rowNumber, isLocked);
+            setTeacherRowControlsDisabled(entity, rowNumber, isLocked);
+        }
+
+        function renderTeacherSelectOptions(items, valueKey, labelKey, selectedValue, emptyLabel = '') {
+            const options = [];
+            if (emptyLabel) {
+                options.push(`<option value="">${escapeHtml(emptyLabel)}</option>`);
+            }
+
+            items.forEach(item => {
+                const value = item[valueKey] || '';
+                const label = formatTeacherReferenceLabel(item[labelKey] || value, item.active);
+                const selected = String(value) === String(selectedValue || '') ? ' selected' : '';
+                options.push(`<option value="${escapeAttribute(value)}"${selected}>${escapeHtml(label)}</option>`);
+            });
+
+            return options.join('');
+        }
+
+        function renderTeacherCourseRow(course) {
+            const rowNumber = Number(course.rowNumber);
+            return `
+                <tr id="courseRow_${rowNumber}">
+                    <td>${escapeHtml(course.courseId || '-')}</td>
+                    <td>
+                        <input class="teacher-grid-input" id="${teacherCellId('course', rowNumber, 'name')}" value="${escapeAttribute(course.courseName || '')}" onblur="saveInlineCourse(${rowNumber})" onkeydown="handleTeacherGridEnter(event)">
+                    </td>
+                    <td><input class="teacher-grid-checkbox" type="checkbox" id="${teacherCellId('course', rowNumber, 'active')}" ${course.active ? 'checked' : ''} onchange="saveInlineCourse(${rowNumber})"></td>
+                    <td class="teacher-grid-cell-note">
+                        <input class="teacher-grid-input" id="${teacherCellId('course', rowNumber, 'notes')}" value="${escapeAttribute(course.notes || '')}" onblur="saveInlineCourse(${rowNumber})" onkeydown="handleTeacherGridEnter(event)">
+                    </td>
+                    <td>
+                        <div class="teacher-table-actions">
+                            <button type="button" class="teacher-danger-button" onclick="deleteCourse('${escapeAttribute(course.courseId || '')}', ${rowNumber})">حذف</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function renderTeacherLocationRow(location) {
+            const rowNumber = Number(location.rowNumber);
+            return `
+                <tr id="locationRow_${rowNumber}">
+                    <td>${escapeHtml(location.locationId || '-')}</td>
+                    <td><input class="teacher-grid-input" id="${teacherCellId('location', rowNumber, 'name')}" value="${escapeAttribute(location.locationName || '')}" onblur="saveInlineLocation(${rowNumber})" onkeydown="handleTeacherGridEnter(event)"></td>
+                    <td><input class="teacher-grid-input" type="number" step="0.000001" id="${teacherCellId('location', rowNumber, 'lat')}" value="${escapeAttribute(String(location.latitude ?? ''))}" onblur="saveInlineLocation(${rowNumber})" onkeydown="handleTeacherGridEnter(event)"></td>
+                    <td><input class="teacher-grid-input" type="number" step="0.000001" id="${teacherCellId('location', rowNumber, 'lon')}" value="${escapeAttribute(String(location.longitude ?? ''))}" onblur="saveInlineLocation(${rowNumber})" onkeydown="handleTeacherGridEnter(event)"></td>
+                    <td><input class="teacher-grid-input" type="number" min="0.02" max="5" step="0.01" id="${teacherCellId('location', rowNumber, 'radius')}" value="${escapeAttribute(String(location.radiusKm ?? ''))}" onblur="saveInlineLocation(${rowNumber})" onkeydown="handleTeacherGridEnter(event)"></td>
+                    <td><input class="teacher-grid-checkbox" type="checkbox" id="${teacherCellId('location', rowNumber, 'active')}" ${location.active ? 'checked' : ''} onchange="saveInlineLocation(${rowNumber})"></td>
+                    <td class="teacher-grid-cell-note"><input class="teacher-grid-input" id="${teacherCellId('location', rowNumber, 'notes')}" value="${escapeAttribute(location.notes || '')}" onblur="saveInlineLocation(${rowNumber})" onkeydown="handleTeacherGridEnter(event)"></td>
+                    <td><button type="button" class="teacher-danger-button" onclick="deleteLocation('${escapeAttribute(location.locationId || '')}', ${rowNumber})">حذف</button></td>
+                </tr>
+            `;
+        }
+
+        function renderTeacherStudentRow(student) {
+            const rowNumber = Number(student.rowNumber);
+            const courses = sortTeacherItems(teacherAdminData.courses, item => `${item.courseName || ''} ${item.courseId || ''}`);
+            const locations = sortTeacherItems(teacherAdminData.locations, item => `${item.locationName || ''} ${item.locationId || ''}`);
+            return `
+                <tr id="studentRow_${rowNumber}">
+                    <td><input class="teacher-grid-input" inputmode="numeric" id="${teacherCellId('student', rowNumber, 'id')}" value="${escapeAttribute(student.traineeId || '')}" onblur="saveInlineStudent(${rowNumber})" onkeydown="handleTeacherGridEnter(event)"></td>
+                    <td><input class="teacher-grid-input" id="${teacherCellId('student', rowNumber, 'name')}" value="${escapeAttribute(student.name || '')}" onblur="saveInlineStudent(${rowNumber})" onkeydown="handleTeacherGridEnter(event)"></td>
+                    <td><select class="teacher-grid-select" id="${teacherCellId('student', rowNumber, 'course')}" onchange="saveInlineStudent(${rowNumber})">${renderTeacherSelectOptions(courses, 'courseId', 'courseName', student.courseId, '')}</select></td>
+                    <td><select class="teacher-grid-select" id="${teacherCellId('student', rowNumber, 'location')}" onchange="saveInlineStudent(${rowNumber})">${renderTeacherSelectOptions(locations, 'locationId', 'locationName', student.locationId, 'بدون موقع')}</select></td>
+                    <td><input class="teacher-grid-checkbox" type="checkbox" id="${teacherCellId('student', rowNumber, 'active')}" ${student.active ? 'checked' : ''} onchange="saveInlineStudent(${rowNumber})"></td>
+                    <td class="teacher-grid-cell-note"><input class="teacher-grid-input" id="${teacherCellId('student', rowNumber, 'notes')}" value="${escapeAttribute(student.notes || '')}" onblur="saveInlineStudent(${rowNumber})" onkeydown="handleTeacherGridEnter(event)"></td>
+                    <td><button type="button" class="teacher-danger-button" onclick="deleteStudent('${escapeAttribute(student.traineeId || '')}', ${rowNumber})">حذف</button></td>
+                </tr>
+            `;
+        }
+
+        function renderTeacherScheduleDays(rowNumber, weekdays) {
+            const dayLabels = [
+                ['sun', 'أحد'],
+                ['mon', 'اثنين'],
+                ['tue', 'ثلاثاء'],
+                ['wed', 'أربعاء'],
+                ['thu', 'خميس'],
+                ['fri', 'جمعة'],
+                ['sat', 'سبت']
+            ];
+
+            return `
+                <div class="teacher-grid-days">
+                    ${dayLabels.map(([key, label]) => `
+                        <label>
+                            <input class="teacher-grid-checkbox" type="checkbox" id="${teacherCellId('schedule', rowNumber, key)}" ${weekdays?.[key] ? 'checked' : ''} onchange="saveInlineSchedule(${rowNumber})">
+                            <span>${label}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderTeacherScheduleRow(schedule) {
+            const rowNumber = Number(schedule.rowNumber);
+            const courses = sortTeacherItems(teacherAdminData.courses, item => `${item.courseName || ''} ${item.courseId || ''}`);
+            const locations = sortTeacherItems(teacherAdminData.locations, item => `${item.locationName || ''} ${item.locationId || ''}`);
+            return `
+                <tr id="scheduleRow_${rowNumber}">
+                    <td>${escapeHtml(schedule.scheduleId || '-')}</td>
+                    <td><select class="teacher-grid-select" id="${teacherCellId('schedule', rowNumber, 'course')}" onchange="saveInlineSchedule(${rowNumber})">${renderTeacherSelectOptions(courses, 'courseId', 'courseName', schedule.courseId, '')}</select></td>
+                    <td><select class="teacher-grid-select" id="${teacherCellId('schedule', rowNumber, 'location')}" onchange="saveInlineSchedule(${rowNumber})">${renderTeacherSelectOptions(locations, 'locationId', 'locationName', schedule.locationId, 'من ملف الطالب')}</select></td>
+                    <td><input class="teacher-grid-input" type="time" id="${teacherCellId('schedule', rowNumber, 'start')}" value="${escapeAttribute(schedule.startTime || '')}" onchange="saveInlineSchedule(${rowNumber})"></td>
+                    <td><input class="teacher-grid-input" type="time" id="${teacherCellId('schedule', rowNumber, 'end')}" value="${escapeAttribute(schedule.endTime || '')}" onchange="saveInlineSchedule(${rowNumber})"></td>
+                    <td>${renderTeacherScheduleDays(rowNumber, schedule.weekdays)}</td>
+                    <td><input class="teacher-grid-input" type="date" id="${teacherCellId('schedule', rowNumber, 'from')}" value="${escapeAttribute(schedule.activeFrom || '')}" onchange="saveInlineSchedule(${rowNumber})"></td>
+                    <td><input class="teacher-grid-input" type="date" id="${teacherCellId('schedule', rowNumber, 'to')}" value="${escapeAttribute(schedule.activeTo || '')}" onchange="saveInlineSchedule(${rowNumber})"></td>
+                    <td><input class="teacher-grid-checkbox" type="checkbox" id="${teacherCellId('schedule', rowNumber, 'active')}" ${schedule.active ? 'checked' : ''} onchange="saveInlineSchedule(${rowNumber})"></td>
+                    <td class="teacher-grid-cell-note"><input class="teacher-grid-input" id="${teacherCellId('schedule', rowNumber, 'notes')}" value="${escapeAttribute(schedule.notes || '')}" onblur="saveInlineSchedule(${rowNumber})" onkeydown="handleTeacherGridEnter(event)"></td>
+                    <td><button type="button" class="teacher-danger-button" onclick="deleteSchedule('${escapeAttribute(schedule.scheduleId || '')}', ${rowNumber})">حذف</button></td>
+                </tr>
+            `;
+        }
+
+        function renderTeacherCoursesList() {
+            const container = document.getElementById('teacherCoursesList');
+            if (!container) return;
+
+            const allCourses = sortTeacherItems(teacherAdminData.courses, course => `${course.courseName || ''} ${course.courseId || ''}`);
+            const filteredCourses = filterTeacherItems(allCourses, 'teacherCourseSearch', course => `${course.courseId || ''} ${course.courseName || ''} ${course.notes || ''} ${course.active ? 'فعالة' : 'موقوفة'}`);
             updateTeacherListCount('teacherCoursesCount', filteredCourses.length, allCourses.length, 'الدورات');
 
             if (!allCourses.length) {
@@ -2209,50 +2437,29 @@
                 return;
             }
 
-            const rows = filteredCourses.map(course => `
-                <tr>
-                    <td>${escapeHtml(course.courseId || '-')}</td>
-                    <td>${escapeHtml(course.courseName || '-')}</td>
-                    <td>${course.active ? 'فعالة' : 'موقوفة'}</td>
-                    <td>${escapeHtml(course.notes || '-')}</td>
-                    <td>
-                        <div class="teacher-table-actions">
-                            <button type="button" class="teacher-secondary-button" data-id="${escapeAttribute(course.courseId || '')}" onclick="editCourse(this.dataset.id)">تعديل</button>
-                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(course.courseId || '')}" data-row="${escapeAttribute(String(course.rowNumber || ''))}" onclick="deleteCourse(this.dataset.id, this.dataset.row)">حذف</button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-
             container.innerHTML = `
                 <table class="teacher-grid-table">
                     <thead>
                         <tr>
                             <th>المعرّف</th>
                             <th>اسم الدورة</th>
-                            <th>الحالة</th>
+                            <th>نشطة</th>
                             <th>ملاحظات</th>
                             <th>إجراءات</th>
                         </tr>
                     </thead>
-                    <tbody>${rows}</tbody>
+                    <tbody>${filteredCourses.map(renderTeacherCourseRow).join('')}</tbody>
                 </table>
+                <span class="teacher-grid-autosave">يحفظ التعديل تلقائياً عند الخروج من الحقل أو الضغط على Enter.</span>
             `;
         }
 
         function renderTeacherLocationsList() {
             const container = document.getElementById('teacherLocationsList');
-            if (!container) {
-                return;
-            }
+            if (!container) return;
 
             const allLocations = sortTeacherItems(teacherAdminData.locations, location => `${location.locationName || ''} ${location.locationId || ''}`);
-            const filteredLocations = filterTeacherItems(
-                allLocations,
-                'teacherLocationSearch',
-                location => `${location.locationId || ''} ${location.locationName || ''} ${location.latitude || ''} ${location.longitude || ''} ${location.notes || ''} ${location.active ? 'فعال' : 'موقوف'}`
-            );
-
+            const filteredLocations = filterTeacherItems(allLocations, 'teacherLocationSearch', location => `${location.locationId || ''} ${location.locationName || ''} ${location.latitude || ''} ${location.longitude || ''} ${location.notes || ''} ${location.active ? 'فعال' : 'موقوف'}`);
             updateTeacherListCount('teacherLocationsCount', filteredLocations.length, allLocations.length, 'المواقع');
 
             if (!allLocations.length) {
@@ -2264,23 +2471,6 @@
                 return;
             }
 
-            const rows = filteredLocations.map(location => `
-                <tr>
-                    <td>${escapeHtml(location.locationId || '-')}</td>
-                    <td>${escapeHtml(location.locationName || '-')}</td>
-                    <td>${escapeHtml(location.latitude)}</td>
-                    <td>${escapeHtml(location.longitude)}</td>
-                    <td>${escapeHtml(location.radiusKm)} كم</td>
-                    <td>${location.active ? 'فعال' : 'موقوف'}</td>
-                    <td>
-                        <div class="teacher-table-actions">
-                            <button type="button" class="teacher-secondary-button" data-id="${escapeAttribute(location.locationId || '')}" onclick="editLocation(this.dataset.id)">تعديل</button>
-                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(location.locationId || '')}" data-row="${escapeAttribute(String(location.rowNumber || ''))}" onclick="deleteLocation(this.dataset.id, this.dataset.row)">حذف</button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-
             container.innerHTML = `
                 <table class="teacher-grid-table">
                     <thead>
@@ -2290,31 +2480,23 @@
                             <th>Latitude</th>
                             <th>Longitude</th>
                             <th>Radius</th>
-                            <th>الحالة</th>
+                            <th>فعال</th>
+                            <th>ملاحظات</th>
                             <th>إجراءات</th>
                         </tr>
                     </thead>
-                    <tbody>${rows}</tbody>
+                    <tbody>${filteredLocations.map(renderTeacherLocationRow).join('')}</tbody>
                 </table>
+                <span class="teacher-grid-autosave">يحفظ التعديل تلقائياً عند الخروج من الحقل أو تغيير القيمة.</span>
             `;
         }
 
         function renderTeacherStudentsList() {
             const container = document.getElementById('teacherStudentsList');
-            if (!container) {
-                return;
-            }
+            if (!container) return;
 
-            const allStudents = sortTeacherItems(
-                teacherAdminData.students,
-                student => `${student.traineeId || ''} ${student.name || ''} ${student.courseName || student.courseId || ''}`
-            );
-            const filteredStudents = filterTeacherItems(
-                allStudents,
-                'teacherStudentSearch',
-                student => `${student.traineeId || ''} ${student.name || ''} ${student.courseName || student.courseId || ''} ${student.locationName || student.locationId || ''} ${student.notes || ''} ${student.active ? 'فعال' : 'موقوف'}`
-            );
-
+            const allStudents = sortTeacherItems(teacherAdminData.students, student => `${student.traineeId || ''} ${student.name || ''} ${student.courseName || student.courseId || ''}`);
+            const filteredStudents = filterTeacherItems(allStudents, 'teacherStudentSearch', student => `${student.traineeId || ''} ${student.name || ''} ${student.courseName || student.courseId || ''} ${student.locationName || student.locationId || ''} ${student.notes || ''} ${student.active ? 'فعال' : 'موقوف'}`);
             updateTeacherListCount('teacherStudentsCount', filteredStudents.length, allStudents.length, 'الطلاب');
 
             if (!allStudents.length) {
@@ -2326,23 +2508,6 @@
                 return;
             }
 
-            const rows = filteredStudents.map(student => `
-                <tr>
-                    <td>${escapeHtml(student.traineeId || '-')}</td>
-                    <td>${escapeHtml(student.name || '-')}</td>
-                    <td>${escapeHtml(student.courseName || student.courseId || '-')}</td>
-                    <td>${escapeHtml(student.locationName || student.locationId || '-')}</td>
-                    <td>${student.active ? 'فعال' : 'موقوف'}</td>
-                    <td>${escapeHtml(student.notes || '-')}</td>
-                    <td>
-                        <div class="teacher-table-actions">
-                            <button type="button" class="teacher-secondary-button" data-id="${escapeAttribute(student.traineeId || '')}" onclick="editStudent(this.dataset.id)">تعديل</button>
-                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(student.traineeId || '')}" data-row="${escapeAttribute(String(student.rowNumber || ''))}" onclick="deleteStudent(this.dataset.id, this.dataset.row)">حذف</button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-
             container.innerHTML = `
                 <table class="teacher-grid-table">
                     <thead>
@@ -2351,32 +2516,23 @@
                             <th>الاسم</th>
                             <th>الدورة</th>
                             <th>الموقع</th>
-                            <th>الحالة</th>
+                            <th>فعال</th>
                             <th>ملاحظات</th>
                             <th>إجراءات</th>
                         </tr>
                     </thead>
-                    <tbody>${rows}</tbody>
+                    <tbody>${filteredStudents.map(renderTeacherStudentRow).join('')}</tbody>
                 </table>
+                <span class="teacher-grid-autosave">يحفظ التعديل تلقائياً عند الخروج من الحقل أو تغيير القيمة.</span>
             `;
         }
 
         function renderTeacherSchedulesList() {
             const container = document.getElementById('teacherSchedulesList');
-            if (!container) {
-                return;
-            }
+            if (!container) return;
 
-            const allSchedules = sortTeacherItems(
-                teacherAdminData.schedules,
-                schedule => `${schedule.courseName || schedule.courseId || ''} ${schedule.startTime || ''} ${schedule.scheduleId || ''}`
-            );
-            const filteredSchedules = filterTeacherItems(
-                allSchedules,
-                'teacherScheduleSearch',
-                schedule => `${schedule.scheduleId || ''} ${schedule.courseName || schedule.courseId || ''} ${schedule.locationName || schedule.locationId || ''} ${schedule.startTime || ''} ${schedule.endTime || ''} ${formatScheduleWeekdays(schedule.weekdays) || ''} ${schedule.activeFrom || ''} ${schedule.activeTo || ''} ${schedule.notes || ''} ${schedule.active ? 'فعال' : 'موقوف'}`
-            );
-
+            const allSchedules = sortTeacherItems(teacherAdminData.schedules, schedule => `${schedule.courseName || schedule.courseId || ''} ${schedule.startTime || ''} ${schedule.scheduleId || ''}`);
+            const filteredSchedules = filterTeacherItems(allSchedules, 'teacherScheduleSearch', schedule => `${schedule.scheduleId || ''} ${schedule.courseName || schedule.courseId || ''} ${schedule.locationName || schedule.locationId || ''} ${schedule.startTime || ''} ${schedule.endTime || ''} ${formatScheduleWeekdays(schedule.weekdays) || ''} ${schedule.activeFrom || ''} ${schedule.activeTo || ''} ${schedule.notes || ''} ${schedule.active ? 'فعال' : 'موقوف'}`);
             updateTeacherListCount('teacherSchedulesCount', filteredSchedules.length, allSchedules.length, 'الجداول');
 
             if (!allSchedules.length) {
@@ -2388,25 +2544,6 @@
                 return;
             }
 
-            const rows = filteredSchedules.map(schedule => `
-                <tr>
-                    <td>${escapeHtml(schedule.scheduleId || '-')}</td>
-                    <td>${escapeHtml(schedule.courseName || schedule.courseId || '-')}</td>
-                    <td>${escapeHtml(schedule.locationName || schedule.locationId || 'من ملف الطالب')}</td>
-                    <td>${escapeHtml(schedule.startTime || '-')} - ${escapeHtml(schedule.endTime || '-')}</td>
-                    <td>${escapeHtml(formatScheduleWeekdays(schedule.weekdays))}</td>
-                    <td>${escapeHtml(schedule.activeFrom || 'مفتوح')}</td>
-                    <td>${escapeHtml(schedule.activeTo || 'مفتوح')}</td>
-                    <td>${schedule.active ? 'فعال' : 'موقوف'}</td>
-                    <td>
-                        <div class="teacher-table-actions">
-                            <button type="button" class="teacher-secondary-button" data-id="${escapeAttribute(schedule.scheduleId || '')}" onclick="editSchedule(this.dataset.id)">تعديل</button>
-                            <button type="button" class="teacher-danger-button" data-id="${escapeAttribute(schedule.scheduleId || '')}" data-row="${escapeAttribute(String(schedule.rowNumber || ''))}" onclick="deleteSchedule(this.dataset.id, this.dataset.row)">حذف</button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-
             container.innerHTML = `
                 <table class="teacher-grid-table">
                     <thead>
@@ -2414,87 +2551,307 @@
                             <th>المعرّف</th>
                             <th>الدورة</th>
                             <th>الموقع</th>
-                            <th>الوقت</th>
+                            <th>البداية</th>
+                            <th>النهاية</th>
                             <th>الأيام</th>
-                            <th>من</th>
-                            <th>إلى</th>
-                            <th>الحالة</th>
+                            <th>فعال من</th>
+                            <th>فعال إلى</th>
+                            <th>فعال</th>
+                            <th>ملاحظات</th>
                             <th>إجراءات</th>
                         </tr>
                     </thead>
-                    <tbody>${rows}</tbody>
+                    <tbody>${filteredSchedules.map(renderTeacherScheduleRow).join('')}</tbody>
                 </table>
+                <span class="teacher-grid-autosave">يحفظ التعديل تلقائياً عند الخروج من الحقل أو تغيير القيمة.</span>
             `;
         }
 
         function editCourse(courseId) {
             const course = teacherAdminData.courses.find(item => item.courseId === courseId);
-            if (!course) {
-                return;
-            }
-            document.getElementById('courseIdInput').value = course.courseId || '';
-            document.getElementById('courseNameInput').value = course.courseName || '';
-            document.getElementById('courseNotesInput').value = course.notes || '';
-            document.getElementById('courseActiveInput').checked = Boolean(course.active);
-            activateTeacherEditTab('courses', 'teacherCourseMessage', 'وضع التعديل مفعل. عدل البيانات ثم اضغط حفظ الدورة.', 'courseNameInput');
+            if (!course) return;
+            switchTeacherTab('courses');
+            document.getElementById(teacherCellId('course', course.rowNumber, 'name'))?.focus();
         }
 
         function editLocation(locationId) {
             const location = teacherAdminData.locations.find(item => item.locationId === locationId);
-            if (!location) {
-                return;
-            }
-            document.getElementById('locationIdInput').value = location.locationId || '';
-            document.getElementById('locationNameInput').value = location.locationName || '';
-            document.getElementById('locationLatInput').value = location.latitude ?? '';
-            document.getElementById('locationLonInput').value = location.longitude ?? '';
-            document.getElementById('locationRadiusInput').value = location.radiusKm ?? '';
-            document.getElementById('locationNotesInput').value = location.notes || '';
-            document.getElementById('locationActiveInput').checked = Boolean(location.active);
-            activateTeacherEditTab('locations', 'teacherLocationMessage', 'وضع التعديل مفعل. عدل البيانات ثم اضغط حفظ الموقع.', 'locationNameInput');
+            if (!location) return;
+            switchTeacherTab('locations');
+            document.getElementById(teacherCellId('location', location.rowNumber, 'name'))?.focus();
         }
 
         function editStudent(traineeId) {
             const student = teacherAdminData.students.find(item => item.traineeId === traineeId);
-            if (!student) {
-                return;
-            }
-            populateTeacherReferenceSelects();
-            document.getElementById('studentIdInput').value = student.traineeId || '';
-            document.getElementById('studentNameInput').value = student.name || '';
-            document.getElementById('studentCourseSelect').value = student.courseId || '';
-            document.getElementById('studentLocationSelect').value = student.locationId || '';
-            document.getElementById('studentNotesInput').value = student.notes || '';
-            document.getElementById('studentActiveInput').checked = Boolean(student.active);
-            activateTeacherEditTab('students', 'teacherStudentsMessage', 'وضع تعديل الطالب مفعل. عدل البيانات ثم اضغط حفظ الطالب.', 'studentIdInput');
+            if (!student) return;
+            switchTeacherTab('students');
+            document.getElementById(teacherCellId('student', student.rowNumber, 'id'))?.focus();
         }
 
         function editSchedule(scheduleId) {
             const schedule = teacherAdminData.schedules.find(item => item.scheduleId === scheduleId);
-            if (!schedule) {
+            if (!schedule) return;
+            switchTeacherTab('schedules');
+            document.getElementById(teacherCellId('schedule', schedule.rowNumber, 'course'))?.focus();
+        }
+
+        function setTeacherActionButtonLoading(buttonId, isLoading, loadingLabel, defaultLabel) {
+            const button = document.getElementById(buttonId);
+            if (!button) {
                 return;
             }
-            populateTeacherReferenceSelects();
-            document.getElementById('scheduleIdInput').value = schedule.scheduleId || '';
-            document.getElementById('scheduleCourseSelect').value = schedule.courseId || '';
-            document.getElementById('scheduleLocationSelect').value = schedule.locationId || '';
-            document.getElementById('scheduleStartInput').value = schedule.startTime || '';
-            document.getElementById('scheduleEndInput').value = schedule.endTime || '';
-            document.getElementById('scheduleActiveFromInput').value = schedule.activeFrom || '';
-            document.getElementById('scheduleActiveToInput').value = schedule.activeTo || '';
-            document.getElementById('scheduleNotesInput').value = schedule.notes || '';
-            document.getElementById('scheduleActiveInput').checked = Boolean(schedule.active);
-            document.getElementById('scheduleSunInput').checked = Boolean(schedule.weekdays?.sun);
-            document.getElementById('scheduleMonInput').checked = Boolean(schedule.weekdays?.mon);
-            document.getElementById('scheduleTueInput').checked = Boolean(schedule.weekdays?.tue);
-            document.getElementById('scheduleWedInput').checked = Boolean(schedule.weekdays?.wed);
-            document.getElementById('scheduleThuInput').checked = Boolean(schedule.weekdays?.thu);
-            document.getElementById('scheduleFriInput').checked = Boolean(schedule.weekdays?.fri);
-            document.getElementById('scheduleSatInput').checked = Boolean(schedule.weekdays?.sat);
-            activateTeacherEditTab('schedules', 'teacherScheduleMessage', 'وضع التعديل مفعل. عدل الجدول ثم اضغط حفظ الجدول.', 'scheduleCourseSelect');
+
+            button.disabled = Boolean(isLoading);
+            button.textContent = isLoading ? loadingLabel : defaultLabel;
+        }
+
+        async function saveInlineCourse(rowNumber) {
+            const course = getTeacherEntityByRow(teacherAdminData.courses, rowNumber);
+            const lockKey = `course:${rowNumber}`;
+            if (!course || isTeacherRowLocked(lockKey)) return;
+
+            const courseName = document.getElementById(teacherCellId('course', rowNumber, 'name'))?.value.trim() || '';
+            const notes = document.getElementById(teacherCellId('course', rowNumber, 'notes'))?.value.trim() || '';
+            const active = Boolean(document.getElementById(teacherCellId('course', rowNumber, 'active'))?.checked);
+
+            if (!courseName) {
+                setTeacherStatus('teacherCourseMessage', 'اسم الدورة لا يمكن أن يكون فارغاً.', 'invalid');
+                renderTeacherCoursesList();
+                return;
+            }
+            if (courseName === (course.courseName || '') && notes === (course.notes || '') && active === Boolean(course.active)) {
+                return;
+            }
+
+            setTeacherRowLock(lockKey, 'course', rowNumber, true);
+            setTeacherStatus('teacherCourseMessage', 'جاري حفظ تعديل الدورة...', 'waiting');
+            try {
+                const result = await callAppsScriptJsonp('saveCourse', {
+                    password: teacherDashboardPassword,
+                    course: {
+                        rowNumber: Number(rowNumber),
+                        courseId: course.courseId,
+                        courseName,
+                        notes,
+                        active
+                    }
+                });
+                if (!result?.ok) {
+                    throw new Error(result?.error || 'تعذر حفظ الدورة.');
+                }
+                await loadTeacherAdminData();
+                setTeacherStatus('teacherCourseMessage', 'تم حفظ تعديل الدورة.', 'valid');
+            } catch (error) {
+                console.error('Inline course save error:', error);
+                setTeacherStatus('teacherCourseMessage', error.message || 'تعذر حفظ الدورة.', 'invalid');
+                renderTeacherCoursesList();
+            } finally {
+                setTeacherRowLock(lockKey, 'course', rowNumber, false);
+            }
+        }
+
+        async function saveInlineLocation(rowNumber) {
+            const location = getTeacherEntityByRow(teacherAdminData.locations, rowNumber);
+            const lockKey = `location:${rowNumber}`;
+            if (!location || isTeacherRowLocked(lockKey)) return;
+
+            const locationName = document.getElementById(teacherCellId('location', rowNumber, 'name'))?.value.trim() || '';
+            const latitude = Number(document.getElementById(teacherCellId('location', rowNumber, 'lat'))?.value);
+            const longitude = Number(document.getElementById(teacherCellId('location', rowNumber, 'lon'))?.value);
+            const radiusKm = Number(document.getElementById(teacherCellId('location', rowNumber, 'radius'))?.value || RADIUS_KM);
+            const notes = document.getElementById(teacherCellId('location', rowNumber, 'notes'))?.value.trim() || '';
+            const active = Boolean(document.getElementById(teacherCellId('location', rowNumber, 'active'))?.checked);
+
+            if (!locationName || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+                setTeacherStatus('teacherLocationMessage', 'أكمل اسم الموقع والإحداثيات قبل الحفظ.', 'invalid');
+                renderTeacherLocationsList();
+                return;
+            }
+            if (
+                locationName === (location.locationName || '') &&
+                Number(latitude) === Number(location.latitude) &&
+                Number(longitude) === Number(location.longitude) &&
+                Number(radiusKm) === Number(location.radiusKm) &&
+                notes === (location.notes || '') &&
+                active === Boolean(location.active)
+            ) {
+                return;
+            }
+
+            setTeacherRowLock(lockKey, 'location', rowNumber, true);
+            setTeacherStatus('teacherLocationMessage', 'جاري حفظ تعديل الموقع...', 'waiting');
+            try {
+                const result = await callAppsScriptJsonp('saveLocation', {
+                    password: teacherDashboardPassword,
+                    location: {
+                        rowNumber: Number(rowNumber),
+                        locationId: location.locationId,
+                        locationName,
+                        latitude,
+                        longitude,
+                        radiusKm,
+                        notes,
+                        active
+                    }
+                });
+                if (!result?.ok) {
+                    throw new Error(result?.error || 'تعذر حفظ الموقع.');
+                }
+                await loadTeacherAdminData();
+                setTeacherStatus('teacherLocationMessage', 'تم حفظ تعديل الموقع.', 'valid');
+            } catch (error) {
+                console.error('Inline location save error:', error);
+                setTeacherStatus('teacherLocationMessage', error.message || 'تعذر حفظ الموقع.', 'invalid');
+                renderTeacherLocationsList();
+            } finally {
+                setTeacherRowLock(lockKey, 'location', rowNumber, false);
+            }
+        }
+
+        async function saveInlineStudent(rowNumber) {
+            const student = getTeacherEntityByRow(teacherAdminData.students, rowNumber);
+            const lockKey = `student:${rowNumber}`;
+            if (!student || isTeacherRowLocked(lockKey)) return;
+
+            const traineeId = normalizeTraineeIdValue(document.getElementById(teacherCellId('student', rowNumber, 'id'))?.value || '');
+            const name = document.getElementById(teacherCellId('student', rowNumber, 'name'))?.value.trim() || '';
+            const courseId = document.getElementById(teacherCellId('student', rowNumber, 'course'))?.value || '';
+            const locationId = document.getElementById(teacherCellId('student', rowNumber, 'location'))?.value || '';
+            const notes = document.getElementById(teacherCellId('student', rowNumber, 'notes'))?.value.trim() || '';
+            const active = Boolean(document.getElementById(teacherCellId('student', rowNumber, 'active'))?.checked);
+
+            const traineeInput = document.getElementById(teacherCellId('student', rowNumber, 'id'));
+            if (traineeInput) {
+                traineeInput.value = traineeId;
+            }
+
+            if (!traineeId || !name || !courseId) {
+                setTeacherStatus('teacherStudentsMessage', 'أكمل الرقم التدريبي والاسم والدورة قبل الحفظ.', 'invalid');
+                renderTeacherStudentsList();
+                return;
+            }
+            if (
+                traineeId === (student.traineeId || '') &&
+                name === (student.name || '') &&
+                courseId === (student.courseId || '') &&
+                locationId === (student.locationId || '') &&
+                notes === (student.notes || '') &&
+                active === Boolean(student.active)
+            ) {
+                return;
+            }
+
+            setTeacherRowLock(lockKey, 'student', rowNumber, true);
+            setTeacherStatus('teacherStudentsMessage', 'جاري حفظ تعديل الطالب...', 'waiting');
+            try {
+                const result = await callAppsScriptJsonp('saveStudent', {
+                    password: teacherDashboardPassword,
+                    student: {
+                        rowNumber: Number(rowNumber),
+                        originalTraineeId: student.traineeId || '',
+                        traineeId,
+                        name,
+                        courseId,
+                        locationId,
+                        notes,
+                        active
+                    }
+                });
+                if (!result?.ok) {
+                    throw new Error(result?.error || 'تعذر حفظ الطالب.');
+                }
+                await loadTeacherAdminData();
+                setTeacherStatus('teacherStudentsMessage', 'تم حفظ تعديل الطالب.', 'valid');
+            } catch (error) {
+                console.error('Inline student save error:', error);
+                setTeacherStatus('teacherStudentsMessage', error.message || 'تعذر حفظ الطالب.', 'invalid');
+                renderTeacherStudentsList();
+            } finally {
+                setTeacherRowLock(lockKey, 'student', rowNumber, false);
+            }
+        }
+
+        async function saveInlineSchedule(rowNumber) {
+            const schedule = getTeacherEntityByRow(teacherAdminData.schedules, rowNumber);
+            const lockKey = `schedule:${rowNumber}`;
+            if (!schedule || isTeacherRowLocked(lockKey)) return;
+
+            const courseId = document.getElementById(teacherCellId('schedule', rowNumber, 'course'))?.value || '';
+            const locationId = document.getElementById(teacherCellId('schedule', rowNumber, 'location'))?.value || '';
+            const startTime = document.getElementById(teacherCellId('schedule', rowNumber, 'start'))?.value || '';
+            const endTime = document.getElementById(teacherCellId('schedule', rowNumber, 'end'))?.value || '';
+            const activeFrom = document.getElementById(teacherCellId('schedule', rowNumber, 'from'))?.value || '';
+            const activeTo = document.getElementById(teacherCellId('schedule', rowNumber, 'to'))?.value || '';
+            const notes = document.getElementById(teacherCellId('schedule', rowNumber, 'notes'))?.value.trim() || '';
+            const active = Boolean(document.getElementById(teacherCellId('schedule', rowNumber, 'active'))?.checked);
+            const weekdays = {
+                sun: Boolean(document.getElementById(teacherCellId('schedule', rowNumber, 'sun'))?.checked),
+                mon: Boolean(document.getElementById(teacherCellId('schedule', rowNumber, 'mon'))?.checked),
+                tue: Boolean(document.getElementById(teacherCellId('schedule', rowNumber, 'tue'))?.checked),
+                wed: Boolean(document.getElementById(teacherCellId('schedule', rowNumber, 'wed'))?.checked),
+                thu: Boolean(document.getElementById(teacherCellId('schedule', rowNumber, 'thu'))?.checked),
+                fri: Boolean(document.getElementById(teacherCellId('schedule', rowNumber, 'fri'))?.checked),
+                sat: Boolean(document.getElementById(teacherCellId('schedule', rowNumber, 'sat'))?.checked)
+            };
+
+            if (!courseId || !startTime || !endTime) {
+                setTeacherStatus('teacherScheduleMessage', 'أكمل الدورة ووقت البداية والنهاية قبل الحفظ.', 'invalid');
+                renderTeacherSchedulesList();
+                return;
+            }
+            if (
+                courseId === (schedule.courseId || '') &&
+                locationId === (schedule.locationId || '') &&
+                startTime === (schedule.startTime || '') &&
+                endTime === (schedule.endTime || '') &&
+                activeFrom === (schedule.activeFrom || '') &&
+                activeTo === (schedule.activeTo || '') &&
+                notes === (schedule.notes || '') &&
+                active === Boolean(schedule.active) &&
+                ['sun','mon','tue','wed','thu','fri','sat'].every(day => Boolean(schedule.weekdays?.[day]) === Boolean(weekdays[day]))
+            ) {
+                return;
+            }
+
+            setTeacherRowLock(lockKey, 'schedule', rowNumber, true);
+            setTeacherStatus('teacherScheduleMessage', 'جاري حفظ تعديل الجدول...', 'waiting');
+            try {
+                const result = await callAppsScriptJsonp('saveSchedule', {
+                    password: teacherDashboardPassword,
+                    schedule: {
+                        rowNumber: Number(rowNumber),
+                        scheduleId: schedule.scheduleId,
+                        courseId,
+                        locationId,
+                        startTime,
+                        endTime,
+                        activeFrom,
+                        activeTo,
+                        weekdays,
+                        active,
+                        notes
+                    }
+                });
+                if (!result?.ok) {
+                    throw new Error(result?.error || 'تعذر حفظ الجدول.');
+                }
+                await loadTeacherAdminData();
+                setTeacherStatus('teacherScheduleMessage', 'تم حفظ تعديل الجدول.', 'valid');
+            } catch (error) {
+                console.error('Inline schedule save error:', error);
+                setTeacherStatus('teacherScheduleMessage', error.message || 'تعذر حفظ الجدول.', 'invalid');
+                renderTeacherSchedulesList();
+            } finally {
+                setTeacherRowLock(lockKey, 'schedule', rowNumber, false);
+            }
         }
 
         async function saveTeacherCourse() {
+            const lockKey = 'teacherCreateCourse';
+            if (isTeacherActionLocked(lockKey)) {
+                return;
+            }
+
             const courseId = document.getElementById('courseIdInput')?.value.trim() || '';
             const courseName = document.getElementById('courseNameInput')?.value.trim();
             const notes = document.getElementById('courseNotesInput')?.value.trim() || '';
@@ -2505,6 +2862,8 @@
                 return;
             }
 
+            setTeacherActionLock(lockKey, true);
+            setTeacherActionButtonLoading('saveTeacherCourseButton', true, 'جاري الحفظ...', 'حفظ الدورة');
             setTeacherStatus('teacherCourseMessage', 'جاري حفظ الدورة...', 'waiting');
             try {
                 const result = await callAppsScriptJsonp('saveCourse', {
@@ -2522,10 +2881,18 @@
             } catch (error) {
                 console.error('Course save error:', error);
                 setTeacherStatus('teacherCourseMessage', error.message || 'تعذر حفظ الدورة.', 'invalid');
+            } finally {
+                setTeacherActionButtonLoading('saveTeacherCourseButton', false, 'جاري الحفظ...', 'حفظ الدورة');
+                setTeacherActionLock(lockKey, false);
             }
         }
 
         async function saveTeacherLocation() {
+            const lockKey = 'teacherCreateLocation';
+            if (isTeacherActionLocked(lockKey)) {
+                return;
+            }
+
             const locationId = document.getElementById('locationIdInput')?.value.trim() || '';
             const locationName = document.getElementById('locationNameInput')?.value.trim();
             const latitude = Number(document.getElementById('locationLatInput')?.value);
@@ -2539,6 +2906,8 @@
                 return;
             }
 
+            setTeacherActionLock(lockKey, true);
+            setTeacherActionButtonLoading('saveTeacherLocationButton', true, 'جاري الحفظ...', 'حفظ الموقع');
             setTeacherStatus('teacherLocationMessage', 'جاري حفظ الموقع...', 'waiting');
             try {
                 const result = await callAppsScriptJsonp('saveLocation', {
@@ -2556,10 +2925,18 @@
             } catch (error) {
                 console.error('Location save error:', error);
                 setTeacherStatus('teacherLocationMessage', error.message || 'تعذر حفظ الموقع.', 'invalid');
+            } finally {
+                setTeacherActionButtonLoading('saveTeacherLocationButton', false, 'جاري الحفظ...', 'حفظ الموقع');
+                setTeacherActionLock(lockKey, false);
             }
         }
 
         async function saveTeacherStudent() {
+            const lockKey = 'teacherCreateStudent';
+            if (isTeacherActionLocked(lockKey)) {
+                return;
+            }
+
             const traineeId = normalizeTraineeIdValue(document.getElementById('studentIdInput')?.value || '');
             const name = document.getElementById('studentNameInput')?.value.trim() || '';
             const courseId = document.getElementById('studentCourseSelect')?.value || '';
@@ -2574,6 +2951,8 @@
                 return;
             }
 
+            setTeacherActionLock(lockKey, true);
+            setTeacherActionButtonLoading('saveTeacherStudentButton', true, 'جاري الحفظ...', 'حفظ الطالب');
             setTeacherStatus('teacherStudentsMessage', 'جاري حفظ الطالب...', 'waiting');
             try {
                 const result = await callAppsScriptJsonp('saveStudent', {
@@ -2591,10 +2970,18 @@
             } catch (error) {
                 console.error('Student save error:', error);
                 setTeacherStatus('teacherStudentsMessage', error.message || 'تعذر حفظ الطالب.', 'invalid');
+            } finally {
+                setTeacherActionButtonLoading('saveTeacherStudentButton', false, 'جاري الحفظ...', 'حفظ الطالب');
+                setTeacherActionLock(lockKey, false);
             }
         }
 
         async function saveTeacherSchedule() {
+            const lockKey = 'teacherCreateSchedule';
+            if (isTeacherActionLocked(lockKey)) {
+                return;
+            }
+
             const scheduleId = document.getElementById('scheduleIdInput')?.value.trim() || '';
             const courseId = document.getElementById('scheduleCourseSelect')?.value || '';
             const locationId = document.getElementById('scheduleLocationSelect')?.value || '';
@@ -2619,6 +3006,8 @@
                 return;
             }
 
+            setTeacherActionLock(lockKey, true);
+            setTeacherActionButtonLoading('saveTeacherScheduleButton', true, 'جاري الحفظ...', 'حفظ الجدول');
             setTeacherStatus('teacherScheduleMessage', 'جاري حفظ الجدول...', 'waiting');
             try {
                 const result = await callAppsScriptJsonp('saveSchedule', {
@@ -2647,10 +3036,18 @@
             } catch (error) {
                 console.error('Schedule save error:', error);
                 setTeacherStatus('teacherScheduleMessage', error.message || 'تعذر حفظ الجدول.', 'invalid');
+            } finally {
+                setTeacherActionButtonLoading('saveTeacherScheduleButton', false, 'جاري الحفظ...', 'حفظ الجدول');
+                setTeacherActionLock(lockKey, false);
             }
         }
 
         async function bulkAddStudents() {
+            const lockKey = 'teacherBulkStudents';
+            if (isTeacherActionLocked(lockKey)) {
+                return;
+            }
+
             const courseId = document.getElementById('studentBulkCourseSelect')?.value || '';
             const locationId = document.getElementById('studentBulkLocationSelect')?.value || '';
             const active = Boolean(document.getElementById('studentBulkActiveInput')?.checked);
@@ -2666,6 +3063,7 @@
                 return;
             }
 
+            setTeacherActionLock(lockKey, true);
             setTeacherStatus('teacherStudentsMessage', 'جاري حفظ الطلاب دفعة واحدة...', 'waiting');
             try {
                 const result = await postAppsScriptBackgroundTask('bulkUpsertStudents', {
@@ -2686,30 +3084,45 @@
             } catch (error) {
                 console.error('Bulk students error:', error);
                 setTeacherStatus('teacherStudentsMessage', error.message || 'تعذر حفظ الطلاب.', 'invalid');
+            } finally {
+                setTeacherActionLock(lockKey, false);
             }
         }
 
         async function deleteCourse(courseId, rowNumber) {
-            await deleteTeacherEntity('deleteCourse', { courseId, rowNumber: Number(rowNumber || 0) }, 'teacherCourseMessage', 'تم حذف الدورة بنجاح.');
+            await deleteTeacherEntity('deleteCourse', { courseId, rowNumber: Number(rowNumber || 0) }, 'teacherCourseMessage', 'تم حذف الدورة بنجاح.', { entity: 'course' });
         }
 
         async function deleteLocation(locationId, rowNumber) {
-            await deleteTeacherEntity('deleteLocation', { locationId, rowNumber: Number(rowNumber || 0) }, 'teacherLocationMessage', 'تم حذف الموقع بنجاح.');
+            await deleteTeacherEntity('deleteLocation', { locationId, rowNumber: Number(rowNumber || 0) }, 'teacherLocationMessage', 'تم حذف الموقع بنجاح.', { entity: 'location' });
         }
 
         async function deleteStudent(traineeId, rowNumber) {
-            await deleteTeacherEntity('deleteStudent', { traineeId, rowNumber: Number(rowNumber || 0) }, 'teacherStudentsMessage', 'تم حذف الطالب بنجاح.');
+            await deleteTeacherEntity('deleteStudent', { traineeId, rowNumber: Number(rowNumber || 0) }, 'teacherStudentsMessage', 'تم حذف الطالب بنجاح.', { entity: 'student' });
         }
 
         async function deleteSchedule(scheduleId, rowNumber) {
-            await deleteTeacherEntity('deleteSchedule', { scheduleId, rowNumber: Number(rowNumber || 0) }, 'teacherScheduleMessage', 'تم حذف الجدول بنجاح.');
+            await deleteTeacherEntity('deleteSchedule', { scheduleId, rowNumber: Number(rowNumber || 0) }, 'teacherScheduleMessage', 'تم حذف الجدول بنجاح.', { entity: 'schedule' });
         }
 
-        async function deleteTeacherEntity(action, payload, statusId, successMessage) {
+        async function deleteTeacherEntity(action, payload, statusId, successMessage, options = {}) {
             if (!confirm('هل أنت متأكد من الحذف؟')) {
                 return;
             }
 
+            const rowNumber = Number(payload?.rowNumber || 0);
+            const entity = options.entity || '';
+            const identity = payload?.courseId || payload?.locationId || payload?.traineeId || payload?.scheduleId || rowNumber || action;
+            const lockKey = `${action}:${identity}`;
+            if (isTeacherActionLocked(lockKey)) {
+                return;
+            }
+
+            setTeacherActionLock(lockKey, true);
+            if (entity && rowNumber) {
+                markTeacherRowSaving(entity, rowNumber, true);
+                setTeacherRowControlsDisabled(entity, rowNumber, true);
+            }
             setTeacherStatus(statusId, 'جاري تنفيذ الحذف...', 'waiting');
             try {
                 const result = await callAppsScriptJsonp(action, Object.assign({ password: teacherDashboardPassword }, payload));
@@ -2722,6 +3135,12 @@
             } catch (error) {
                 console.error(`${action} error:`, error);
                 setTeacherStatus(statusId, error.message || 'تعذر تنفيذ الحذف.', 'invalid');
+            } finally {
+                if (entity && rowNumber) {
+                    markTeacherRowSaving(entity, rowNumber, false);
+                    setTeacherRowControlsDisabled(entity, rowNumber, false);
+                }
+                setTeacherActionLock(lockKey, false);
             }
         }
 
