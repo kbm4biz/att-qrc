@@ -9,7 +9,7 @@
     <title>التحضير الذاتي</title>
     <script>
         (function ensureFreshAttendanceBuild() {
-            var BUILD_VERSION = '2026-05-02-1838';
+            var BUILD_VERSION = '2026-05-02-qr-reader-fix';
             var BUILD_PARAM = '_av';
             var STORAGE_KEY = 'attendanceAppBuildVersion';
 
@@ -1993,6 +1993,7 @@
         let nfcTokenStarted = false;
         let gpsValidationPassed = false;
         let qrValidationPassed = false;
+        let qrCompletionInProgress = false;
         let supportingFormCompleted = false;
         let supportingFormData = null;
         let supportingFormSubmitting = false;
@@ -5009,6 +5010,7 @@
 
         function proceedAfterLocationVerification() {
             if (ENABLE_QR_VALIDATION) {
+                qrCompletionInProgress = false;
                 showStep(3);
                 setTimeout(() => {
                     if (document.getElementById('step3')?.classList.contains('active-step')) {
@@ -5207,6 +5209,16 @@
         async function completeAttendance() {
             if (!areEnabledGatesSatisfied()) {
                 console.warn('Attendance blocked because one or more enabled verification gates are not complete.');
+                qrCompletionInProgress = false;
+                if (document.getElementById('step3')?.classList.contains('active-step')) {
+                    const missingGateMessage = getMissingGateMessage();
+                    showError(missingGateMessage, document.getElementById('scanStatus'));
+                    const controlBtn = document.getElementById('controlBtn');
+                    if (controlBtn) {
+                        controlBtn.disabled = false;
+                        controlBtn.textContent = 'إعادة المحاولة';
+                    }
+                }
                 return;
             }
 
@@ -5271,6 +5283,7 @@
             nfcReservePromise = null;
             nfcStartPromise = null;
             nfcTokenStarted = false;
+            qrCompletionInProgress = false;
             supportingFormCompleted = false;
             supportingFormData = null;
             supportingFormSubmitting = false;
@@ -5323,6 +5336,7 @@
             clearNfcCountdownTimer();
             gpsValidationPassed = false;
             qrValidationPassed = false;
+            qrCompletionInProgress = false;
             supportingFormCompleted = false;
             supportingFormData = null;
             supportingFormSubmitting = false;
@@ -5664,7 +5678,7 @@
         }
 
         async function scanFrame() {
-            if (!scannerActive) return;
+            if (!scannerActive || qrCompletionInProgress) return;
 
             const video = document.getElementById('video-preview');
             if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
@@ -5686,7 +5700,14 @@
                 const isValid = await validateQRData(code.data);
                 if (isValid) {
                     // QR is valid - complete attendance
+                    qrCompletionInProgress = true;
                     qrValidationPassed = true;
+                    setScanStatus('تم التحقق من QR. جاري تسجيل الحضور، لا تغلق الصفحة.', 'valid');
+                    const controlBtn = document.getElementById('controlBtn');
+                    if (controlBtn) {
+                        controlBtn.disabled = true;
+                        controlBtn.textContent = 'جاري التسجيل...';
+                    }
                     stopScanner({ silent: true });
                     proceedAfterQrVerification();
                     return;
@@ -6183,6 +6204,22 @@
                 (!ENABLE_GPS_VALIDATION || gpsValidationPassed) &&
                 (!ENABLE_QR_VALIDATION || qrValidationPassed) &&
                 (!ENABLE_SUPPORTING_FORM || supportingFormCompleted);
+        }
+
+        function getMissingGateMessage() {
+            if (!isNfcGateSatisfied()) {
+                return 'انتهت صلاحية رابط NFC. المس البطاقة مرة أخرى.';
+            }
+            if (ENABLE_GPS_VALIDATION && !gpsValidationPassed) {
+                return 'لم يكتمل التحقق من الموقع. أعد المحاولة من البداية.';
+            }
+            if (ENABLE_QR_VALIDATION && !qrValidationPassed) {
+                return 'لم يكتمل التحقق من QR. امسح الرمز مرة أخرى.';
+            }
+            if (ENABLE_SUPPORTING_FORM && !supportingFormCompleted) {
+                return 'أكمل النموذج المطلوب قبل تسجيل الحضور.';
+            }
+            return 'لم تكتمل شروط تسجيل الحضور. أعد المحاولة.';
         }
 
         async function sendAttendanceLog(trainee) {
