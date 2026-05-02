@@ -5,48 +5,115 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>التحضير الذاتي</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+        :root {
+            --brand-primary: #0e5a8a;
+            --brand-primary-strong: #093a5b;
+            --brand-accent: #f2b544;
+            --brand-surface: #f4f8fb;
+            --brand-card: rgba(255, 255, 255, 0.95);
+            --brand-text: #17324d;
+            --brand-muted: #5d7286;
+            --brand-success: #1f9d55;
+            --brand-danger: #d64545;
+            --brand-shadow: 0 18px 40px rgba(14, 49, 80, 0.16);
+        }
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
         body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            font-family: 'Cairo', sans-serif;
+            background:
+                radial-gradient(circle at top right, rgba(242, 181, 68, 0.2), transparent 28%),
+                radial-gradient(circle at bottom left, rgba(14, 90, 138, 0.16), transparent 32%),
+                linear-gradient(180deg, #eef5fb 0%, #f9fbfd 48%, #eef5fb 100%);
             display: flex;
             flex-direction: column;
             direction: rtl;
             min-height: 100vh;
-            padding: 20px;
-            color: #333;
+            padding: 20px 14px;
+            color: var(--brand-text);
+            overflow-x: hidden;
         }
         .container {
             max-width: 800px;
             margin: 0 auto;
             width: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            background: var(--brand-card);
+            border-radius: 26px;
+            box-shadow: var(--brand-shadow);
             overflow: hidden;
             position: relative;
+            border: 1px solid rgba(14, 90, 138, 0.08);
         }
         .header {
-            background: #2196F3;
-            padding: 20px;
+            background: linear-gradient(135deg, var(--brand-primary-strong), var(--brand-primary), #1279a5);
+            padding: 24px 20px 18px;
             text-align: center;
             color: white;
             position: relative;
         }
         .header h1 {
-            font-size: 1.8rem;
+            font-size: 1.95rem;
             margin: 0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            text-shadow: 0 6px 18px rgba(0,0,0,0.18);
+            font-weight: 800;
+        }
+        .header-subline {
+            margin-top: 6px;
+            color: rgba(255,255,255,0.82);
+            font-size: 14px;
+        }
+        .meeting-indicator {
+            margin: 14px auto 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.14);
+            border: 1px solid rgba(255,255,255,0.18);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            min-height: 42px;
+        }
+        .meeting-indicator.active {
+            background: rgba(31, 157, 85, 0.18);
+        }
+        .meeting-indicator.inactive {
+            background: rgba(214, 69, 69, 0.18);
+        }
+        .floating-emojis {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+        .floating-emojis span {
+            position: absolute;
+            bottom: -60px;
+            font-size: 26px;
+            opacity: 0.18;
+            animation: floatEmoji 18s linear infinite;
+            animation-delay: var(--delay, 0s);
+            left: var(--x, 10%);
+        }
+        @keyframes floatEmoji {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.22; }
+            50% { opacity: 0.18; }
+            100% { transform: translateY(-115vh) rotate(16deg); opacity: 0; }
         }
         .step {
             display: none;
             flex: 1;
             text-align: center;
-            padding: 30px 20px;
+            padding: 28px 20px 34px;
             position: relative;
             min-height: 500px;
         }
@@ -61,25 +128,25 @@
             text-align: center;
             background: white;
             margin: 15px 0;
-            border-radius: 10px;
+            border-radius: 16px;
             width: 90%;
             max-width: 500px;
             word-wrap: break-word;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            border: 1px solid #eee;
+            box-shadow: 0 12px 24px rgba(12, 44, 68, 0.08);
+            border: 1px solid rgba(14, 90, 138, 0.1);
         }
         .waiting {
-            color: #0d47a1;
-            background: #e3f2fd;
-            border-left: 5px solid #2196F3;
+            color: var(--brand-primary-strong);
+            background: #edf6fb;
+            border-right: 5px solid var(--brand-primary);
         }
         .valid { 
-            color: #4CAF50;
-            border-left: 5px solid #4CAF50;
+            color: var(--brand-success);
+            border-right: 5px solid var(--brand-success);
         }
         .invalid { 
-            color: #f44336;
-            border-left: 5px solid #f44336;
+            color: var(--brand-danger);
+            border-right: 5px solid var(--brand-danger);
         }
         .nfc-countdown {
             margin: 12px auto 0;
@@ -121,11 +188,11 @@
             border-left-color: #2196F3;
         }
         button {
-            background: #2196F3;
+            background: linear-gradient(135deg, var(--brand-primary), #0c719d);
             color: white;
             border: none;
             padding: 17px 30px;
-            border-radius: 14px;
+            border-radius: 16px;
             margin: 15px 0;
             font-size: 18px;
             cursor: pointer;
@@ -133,13 +200,13 @@
             max-width: 420px;
             min-height: 58px;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+            box-shadow: 0 14px 30px rgba(14, 90, 138, 0.26);
             font-weight: bold;
         }
         button:hover {
-            background: #1976D2;
+            background: linear-gradient(135deg, #0c6996, var(--brand-primary-strong));
             transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(33, 150, 243, 0.4);
+            box-shadow: 0 18px 36px rgba(14, 90, 138, 0.3);
         }
         button:active {
             transform: translateY(0);
@@ -158,10 +225,11 @@
         }
         h2 {
             margin: 20px 0;
-            color: #333;
+            color: var(--brand-text);
             font-size: 1.5em;
             position: relative;
             padding-bottom: 10px;
+            font-weight: 800;
         }
         h2::after {
             content: '';
@@ -191,8 +259,8 @@
             margin: 18px 0 12px;
             width: 90%;
             font-size: 24px;
-            border: 2px solid #ddd;
-            border-radius: 14px;
+            border: 2px solid rgba(14, 90, 138, 0.12);
+            border-radius: 18px;
             text-align: center;
             outline: none;
             transition: border 0.3s, box-shadow 0.3s;
@@ -200,10 +268,11 @@
             min-height: 64px;
             font-weight: bold;
             letter-spacing: 0;
+            background: rgba(255,255,255,0.96);
         }
         #idInput:focus {
-            border-color: #2196F3;
-            box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.2);
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 4px rgba(14, 90, 138, 0.16);
         }
         .scanner-container {
             width: 90%;
@@ -427,9 +496,65 @@
             font-size: 14px;
             line-height: 1.7;
         }
+        .preflight-card,
+        .maintenance-card {
+            width: 92%;
+            max-width: 520px;
+            margin: 0 auto;
+            padding: 28px 22px;
+            border-radius: 24px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,250,252,0.96));
+            border: 1px solid rgba(14, 90, 138, 0.08);
+            box-shadow: 0 20px 42px rgba(12, 44, 68, 0.12);
+        }
+        .preflight-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--brand-text);
+        }
+        .preflight-message {
+            margin-top: 10px;
+            color: var(--brand-muted);
+            line-height: 1.8;
+            font-size: 15px;
+        }
+        .preflight-stream {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .preflight-line {
+            height: 12px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(14, 90, 138, 0.08), rgba(242, 181, 68, 0.22), rgba(14, 90, 138, 0.08));
+            background-size: 200% 100%;
+            animation: preflightPulse 1.4s linear infinite;
+        }
+        .preflight-line:nth-child(2) { width: 88%; }
+        .preflight-line:nth-child(3) { width: 76%; }
+        .preflight-line:nth-child(4) { width: 64%; }
+        @keyframes preflightPulse {
+            0% { background-position: 180% 0; }
+            100% { background-position: -20% 0; }
+        }
+        .maintenance-card {
+            text-align: center;
+        }
+        .maintenance-card .maintenance-icon {
+            font-size: 44px;
+            margin-bottom: 10px;
+        }
         body.admin-view {
             background: #eef3f8;
             padding: 14px;
+        }
+        body.admin-view .floating-emojis {
+            display: none;
+        }
+        body.admin-view .meeting-indicator,
+        body.admin-view .header-subline {
+            display: none;
         }
         body.admin-view .container {
             max-width: 1180px;
@@ -1030,13 +1155,36 @@
     </style>
 </head>
 <body>
+    <div class="floating-emojis" aria-hidden="true">
+        <span style="--x: 6%; --delay: 0s;">📲</span>
+        <span style="--x: 22%; --delay: 4s;">✨</span>
+        <span style="--x: 44%; --delay: 8s;">✅</span>
+        <span style="--x: 68%; --delay: 2s;">🎓</span>
+        <span style="--x: 86%; --delay: 6s;">🌟</span>
+    </div>
     <div class="container">
         <div class="header">
             <h1>التحضير الذاتي</h1>
+            <div class="header-subline">تجربة حضور أسرع وأوضح للمتدربين</div>
+            <div id="meetingIndicator" class="meeting-indicator waiting">🟡 جاري التحقق من حالة الاجتماع</div>
+        </div>
+
+        <div id="step0" class="step active-step">
+            <div class="preflight-card">
+                <div class="spinner" id="preflightSpinner"></div>
+                <div class="preflight-title" id="preflightTitle">جاري تجهيز التحضير</div>
+                <div class="preflight-message" id="preflightMessage">يرجى الانتظار قليلاً أثناء تجهيز نموذج الحضور.</div>
+                <div class="preflight-stream" aria-hidden="true">
+                    <div class="preflight-line"></div>
+                    <div class="preflight-line"></div>
+                    <div class="preflight-line"></div>
+                    <div class="preflight-line"></div>
+                </div>
+            </div>
         </div>
         
         <!-- STEP 1: ID VERIFICATION -->
-        <div id="step1" class="step active-step">
+        <div id="step1" class="step">
             <h2>أدخل رقمك التدريبي</h2>
             <input type="text" id="idInput" placeholder="441234567" aria-label="رقم المتدرب" inputmode="numeric" autocomplete="off">
             <div id="idSpinner" class="spinner"></div>
@@ -1180,6 +1328,15 @@
                         <label class="teacher-field teacher-form-wide">
                             اسم الحقل المخصص 3
                             <input type="text" id="adminSupportField3" maxlength="60" placeholder="اتركه فارغاً لإخفائه" oninput="markAdminSettingsDirty()">
+                        </label>
+                        <label class="teacher-toggle">
+                            <span>وضع الصيانة</span>
+                            <input type="checkbox" id="adminMaintenanceModeToggle" onchange="markAdminSettingsDirty()">
+                            <span class="teacher-toggle-switch"></span>
+                        </label>
+                        <label class="teacher-field teacher-form-wide">
+                            رسالة الصيانة
+                            <input type="text" id="adminMaintenanceMessage" maxlength="220" placeholder="اكتب الرسالة التي تظهر للطالب أثناء الصيانة" oninput="markAdminSettingsDirty()">
                         </label>
                     </div>
                     <div class="teacher-settings-note">هذه الإعدادات تطبق على الطلاب عند فتح الصفحة أو إعادة تحميلها. إذا كانت كل وسائل التحقق مغلقة سيبقى تسجيل الرقم التدريبي فقط. الحقول المخصصة في النموذج تظهر فقط إذا كتبت لها أسماء هنا.</div>
@@ -1443,6 +1600,14 @@
             </div>
         </div>
 
+        <div id="step8" class="step">
+            <div class="maintenance-card">
+                <div class="maintenance-icon">🛠️</div>
+                <h2>النظام تحت الصيانة</h2>
+                <div id="maintenanceMessageBox" class="status-bar waiting">يرجى المحاولة لاحقاً.</div>
+            </div>
+        </div>
+
         <button id="adminReset" onclick="forceReset()">إعادة تعيين الجلسة</button>
         
         <div class="footer">
@@ -1463,7 +1628,9 @@
             requireSupportingAttachment: true,
             requireSupportingNote: false,
             radiusKm: 0.2,
-            supportingCustomFields: ['', '', '']
+            supportingCustomFields: ['', '', ''],
+            maintenanceMode: false,
+            maintenanceMessage: 'النظام تحت الصيانة حالياً. يرجى المحاولة لاحقاً.'
         };
         let ENABLE_GPS_VALIDATION = DEFAULT_APP_SETTINGS.enableGpsValidation;
         let ENABLE_QR_VALIDATION = DEFAULT_APP_SETTINGS.enableQrValidation;
@@ -1472,6 +1639,8 @@
         let REQUIRE_SUPPORTING_ATTACHMENT = DEFAULT_APP_SETTINGS.requireSupportingAttachment;
         let REQUIRE_SUPPORTING_NOTE = DEFAULT_APP_SETTINGS.requireSupportingNote;
         let SUPPORTING_CUSTOM_FIELDS = [...DEFAULT_APP_SETTINGS.supportingCustomFields];
+        let MAINTENANCE_MODE = DEFAULT_APP_SETTINGS.maintenanceMode;
+        let MAINTENANCE_MESSAGE = DEFAULT_APP_SETTINGS.maintenanceMessage;
         const SUPPORTING_NOTE_MAX_LENGTH = 300;
         const SUPPORTING_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
         const SUPPORTING_IMAGE_MAX_DIMENSION = 1600;
@@ -1521,12 +1690,68 @@
         let teacherLastResponse = null;
         let teacherLayoutReady = false;
         let activeTeacherTab = 'dashboard';
+        let bootstrapActiveMeetingNow = null;
         let teacherAdminData = {
             courses: [],
             locations: [],
             students: [],
             schedules: []
         };
+
+        function setPreflightStatus(title, message) {
+            const titleElement = document.getElementById('preflightTitle');
+            const messageElement = document.getElementById('preflightMessage');
+            if (titleElement) {
+                titleElement.textContent = title || 'جاري تجهيز التحضير';
+            }
+            if (messageElement) {
+                messageElement.textContent = message || 'يرجى الانتظار قليلاً أثناء تجهيز نموذج الحضور.';
+            }
+            showStep(0);
+        }
+
+        function setMeetingIndicatorState(isActive, message, isPending = false) {
+            const indicator = document.getElementById('meetingIndicator');
+            if (!indicator) {
+                return;
+            }
+
+            indicator.className = 'meeting-indicator';
+            if (isPending) {
+                indicator.classList.add('waiting');
+                indicator.textContent = `🟡 ${message || 'جاري التحقق من حالة الاجتماع'}`;
+                return;
+            }
+
+            indicator.classList.add(isActive ? 'active' : 'inactive');
+            indicator.textContent = `${isActive ? '🟢' : '🔴'} ${message || (isActive ? 'يوجد اجتماع نشط الآن' : 'لا يوجد اجتماع نشط الآن')}`;
+        }
+
+        async function refreshMeetingIndicator() {
+            setMeetingIndicatorState(false, 'جاري التحقق من حالة الاجتماع', true);
+
+            if (bootstrapActiveMeetingNow === true) {
+                setMeetingIndicatorState(true, 'يوجد اجتماع نشط الآن');
+                return;
+            }
+
+            try {
+                const result = await verifyMeetingTime();
+                setMeetingIndicatorState(Boolean(result?.valid), result?.valid ? 'يوجد اجتماع نشط الآن' : 'لا يوجد اجتماع نشط الآن');
+            } catch (error) {
+                console.warn('Meeting indicator check failed:', error);
+                setMeetingIndicatorState(false, 'تعذر التحقق من حالة الاجتماع');
+            }
+        }
+
+        function showMaintenanceScreen(message) {
+            const box = document.getElementById('maintenanceMessageBox');
+            if (box) {
+                box.className = 'status-bar waiting';
+                box.textContent = message || MAINTENANCE_MESSAGE || DEFAULT_APP_SETTINGS.maintenanceMessage;
+            }
+            showStep(8);
+        }
 
         // ================== ON PAGE LOAD ================== //
         window.onload = async () => {
@@ -1546,7 +1771,14 @@
                 return;
             }
 
+            setPreflightStatus('جاري تجهيز التحضير', 'نقوم الآن بتحميل الإعدادات والتحقق من حالة النظام.');
             await loadRuntimeSettings();
+            await refreshMeetingIndicator();
+
+            if (MAINTENANCE_MODE) {
+                showMaintenanceScreen(MAINTENANCE_MESSAGE);
+                return;
+            }
 
             const sessionCookie = getCookie('traineeSession');
             if(sessionCookie) {
@@ -1558,16 +1790,13 @@
                 }
             }
 
+            setPreflightStatus('جاري تجهيز وسيلة التحقق', 'نقوم الآن بقراءة إعدادات الحضور وتهيئة التحقق المناسب.');
             nfcTapData = loadNfcTapData();
             if (ENABLE_NFC_TAP_VALIDATION && nfcTapData) {
-                applyNfcGateToForm();
+                setPreflightStatus('جاري فتح النموذج', 'تم اكتشاف رابط البطاقة. نتحقق الآن من صلاحية الدخول قبل عرض النموذج.');
                 await reserveNfcTapToken();
             }
             applyNfcGateToForm();
-            if (!isNfcGateSatisfied()) {
-                showStep(1);
-                return;
-            }
 
             if (ENABLE_NFC_TAP_VALIDATION) {
                 setTimeout(() => {
@@ -1586,7 +1815,8 @@
                     console.error('Error loading location data:', error);
                 }
             }
-             
+
+            setPreflightStatus('جاهز', 'تم تجهيز شاشة الحضور. يمكنك المتابعة الآن.');
             showStep(1);
         };
 
@@ -1719,6 +1949,9 @@
             try {
                 const result = await callAppsScriptJsonp('attendanceBootstrap', {});
                 if (result?.ok) {
+                    bootstrapActiveMeetingNow = typeof result.activeMeetingNow === 'boolean'
+                        ? result.activeMeetingNow
+                        : null;
                     if (result.settings) {
                         applyRuntimeSettings(result.settings);
                     }
@@ -2681,6 +2914,8 @@
             REQUIRE_SUPPORTING_ATTACHMENT = coerceBooleanSetting(settings?.requireSupportingAttachment, DEFAULT_APP_SETTINGS.requireSupportingAttachment);
             REQUIRE_SUPPORTING_NOTE = coerceBooleanSetting(settings?.requireSupportingNote, DEFAULT_APP_SETTINGS.requireSupportingNote);
             SUPPORTING_CUSTOM_FIELDS = normalizeSupportingCustomFieldLabels(settings?.supportingCustomFields ?? DEFAULT_APP_SETTINGS.supportingCustomFields);
+            MAINTENANCE_MODE = coerceBooleanSetting(settings?.maintenanceMode, DEFAULT_APP_SETTINGS.maintenanceMode);
+            MAINTENANCE_MESSAGE = String(settings?.maintenanceMessage || '').trim() || DEFAULT_APP_SETTINGS.maintenanceMessage;
             const radiusKm = Number(settings?.radiusKm);
             RADIUS_KM = Number.isFinite(radiusKm) ? Math.min(Math.max(radiusKm, 0.02), 5) : DEFAULT_APP_SETTINGS.radiusKm;
             renderSupportingCustomFields();
@@ -2695,7 +2930,9 @@
                 requireSupportingAttachment: REQUIRE_SUPPORTING_ATTACHMENT,
                 requireSupportingNote: REQUIRE_SUPPORTING_NOTE,
                 radiusKm: RADIUS_KM,
-                supportingCustomFields: [...SUPPORTING_CUSTOM_FIELDS]
+                supportingCustomFields: [...SUPPORTING_CUSTOM_FIELDS],
+                maintenanceMode: MAINTENANCE_MODE,
+                maintenanceMessage: MAINTENANCE_MESSAGE
             };
         }
 
@@ -2707,6 +2944,7 @@
             setChecked('adminSupportToggle', settings.enableSupportingForm);
             setChecked('adminRequireAttachmentToggle', settings.requireSupportingAttachment);
             setChecked('adminRequireNoteToggle', settings.requireSupportingNote);
+            setChecked('adminMaintenanceModeToggle', settings.maintenanceMode);
             const radiusInput = document.getElementById('adminRadiusKm');
             if (radiusInput) {
                 radiusInput.value = settings.radiusKm;
@@ -2714,6 +2952,7 @@
             setValue('adminSupportField1', customFields[0] || '');
             setValue('adminSupportField2', customFields[1] || '');
             setValue('adminSupportField3', customFields[2] || '');
+            setValue('adminMaintenanceMessage', settings.maintenanceMessage || DEFAULT_APP_SETTINGS.maintenanceMessage);
         }
 
         function readAdminSettingsControls() {
@@ -2730,7 +2969,9 @@
                     document.getElementById('adminSupportField1')?.value || '',
                     document.getElementById('adminSupportField2')?.value || '',
                     document.getElementById('adminSupportField3')?.value || ''
-                ])
+                ]),
+                maintenanceMode: getChecked('adminMaintenanceModeToggle'),
+                maintenanceMessage: (document.getElementById('adminMaintenanceMessage')?.value || '').trim() || DEFAULT_APP_SETTINGS.maintenanceMessage
             };
         }
 
@@ -2755,10 +2996,12 @@
                 'adminSupportToggle',
                 'adminRequireAttachmentToggle',
                 'adminRequireNoteToggle',
+                'adminMaintenanceModeToggle',
                 'adminRadiusKm',
                 'adminSupportField1',
                 'adminSupportField2',
-                'adminSupportField3'
+                'adminSupportField3',
+                'adminMaintenanceMessage'
             ].forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
@@ -4252,9 +4495,11 @@
                     }
                 }
 
+                sessionStorage.removeItem('currentMeeting');
                 return { valid: false, message: 'لا يوجد اجتماع نشط في الوقت الحالي. يرجى التحقق من جدول الاجتماعات.' };
             } catch (error) {
                 console.error('خطأ في التحقق من جدول الاجتماعات:', error);
+                sessionStorage.removeItem('currentMeeting');
                 return { valid: false, message: 'تعذر التحقق من جدول الاجتماعات. حاول مرة أخرى لاحقاً.' };
             }
         }
