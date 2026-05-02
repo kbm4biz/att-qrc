@@ -5259,13 +5259,27 @@
             nfcStartPromise = null;
             nfcTokenStarted = false;
             qrCompletionInProgress = false;
+            gpsValidationPassed = false;
+            qrValidationPassed = false;
             supportingFormCompleted = false;
             supportingFormData = null;
             supportingFormSubmitting = false;
+            attendanceRecorded = false;
             setIdLoadingState(false);
             clearNfcCountdownTimer();
             showStep(1);
             applyNfcGateToForm();
+
+            const idInput = document.getElementById('idInput');
+            if (idInput && traineeID) {
+                idInput.value = traineeID;
+            }
+
+            const idStatus = document.getElementById('idStatus');
+            if (idStatus) {
+                showError(message || 'تعذر تسجيل الحضور. حاول مرة أخرى.', idStatus);
+                scrollToAttendanceFeedback();
+            }
         }
         
         // Show location error and reset form
