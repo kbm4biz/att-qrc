@@ -3,7 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>التحضير الذاتي</title>
+    <script>
+        (function ensureFreshAttendanceBuild() {
+            var BUILD_VERSION = '2026-05-02-1838';
+            var BUILD_PARAM = '_av';
+            var STORAGE_KEY = 'attendanceAppBuildVersion';
+
+            try {
+                var currentUrl = new URL(window.location.href);
+                var currentVersion = currentUrl.searchParams.get(BUILD_PARAM) || '';
+
+                if (currentVersion !== BUILD_VERSION) {
+                    currentUrl.searchParams.set(BUILD_PARAM, BUILD_VERSION);
+                    window.location.replace(currentUrl.toString());
+                    return;
+                }
+
+                if (window.localStorage) {
+                    localStorage.setItem(STORAGE_KEY, BUILD_VERSION);
+                }
+            } catch (error) {
+                console.warn('Build refresh guard skipped:', error);
+            }
+        })();
+    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
         :root {
@@ -905,6 +932,176 @@
             line-height: 1.7;
             margin-bottom: 10px;
         }
+        .teacher-qr-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .teacher-qr-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .teacher-qr-session-state {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: #f8fbfd;
+            border: 1px solid #dce7f0;
+            color: #334e68;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .teacher-qr-session-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #b0bec5;
+            box-shadow: 0 0 0 5px rgba(176, 190, 197, 0.18);
+            flex: 0 0 12px;
+        }
+        .teacher-qr-session-dot.active {
+            background: #2e7d32;
+            box-shadow: 0 0 0 5px rgba(46, 125, 50, 0.16);
+        }
+        .teacher-qr-session-dot.inactive {
+            background: #d64545;
+            box-shadow: 0 0 0 5px rgba(214, 69, 69, 0.14);
+        }
+        .teacher-qr-config-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: bold;
+            background: #eef6ff;
+            color: #0e5a8a;
+            border: 1px solid rgba(14, 90, 138, 0.14);
+        }
+        .teacher-qr-config-badge.off {
+            background: #fff4f4;
+            color: #b42318;
+            border-color: rgba(180, 35, 24, 0.16);
+        }
+        .teacher-qr-stage {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(260px, 1fr));
+            gap: 16px;
+            align-items: stretch;
+        }
+        .teacher-qr-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 420px;
+            padding: 22px 18px 18px;
+            background: linear-gradient(180deg, #ffffff, #f7fafc);
+            border: 1px solid #dfe7ef;
+            border-radius: 16px;
+            box-shadow: 0 16px 34px rgba(14, 49, 80, 0.08);
+            overflow: hidden;
+            text-align: center;
+        }
+        .teacher-qr-card::before,
+        .teacher-qr-card::after {
+            content: '';
+            position: absolute;
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0.16;
+        }
+        .teacher-qr-card::before {
+            top: -70px;
+            right: -50px;
+            background: radial-gradient(circle, rgba(242, 181, 68, 0.85), transparent 70%);
+        }
+        .teacher-qr-card::after {
+            bottom: -80px;
+            left: -40px;
+            background: radial-gradient(circle, rgba(14, 90, 138, 0.65), transparent 70%);
+        }
+        .teacher-qr-card h4 {
+            position: relative;
+            z-index: 1;
+            margin: 0;
+            color: #102a43;
+            font-size: 22px;
+        }
+        .teacher-qr-card p {
+            position: relative;
+            z-index: 1;
+            margin: 8px 0 16px;
+            color: #607d8b;
+            line-height: 1.8;
+            font-size: 14px;
+            max-width: 320px;
+        }
+        .teacher-qr-code {
+            position: relative;
+            z-index: 1;
+            width: 236px;
+            min-width: 236px;
+            height: 236px;
+            padding: 12px;
+            border-radius: 20px;
+            background: #fff;
+            border: 1px solid #e3ebf2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 28px rgba(16, 42, 67, 0.10);
+        }
+        .teacher-qr-code img,
+        .teacher-qr-code canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .teacher-qr-empty {
+            color: #7b8794;
+            font-size: 14px;
+            font-weight: bold;
+            line-height: 1.8;
+            padding: 0 16px;
+        }
+        .teacher-qr-meta {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .teacher-qr-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: #f5f8fb;
+            border: 1px solid #dce7f0;
+            color: #486581;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .teacher-qr-footer {
+            margin-top: 4px;
+            color: #7b8794;
+            font-size: 13px;
+            line-height: 1.8;
+        }
         .teacher-form-grid {
             display: grid;
             grid-template-columns: repeat(4, minmax(140px, 1fr));
@@ -1162,6 +1359,9 @@
             .teacher-entity-list {
                 grid-template-columns: 1fr 1fr;
             }
+            .teacher-qr-stage {
+                grid-template-columns: 1fr;
+            }
             .teacher-record {
                 grid-template-columns: 1fr;
             }
@@ -1172,6 +1372,14 @@
             .teacher-actions button,
             .teacher-filters button {
                 width: 100%;
+            }
+            .teacher-qr-card {
+                min-height: 380px;
+            }
+            .teacher-qr-code {
+                width: 220px;
+                min-width: 220px;
+                height: 220px;
             }
         }
         @media (min-width: 601px) and (max-width: 900px) {
@@ -1188,6 +1396,9 @@
             .teacher-form-grid,
             .teacher-entity-list {
                 grid-template-columns: 1fr 1fr;
+            }
+            .teacher-qr-stage {
+                grid-template-columns: 1fr;
             }
             .teacher-record {
                 grid-template-columns: 1fr 1fr;
@@ -1395,7 +1606,7 @@
                     <div id="teacherSettingsMessage" class="status-bar teacher-message waiting">جاري تحميل الإعدادات...</div>
                 </div>
 
-                <div class="teacher-block">
+                <div class="teacher-block" data-teacher-block="setup">
                     <h3>تهيئة البيانات</h3>
                     <div class="teacher-block-note">استخدم هذا الزر مرة واحدة لإنشاء الجداول الجديدة داخل نفس ملف Google Sheet إذا لم تكن موجودة بعد.</div>
                     <div class="teacher-actions">
@@ -1405,7 +1616,7 @@
                     <div id="teacherSetupMessage" class="status-bar teacher-message waiting">جاهز.</div>
                 </div>
 
-                <div class="teacher-block">
+                <div class="teacher-block" data-teacher-block="courses">
                     <h3>الدورات</h3>
                     <div class="teacher-form-grid">
                         <input type="hidden" id="courseIdInput">
@@ -1437,7 +1648,7 @@
                     <div id="teacherCoursesList" class="teacher-grid-wrap"></div>
                 </div>
 
-                <div class="teacher-block">
+                <div class="teacher-block" data-teacher-block="locations">
                     <h3>المواقع</h3>
                     <div class="teacher-form-grid">
                         <input type="hidden" id="locationIdInput">
@@ -1481,7 +1692,7 @@
                     <div id="teacherLocationsList" class="teacher-grid-wrap"></div>
                 </div>
 
-                <div class="teacher-block">
+                <div class="teacher-block" data-teacher-block="students">
                     <h3>الطلاب - إضافة وتعديل جماعي</h3>
                     <div class="teacher-block-note">يمكنك حفظ طالب واحد من النموذج، أو لصق مجموعة كبيرة. كل سطر بالشكل: الرقم التدريبي, الاسم</div>
                     <div class="teacher-form-grid">
@@ -1546,7 +1757,7 @@
                     <div id="teacherStudentsList" class="teacher-grid-wrap"></div>
                 </div>
 
-                <div class="teacher-block">
+                <div class="teacher-block" data-teacher-block="schedules">
                     <h3>الجداول المتكررة</h3>
                     <div class="teacher-block-note">أنشئ لقاءات متكررة حسب أيام الأسبوع. مثال: كل أحد واثنين من 08:00 إلى 10:00.</div>
                     <div class="teacher-form-grid">
@@ -1606,6 +1817,50 @@
                         <div id="teacherSchedulesCount" class="teacher-list-count">0</div>
                     </div>
                     <div id="teacherSchedulesList" class="teacher-grid-wrap"></div>
+                </div>
+
+                <div class="teacher-block" data-teacher-block="qr">
+                    <h3>عرض QR كود</h3>
+                    <div class="teacher-block-note">هذه الشاشة مخصصة لعرض رموز QR للمتدربين عند تفعيل التحقق بواسطة QR. ابدأ الجلسة ثم اعرض الشاشة أمام الطلاب.</div>
+                    <div class="teacher-qr-shell">
+                        <div class="teacher-qr-toolbar">
+                            <div class="teacher-qr-session-state">
+                                <span id="teacherQrSessionDot" class="teacher-qr-session-dot inactive"></span>
+                                <span id="teacherQrSessionText">جلسة QR متوقفة</span>
+                            </div>
+                            <div class="teacher-actions">
+                                <button type="button" id="teacherQrToggleButton" onclick="toggleTeacherQrSession()">بدء جلسة QR</button>
+                                <button type="button" id="teacherQrRefreshButton" class="teacher-secondary-button" onclick="refreshTeacherQrSession()" disabled>تحديث الرمز الآن</button>
+                            </div>
+                        </div>
+                        <div id="teacherQrConfigBadge" class="teacher-qr-config-badge">QR مفعّل حالياً في الإعدادات</div>
+                        <div class="teacher-qr-stage">
+                            <div class="teacher-qr-card">
+                                <h4>الخطوة الأولى</h4>
+                                <p>امسح هذا الرمز لفتح نموذج التحضير الذاتي على جهاز المتدرب.</p>
+                                <div id="teacherStaticQrCode" class="teacher-qr-code">
+                                    <div class="teacher-qr-empty">جاري تجهيز رمز فتح نموذج التحضير...</div>
+                                </div>
+                                <div class="teacher-qr-meta">
+                                    <span class="teacher-qr-pill">رابط فتح النموذج</span>
+                                    <span class="teacher-qr-pill">ثابت طوال اليوم</span>
+                                </div>
+                            </div>
+                            <div class="teacher-qr-card">
+                                <h4>الخطوة الثانية</h4>
+                                <p>بعد فتح النموذج، امسح رمز التحقق المتغير لإكمال شرط QR عند تفعيله.</p>
+                                <div id="teacherDynamicQrCode" class="teacher-qr-code">
+                                    <div class="teacher-qr-empty">ابدأ الجلسة لعرض رمز التحقق المتغير.</div>
+                                </div>
+                                <div class="teacher-qr-meta">
+                                    <span id="teacherQrSessionIdPill" class="teacher-qr-pill">لا توجد جلسة</span>
+                                    <span id="teacherQrRefreshPill" class="teacher-qr-pill">يتحدث كل 10 ثوانٍ</span>
+                                </div>
+                                <div id="teacherQrFooter" class="teacher-qr-footer">عند إيقاف الجلسة يختفي رمز التحقق مباشرة.</div>
+                            </div>
+                        </div>
+                        <div id="teacherQrMessage" class="status-bar teacher-message waiting">جاهز لبدء جلسة QR جديدة.</div>
+                    </div>
                 </div>
 
                 <div class="teacher-filters">
@@ -1669,6 +1924,7 @@
 
     <audio id="successSound" src="https://raw.githubusercontent.com/kbm4biz/att-qrc/main/assets/notification.wav" preload="auto"></audio>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
 
     <script>
         // ================== CONFIGURATIONS ================== //
@@ -1707,6 +1963,8 @@
         const MEETING_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSk8j-ZMvoxK-kaDxnBIBOCwC46Mg4eN7LvK4u5gS4Am3Q8p4JzfZ5saoK5jssFkOIsX-ZMajllUSMw/pub?gid=217527569&single=true&output=csv';
         const APPS_SCRIPT_LOG_URL = 'https://script.google.com/macros/s/AKfycbzQ_qHgTzYTZli-ChD_kU-pcpunvHn_PMv4uJ3C5Coj5DfQM0eswdBDYa_PsLrp4drr2Q/exec'; // Apps Script LOG endpoint
         const SECRET_PHRASE = 'SCHOOL_SECRET_2026';
+        const TEACHER_QR_REFRESH_INTERVAL = 10000;
+        const TEACHER_QR_TIME_API_URL = 'https://timeapi.io/api/Time/current/zone?timeZone=Asia/Riyadh';
         const SESSION_DURATION = 12 * 60 * 60 * 1000;
         const MAX_ATTEMPTS = 5;
         const REDIRECT_URL = 'https://tvtc.gov.sa/ar/Pages/default1.aspx';
@@ -1745,6 +2003,9 @@
         let teacherLayoutReady = false;
         let activeTeacherTab = 'dashboard';
         let bootstrapActiveMeetingNow = null;
+        let teacherQrInterval = null;
+        let teacherQrSessionId = '';
+        let teacherQrBusy = false;
         let teacherAdminData = {
             courses: [],
             locations: [],
@@ -1887,7 +2148,7 @@
 
             const topbar = dashboard.querySelector('.teacher-topbar');
             const settingsBlock = dashboard.querySelector('.teacher-settings');
-            const teacherBlocks = Array.from(dashboard.children).filter(child => child.classList && child.classList.contains('teacher-block'));
+            const getTeacherBlock = (blockName) => dashboard.querySelector(`.teacher-block[data-teacher-block="${blockName}"]`);
             const filters = dashboard.querySelector('.teacher-filters');
             const message = dashboard.querySelector('#teacherMessage');
             const summary = dashboard.querySelector('.teacher-summary');
@@ -1906,11 +2167,12 @@
             const tabDefinitions = [
                 { id: 'dashboard', label: 'لوحة المتابعة', title: 'نتائج الحضور', nodes: [filters, message, summary, listTools, rows] },
                 { id: 'settings', label: 'الإعدادات', title: 'إعدادات النموذج', nodes: [settingsBlock] },
-                { id: 'setup', label: 'التهيئة', title: 'تهيئة البيانات', nodes: [teacherBlocks[0]] },
-                { id: 'courses', label: 'الدورات', title: 'إدارة الدورات', nodes: [teacherBlocks[1]] },
-                { id: 'locations', label: 'المواقع', title: 'إدارة المواقع', nodes: [teacherBlocks[2]] },
-                { id: 'students', label: 'الطلاب', title: 'إدارة الطلاب', nodes: [teacherBlocks[3]] },
-                { id: 'schedules', label: 'الجداول', title: 'إدارة الجداول', nodes: [teacherBlocks[4]] }
+                { id: 'setup', label: 'التهيئة', title: 'تهيئة البيانات', nodes: [getTeacherBlock('setup')] },
+                { id: 'courses', label: 'الدورات', title: 'إدارة الدورات', nodes: [getTeacherBlock('courses')] },
+                { id: 'locations', label: 'المواقع', title: 'إدارة المواقع', nodes: [getTeacherBlock('locations')] },
+                { id: 'students', label: 'الطلاب', title: 'إدارة الطلاب', nodes: [getTeacherBlock('students')] },
+                { id: 'schedules', label: 'الجداول', title: 'إدارة الجداول', nodes: [getTeacherBlock('schedules')] },
+                { id: 'qr', label: 'عرض QR كود', title: 'عرض QR كود', nodes: [getTeacherBlock('qr')] }
             ];
 
             tabDefinitions.forEach(tab => {
@@ -1962,6 +2224,10 @@
             document.querySelectorAll('.teacher-panel').forEach(panel => {
                 panel.classList.toggle('active', panel.dataset.teacherTab === activeTeacherTab);
             });
+
+            if (activeTeacherTab === 'qr') {
+                initializeTeacherQrPanel();
+            }
         }
 
         function activateTeacherEditTab(tabId, statusId, message, focusId) {
@@ -1986,6 +2252,7 @@
             document.querySelector('.header h1').textContent = 'لوحة المعلم';
             showStep(7);
             setupTeacherAdminLayout();
+            initializeTeacherQrPanel();
             switchTeacherTab('dashboard');
 
             const dateInput = document.getElementById('teacherDate');
@@ -1997,6 +2264,220 @@
             loadAdminSettings();
             loadTeacherAdminData();
             loadTeacherLog();
+        }
+
+        function getTeacherQrStudentUrl() {
+            const url = new URL(window.location.href);
+            url.hash = '';
+            Array.from(url.searchParams.keys()).forEach(key => {
+                if (key !== '_av') {
+                    url.searchParams.delete(key);
+                }
+            });
+            return url.toString();
+        }
+
+        function setTeacherQrMessage(message, tone = 'waiting') {
+            setTeacherStatus('teacherQrMessage', message, tone);
+        }
+
+        function getTeacherQrSessionShortId() {
+            if (!teacherQrSessionId) {
+                return 'لا توجد جلسة';
+            }
+            return `الجلسة ${teacherQrSessionId.slice(-8)}`;
+        }
+
+        function updateTeacherQrSessionUi() {
+            const sessionDot = document.getElementById('teacherQrSessionDot');
+            const sessionText = document.getElementById('teacherQrSessionText');
+            const toggleButton = document.getElementById('teacherQrToggleButton');
+            const refreshButton = document.getElementById('teacherQrRefreshButton');
+            const sessionPill = document.getElementById('teacherQrSessionIdPill');
+            const footer = document.getElementById('teacherQrFooter');
+
+            const isActive = Boolean(teacherQrSessionId);
+            if (sessionDot) {
+                sessionDot.classList.toggle('active', isActive);
+                sessionDot.classList.toggle('inactive', !isActive);
+            }
+            if (sessionText) {
+                sessionText.textContent = isActive ? 'جلسة QR نشطة الآن' : 'جلسة QR متوقفة';
+            }
+            if (toggleButton) {
+                toggleButton.textContent = isActive ? 'إيقاف جلسة QR' : 'بدء جلسة QR';
+            }
+            if (refreshButton) {
+                refreshButton.disabled = !isActive || teacherQrBusy;
+                refreshButton.textContent = teacherQrBusy ? 'جاري التحديث...' : 'تحديث الرمز الآن';
+            }
+            if (sessionPill) {
+                sessionPill.textContent = getTeacherQrSessionShortId();
+            }
+            if (footer) {
+                footer.textContent = isActive
+                    ? 'يتغير رمز التحقق تلقائياً كل 10 ثوانٍ خلال الجلسة الحالية.'
+                    : 'عند بدء الجلسة يظهر رمز التحقق المتغير هنا مباشرة.';
+            }
+        }
+
+        function refreshTeacherQrPanelState() {
+            const badge = document.getElementById('teacherQrConfigBadge');
+            if (!badge) {
+                return;
+            }
+
+            if (ENABLE_QR_VALIDATION) {
+                badge.classList.remove('off');
+                badge.textContent = 'QR مفعّل حالياً في الإعدادات';
+            } else {
+                badge.classList.add('off');
+                badge.textContent = 'QR متوقف حالياً في الإعدادات - يمكن تجهيز الجلسة مسبقاً عند الحاجة';
+            }
+        }
+
+        function renderTeacherQrCode(containerId, text, size = 212) {
+            const container = document.getElementById(containerId);
+            if (!container) {
+                return false;
+            }
+
+            if (typeof QRCode === 'undefined') {
+                container.innerHTML = '<div class="teacher-qr-empty">تعذر تحميل مكتبة QR. أعد فتح الصفحة.</div>';
+                return false;
+            }
+
+            container.innerHTML = '';
+            new QRCode(container, {
+                text,
+                width: size,
+                height: size,
+                colorDark: '#102a43',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+            return true;
+        }
+
+        function renderTeacherStaticQr() {
+            const rendered = renderTeacherQrCode('teacherStaticQrCode', getTeacherQrStudentUrl(), 212);
+            if (!rendered) {
+                setTeacherQrMessage('تعذر تجهيز QR الثابت. أعد تحميل الصفحة.', 'invalid');
+            }
+        }
+
+        function clearTeacherDynamicQr() {
+            const container = document.getElementById('teacherDynamicQrCode');
+            if (container) {
+                container.innerHTML = '<div class="teacher-qr-empty">ابدأ الجلسة لعرض رمز التحقق المتغير.</div>';
+            }
+        }
+
+        async function fetchTeacherQrTime() {
+            try {
+                const response = await fetch(TEACHER_QR_TIME_API_URL, { cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const payload = await response.json();
+                if (!payload?.dateTime) {
+                    throw new Error('Missing dateTime in API response');
+                }
+                return new Date(payload.dateTime);
+            } catch (error) {
+                console.warn('Teacher QR time API fallback to local Saudi time:', error);
+                return getSaudiTime();
+            }
+        }
+
+        function buildTeacherQrTokenPayload(timestampWindow) {
+            return {
+                t: timestampWindow,
+                s: teacherQrSessionId,
+                h: simpleHash(`${timestampWindow}${teacherQrSessionId}${SECRET_PHRASE}`)
+            };
+        }
+
+        async function generateTeacherDynamicQr() {
+            if (!teacherQrSessionId || teacherQrBusy) {
+                return;
+            }
+
+            teacherQrBusy = true;
+            updateTeacherQrSessionUi();
+
+            try {
+                const accurateTime = await fetchTeacherQrTime();
+                const timestampWindow = Math.floor(accurateTime.getTime() / 10000);
+                const payload = buildTeacherQrTokenPayload(timestampWindow);
+                const token = btoa(JSON.stringify(payload)).replace(/=+$/, '');
+                const rendered = renderTeacherQrCode('teacherDynamicQrCode', token, 212);
+                if (!rendered) {
+                    throw new Error('تعذر رسم رمز QR.');
+                }
+
+                const refreshPill = document.getElementById('teacherQrRefreshPill');
+                if (refreshPill) {
+                    refreshPill.textContent = `آخر تحديث ${formatTime(accurateTime)}`;
+                }
+
+                setTeacherQrMessage(
+                    ENABLE_QR_VALIDATION
+                        ? 'رمز التحقق جاهز للعرض ويتحدث كل 10 ثوانٍ.'
+                        : 'تم توليد رمز التحقق، لكن خيار QR ما يزال متوقفاً في الإعدادات.',
+                    ENABLE_QR_VALIDATION ? 'valid' : 'waiting'
+                );
+            } catch (error) {
+                console.error('Teacher dynamic QR generation error:', error);
+                setTeacherQrMessage(error.message || 'تعذر توليد رمز QR حالياً.', 'invalid');
+            } finally {
+                teacherQrBusy = false;
+                updateTeacherQrSessionUi();
+            }
+        }
+
+        function startTeacherQrSession() {
+            teacherQrSessionId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+            clearInterval(teacherQrInterval);
+            teacherQrInterval = setInterval(generateTeacherDynamicQr, TEACHER_QR_REFRESH_INTERVAL);
+            updateTeacherQrSessionUi();
+            generateTeacherDynamicQr();
+        }
+
+        function stopTeacherQrSession() {
+            clearInterval(teacherQrInterval);
+            teacherQrInterval = null;
+            teacherQrSessionId = '';
+            teacherQrBusy = false;
+            clearTeacherDynamicQr();
+            updateTeacherQrSessionUi();
+            setTeacherQrMessage('تم إيقاف جلسة QR الحالية.', 'waiting');
+        }
+
+        function toggleTeacherQrSession() {
+            if (teacherQrSessionId) {
+                stopTeacherQrSession();
+                return;
+            }
+
+            startTeacherQrSession();
+        }
+
+        function refreshTeacherQrSession() {
+            if (!teacherQrSessionId) {
+                setTeacherQrMessage('ابدأ جلسة QR أولاً حتى يظهر رمز التحقق.', 'invalid');
+                return;
+            }
+            generateTeacherDynamicQr();
+        }
+
+        function initializeTeacherQrPanel() {
+            renderTeacherStaticQr();
+            refreshTeacherQrPanelState();
+            updateTeacherQrSessionUi();
+            if (!teacherQrSessionId) {
+                clearTeacherDynamicQr();
+            }
         }
 
         async function loadRuntimeSettings() {
@@ -3338,6 +3819,7 @@
             const radiusKm = Number(settings?.radiusKm);
             RADIUS_KM = Number.isFinite(radiusKm) ? Math.min(Math.max(radiusKm, 0.02), 5) : DEFAULT_APP_SETTINGS.radiusKm;
             renderSupportingCustomFields();
+            refreshTeacherQrPanelState();
         }
 
         function getCurrentAppSettings() {
