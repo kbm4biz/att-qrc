@@ -7,30 +7,6 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>التحضير الذاتي</title>
-    <script>
-        (function ensureFreshAttendanceBuild() {
-            var BUILD_VERSION = '2026-05-02-qr-reader-fix';
-            var BUILD_PARAM = '_av';
-            var STORAGE_KEY = 'attendanceAppBuildVersion';
-
-            try {
-                var currentUrl = new URL(window.location.href);
-                var currentVersion = currentUrl.searchParams.get(BUILD_PARAM) || '';
-
-                if (currentVersion !== BUILD_VERSION) {
-                    currentUrl.searchParams.set(BUILD_PARAM, BUILD_VERSION);
-                    window.location.replace(currentUrl.toString());
-                    return;
-                }
-
-                if (window.localStorage) {
-                    localStorage.setItem(STORAGE_KEY, BUILD_VERSION);
-                }
-            } catch (error) {
-                console.warn('Build refresh guard skipped:', error);
-            }
-        })();
-    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
         :root {
@@ -2273,9 +2249,7 @@
             const url = new URL(window.location.href);
             url.hash = '';
             Array.from(url.searchParams.keys()).forEach(key => {
-                if (key !== '_av') {
-                    url.searchParams.delete(key);
-                }
+                url.searchParams.delete(key);
             });
             return url.toString();
         }
@@ -5033,6 +5007,7 @@
 
             supportingFormCompleted = false;
             supportingFormData = null;
+            setPreflightStatus('تم التحقق من رمز QR', 'جاري إكمال تسجيل الحضور، لا تغلق الصفحة.');
             completeAttendance();
         }
 
