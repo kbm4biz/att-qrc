@@ -5007,7 +5007,12 @@
 
             supportingFormCompleted = false;
             supportingFormData = null;
-            setPreflightStatus('تم التحقق من رمز QR', 'جاري إكمال تسجيل الحضور، لا تغلق الصفحة.');
+            setPreflightStatus(
+                ENABLE_QR_VALIDATION
+                    ? 'تم التحقق من رمز QR'
+                    : 'جاري إكمال تسجيل الحضور',
+                'جاري إكمال تسجيل الحضور، لا تغلق الصفحة.'
+            );
             completeAttendance();
         }
 
