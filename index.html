@@ -1979,6 +1979,8 @@
         let locationData = null;
         let attendanceRecorded = false; // Flag to prevent duplicate attendance logs
         let idVerificationInProgress = false;
+        let scannerStartupInProgress = false;
+        let scannerActivationToken = 0;
         let nfcTapData = null;
         let nfcTapError = '';
         let nfcTapUsedForThisAttempt = false;
@@ -5008,6 +5010,11 @@
         function proceedAfterLocationVerification() {
             if (ENABLE_QR_VALIDATION) {
                 showStep(3);
+                setTimeout(() => {
+                    if (document.getElementById('step3')?.classList.contains('active-step')) {
+                        startScanner({ auto: true });
+                    }
+                }, 120);
                 return;
             }
 
@@ -5500,46 +5507,171 @@
 
         // ================== STEP 3: SCAN QR ================== //
         async function toggleScanner() {
+            if (scannerStartupInProgress) {
+                return;
+            }
+
             if (scannerActive) {
                 stopScanner();
             } else {
-                await startScanner();
+                await startScanner({ auto: false });
             }
         }
 
-        async function startScanner() {
-            try {
-                videoStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment" }
-                });
-                const video = document.getElementById('video-preview');
-                video.srcObject = videoStream;
+        function setScanStatus(message, tone = 'waiting') {
+            const scanStatus = document.getElementById('scanStatus');
+            if (!scanStatus) {
+                return;
+            }
 
-                video.onplaying = () => {
-                    scannerActive = true;
-                    document.getElementById('controlBtn').textContent = 'إيقاف الماسح';
-                    document.getElementById('scanStatus').textContent = 'جارِ المسح...';
-                    scanFrame();
-                };
+            scanStatus.className = `status-bar ${tone}`;
+            scanStatus.textContent = message;
+        }
+
+        async function startScanner(options = {}) {
+            const autoStart = Boolean(options?.auto);
+            if (scannerActive || scannerStartupInProgress) {
+                return;
+            }
+
+            const video = document.getElementById('video-preview');
+            const controlBtn = document.getElementById('controlBtn');
+            if (!video || !controlBtn) {
+                return;
+            }
+
+            const activationToken = ++scannerActivationToken;
+            scannerStartupInProgress = true;
+            controlBtn.disabled = true;
+            controlBtn.textContent = 'جاري فتح الكاميرا...';
+            setScanStatus('جاري فتح الكاميرا...', 'waiting');
+
+            function finalizeScannerReady() {
+                if (activationToken !== scannerActivationToken || scannerActive) {
+                    return;
+                }
+
+                if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+                    return;
+                }
+
+                scannerStartupInProgress = false;
+                scannerActive = true;
+                controlBtn.disabled = false;
+                controlBtn.textContent = 'إيقاف الماسح';
+                setScanStatus('وجّه الكاميرا نحو رمز QR الآن.', 'waiting');
+                scanFrame();
+            }
+
+            try {
+                let stream = null;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: 'environment' } },
+                        audio: false
+                    });
+                } catch (primaryError) {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: true,
+                        audio: false
+                    });
+                }
+
+                if (activationToken !== scannerActivationToken) {
+                    stream?.getTracks?.().forEach(track => track.stop());
+                    return;
+                }
+
+                videoStream = stream;
+                video.setAttribute('playsinline', 'true');
+                video.muted = true;
+                video.autoplay = true;
+                video.srcObject = videoStream;
+                video.onloadedmetadata = finalizeScannerReady;
+                video.oncanplay = finalizeScannerReady;
+                video.onplaying = finalizeScannerReady;
+
+                try {
+                    await video.play();
+                } catch (playError) {
+                    console.warn('Video play() fallback on this device:', playError);
+                }
+
+                finalizeScannerReady();
+
+                setTimeout(() => {
+                    if (activationToken !== scannerActivationToken || scannerActive) {
+                        return;
+                    }
+
+                    scannerStartupInProgress = false;
+                    controlBtn.disabled = false;
+                    controlBtn.textContent = 'بدء الماسح';
+                    setScanStatus(
+                        autoStart
+                            ? 'لم تبدأ الكاميرا تلقائياً. اضغط زر "بدء الماسح" واسمح للكاميرا.'
+                            : 'تعذر تشغيل الكاميرا الآن. حاول مرة أخرى.',
+                        autoStart ? 'waiting' : 'invalid'
+                    );
+                }, 4200);
             } catch (error) {
-                showError('يجب السماح بالوصول للكاميرا', document.getElementById('scanStatus'));
+                scannerStartupInProgress = false;
+                controlBtn.disabled = false;
+                controlBtn.textContent = 'بدء الماسح';
+                showError(
+                    autoStart
+                        ? 'اسمح للكاميرا ثم اضغط "بدء الماسح" للمتابعة.'
+                        : 'يجب السماح بالوصول للكاميرا',
+                    document.getElementById('scanStatus')
+                );
                 console.error('خطأ في الكاميرا:', error);
             }
         }
 
-        function stopScanner() {
+        function stopScanner(options = {}) {
+            const silent = Boolean(options?.silent);
+            const statusMessage = options?.statusMessage || 'تم إيقاف الماسح';
+            scannerActivationToken++;
+            scannerStartupInProgress = false;
+
             if (videoStream) {
                 videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
             }
+
+            const video = document.getElementById('video-preview');
+            if (video) {
+                try {
+                    video.pause();
+                } catch (error) {
+                    console.warn('Video pause skipped:', error);
+                }
+                video.srcObject = null;
+                video.onloadedmetadata = null;
+                video.oncanplay = null;
+                video.onplaying = null;
+            }
+
             scannerActive = false;
-            document.getElementById('controlBtn').textContent = 'بدء الماسح';
-            document.getElementById('scanStatus').textContent = 'تم إيقاف الماسح';
+            const controlBtn = document.getElementById('controlBtn');
+            if (controlBtn) {
+                controlBtn.disabled = false;
+                controlBtn.textContent = 'بدء الماسح';
+            }
+            if (!silent) {
+                setScanStatus(statusMessage, 'waiting');
+            }
         }
 
         async function scanFrame() {
             if (!scannerActive) return;
 
             const video = document.getElementById('video-preview');
+            if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+                requestAnimationFrame(scanFrame);
+                return;
+            }
+
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
 
@@ -5555,7 +5687,7 @@
                 if (isValid) {
                     // QR is valid - complete attendance
                     qrValidationPassed = true;
-                    stopScanner();
+                    stopScanner({ silent: true });
                     proceedAfterQrVerification();
                     return;
                 } else {
@@ -6124,11 +6256,19 @@
 
         // ================== UTILITIES ================== //
         function showStep(stepNumber) {
+            if (Number(stepNumber) !== 3 && (scannerActive || scannerStartupInProgress || videoStream)) {
+                stopScanner({ silent: true });
+            }
+
             document.querySelectorAll('.step').forEach(step => {
                 step.classList.remove('active-step');
             });
 
             document.getElementById(`step${stepNumber}`).classList.add('active-step');
+
+            if (Number(stepNumber) === 3) {
+                setScanStatus('جاري تجهيز الكاميرا...', 'waiting');
+            }
         }
 
         function setCookie(name, value, duration) {
