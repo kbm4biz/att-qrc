@@ -3639,7 +3639,7 @@
                 return '-';
             }
 
-            const safeUrl = escapeAttribute(row.attachmentUrl);
+            const safeUrl = escapeUrlAttribute(row.attachmentUrl);
             const label = escapeHtml(row.attachmentName || 'فتح الملف');
             return `<a class="teacher-attachment-link" href="${safeUrl}" target="_blank" rel="noopener">فتح الملف</a><div>${label}</div>`;
         }
@@ -3743,6 +3743,10 @@
         }
 
         function escapeAttribute(value) {
+            return escapeHtml(String(value ?? ''));
+        }
+
+        function escapeUrlAttribute(value) {
             const text = String(value || '');
             if (!/^https?:\/\//i.test(text)) {
                 return '#';
