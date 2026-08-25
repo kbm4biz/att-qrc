@@ -1786,7 +1786,7 @@
                 <div class="trainee-info" id="traineeDetails"></div>
                 <div class="timestamp" id="timestamp"></div>
                 <div class="address-info" id="addressDetails">جاري تحميل معلومات الموقع...</div>
-                <div class="cooldown-message">سيتم الانتقال إلى لوحة حضورك خلال 10 ثوانٍ...</div>
+                <div class="cooldown-message" id="successNextMessage">تم حفظ النتيجة. يرجى الانتظار...</div>
             </div>
         </div>
         
@@ -1877,6 +1877,11 @@
                                     <span class="teacher-toggle-switch"></span>
                                 </label>
                                 <label class="teacher-toggle">
+                                    <span>عرض تقرير السرعة والدقة للطالب بعد الإرسال</span>
+                                    <input type="checkbox" id="adminStudentDashboardToggle" onchange="markCourseFormSettingsDirty()">
+                                    <span class="teacher-toggle-switch"></span>
+                                </label>
+                                <label class="teacher-toggle">
                                     <span>إلزام المرفق</span>
                                     <input type="checkbox" id="adminRequireAttachmentToggle" onchange="markCourseFormSettingsDirty()">
                                     <span class="teacher-toggle-switch"></span>
@@ -1906,7 +1911,7 @@
                                     <textarea id="adminSupportChoiceOptions" maxlength="3000" placeholder="مثال:&#10;الخيار الأول&#10;الخيار الثاني&#10;الخيار الثالث" oninput="markCourseFormSettingsDirty()"></textarea>
                                 </label>
                             </div>
-                            <div class="teacher-settings-note">تُحفظ هذه الخيارات داخل ملاحظات الدورة دون تغيير نص الملاحظات الظاهر. إذا تركت قائمة الخيارات فارغة، يبقى الحقل المخصص 3 مربع نص كما هو حالياً.</div>
+                            <div class="teacher-settings-note">لمقررات مهارات الطباعة: سمِّ الحقل الأول "السرعة" أو Speed/WPM، والحقل الثاني "الدقة" أو Accuracy. عند تفعيل التقرير ستُستخدم هذه القيم في مقارنة الطلاب ولوحة الطالب. إذا تركت خيارات الحقل الثالث فارغة، يبقى مربع نص.</div>
                         </div>
                     </div>
                     <div class="teacher-settings-note">إعدادات GPS وQR وNFC والصيانة عامة. إعدادات النموذج والمرفق والملاحظة والحقول المخصصة تُضبط لكل دورة على حدة. الحقول المخصصة تظهر فقط إذا كتبت لها أسماء وفعلتها للدورة.</div>
@@ -2172,8 +2177,8 @@
                 </div>
 
                 <div class="teacher-block" data-teacher-block="analytics">
-                    <h3>مقارنة أداء الطلاب</h3>
-                    <div class="teacher-block-note">نسبة الحضور تقارن لقاءات الطالب باللقاءات المرصودة لدورته خلال الفترة. السرعة هي الزمن من فتح صفحة التحضير إلى اكتمال التسجيل، وتظهر فقط للسجلات التي تحتوي قياساً صالحاً.</div>
+                    <h3>تحليلات مهارات الطباعة</h3>
+                    <div class="teacher-block-note">تقارن هذه اللوحة سرعة الطباعة ودقتها من نتائج النموذج المساند للدورات التي فُعّل لها تقرير الطالب. السرعة تُعرض بالكلمات في الدقيقة، والدقة كنسبة مئوية.</div>
                     <div class="analytics-toolbar">
                         <label class="teacher-field">
                             الفترة
@@ -2194,17 +2199,17 @@
                     <div id="analyticsMessage" class="status-bar teacher-message waiting">اختر الفترة ثم حدّث المقارنة.</div>
                     <div class="analytics-summary">
                         <div class="analytics-stat"><strong id="analyticsStudentCount">0</strong><span>طلاب في المقارنة</span></div>
-                        <div class="analytics-stat"><strong id="analyticsSubmissionCount">0</strong><span>عمليات حضور</span></div>
-                        <div class="analytics-stat"><strong id="analyticsAttendanceAverage">-</strong><span>متوسط الحضور</span></div>
-                        <div class="analytics-stat"><strong id="analyticsSpeedAverage">-</strong><span>متوسط سرعة الإكمال</span></div>
+                        <div class="analytics-stat"><strong id="analyticsSubmissionCount">0</strong><span>نتائج طباعة</span></div>
+                        <div class="analytics-stat"><strong id="analyticsAttendanceAverage">-</strong><span>متوسط الدقة</span></div>
+                        <div class="analytics-stat"><strong id="analyticsSpeedAverage">-</strong><span>متوسط سرعة الطباعة</span></div>
                     </div>
                     <div class="analytics-grid">
                         <section class="analytics-chart">
-                            <h4>نسبة الحضور</h4>
+                            <h4>متوسط دقة الطباعة</h4>
                             <div id="analyticsAttendanceBars" class="analytics-bars"></div>
                         </section>
                         <section class="analytics-chart">
-                            <h4>أسرع أزمنة الإكمال</h4>
+                            <h4>متوسط سرعة الطباعة</h4>
                             <div id="analyticsSpeedBars" class="analytics-bars"></div>
                         </section>
                     </div>
@@ -2266,18 +2271,18 @@
         <div id="step9" class="step student-dashboard-step">
             <div class="student-dashboard">
                 <div class="student-hero">
-                    <h2 id="studentDashboardName">لوحة الطالب</h2>
-                    <p id="studentDashboardCourse">جاري تحميل بياناتك...</p>
+                    <h2 id="studentDashboardName">تقرير مهارات الطباعة</h2>
+                    <p id="studentDashboardCourse">جاري تحميل نتائجك...</p>
                 </div>
-                <div id="studentDashboardMessage" class="status-bar waiting">جاري تحميل سجل الحضور...</div>
+                <div id="studentDashboardMessage" class="status-bar waiting">جاري تحميل تقرير السرعة والدقة...</div>
                 <div class="student-summary">
-                    <div class="student-stat"><strong id="studentAttendanceCount">0</strong><span>مرات الحضور</span></div>
-                    <div class="student-stat"><strong id="studentMeetingCount">0</strong><span>لقاءات مختلفة</span></div>
-                    <div class="student-stat"><strong id="studentAverageSpeed">-</strong><span>متوسط سرعة الإكمال</span></div>
-                    <div class="student-stat"><strong id="studentAttachmentCount">0</strong><span>مرفقات مرفوعة</span></div>
+                    <div class="student-stat"><strong id="studentSubmissionCount">0</strong><span>عدد النتائج</span></div>
+                    <div class="student-stat"><strong id="studentBestSpeed">-</strong><span>أفضل سرعة</span></div>
+                    <div class="student-stat"><strong id="studentAverageSpeed">-</strong><span>متوسط السرعة</span></div>
+                    <div class="student-stat"><strong id="studentAverageAccuracy">-</strong><span>متوسط الدقة</span></div>
                 </div>
                 <div class="teacher-list-tools">
-                    <strong>سجل الحضور</strong>
+                    <strong>نتائج مهارات الطباعة</strong>
                     <span id="studentDashboardUpdated"></span>
                 </div>
                 <div id="studentHistory" class="student-history"></div>
@@ -2346,7 +2351,6 @@
         const MAX_ATTEMPTS = 5;
         const REDIRECT_URL = 'https://tvtc.gov.sa/ar/Pages/default1.aspx';
         const REDIRECT_DELAY = 10000;
-        const ATTENDANCE_JOURNEY_STARTED_AT_MS = Date.now();
         let traineeID = '';
         let scannerActive = false;
         let videoStream = null;
@@ -2534,7 +2538,7 @@
         async function initializeStudentDashboard(traineeId, token) {
             document.body.classList.add('student-dashboard-view');
             const headerTitle = document.querySelector('.header h1');
-            if (headerTitle) headerTitle.textContent = 'سجل حضوري';
+            if (headerTitle) headerTitle.textContent = 'تقرير مهارات الطباعة';
             showStep(9);
 
             const message = document.getElementById('studentDashboardMessage');
@@ -2548,17 +2552,17 @@
             try {
                 const result = await callAppsScriptJsonp('studentDashboard', { traineeId, token });
                 if (!result?.ok) {
-                    throw new Error(result?.error || 'تعذر تحميل سجل الحضور.');
+                    throw new Error(result?.error || 'تعذر تحميل تقرير مهارات الطباعة.');
                 }
                 renderStudentDashboard(result);
                 message.className = 'status-bar valid';
-                message.textContent = 'تم تحميل سجل حضورك بنجاح.';
+                message.textContent = 'تم تحميل تقرير مهارات الطباعة بنجاح.';
             } catch (error) {
                 console.error('Student dashboard error:', error);
                 message.className = 'status-bar invalid';
                 message.textContent = /unable to load|failed to fetch|network/i.test(error?.message || '')
-                    ? 'تعذر الاتصال بسجل الحضور حالياً. حاول تحديث الصفحة بعد قليل.'
-                    : (error.message || 'تعذر فتح لوحة الحضور. سجّل حضورك مرة أخرى للحصول على رابط جديد.');
+                    ? 'تعذر الاتصال بالتقرير حالياً. حاول تحديث الصفحة بعد قليل.'
+                    : (error.message || 'تعذر فتح تقرير مهارات الطباعة. أرسل النموذج مرة أخرى للحصول على رابط جديد.');
                 renderStudentHistory([]);
             }
         }
@@ -2566,12 +2570,12 @@
         function renderStudentDashboard(result) {
             const student = result.student || {};
             const summary = result.summary || {};
-            setText('studentDashboardName', student.name ? `مرحباً، ${student.name}` : 'لوحة الطالب');
+            setText('studentDashboardName', student.name ? `تقرير ${student.name}` : 'تقرير مهارات الطباعة');
             setText('studentDashboardCourse', `${student.courseName || 'دون دورة'} · الرقم التدريبي ${student.traineeId || '-'}`);
-            setText('studentAttendanceCount', summary.attendanceCount || 0);
-            setText('studentMeetingCount', summary.uniqueMeetings || 0);
-            setText('studentAverageSpeed', formatDurationSeconds(summary.averageSpeedSeconds));
-            setText('studentAttachmentCount', summary.attachments || 0);
+            setText('studentSubmissionCount', summary.submissionCount || 0);
+            setText('studentBestSpeed', formatTypingSpeed(summary.bestTypingSpeed));
+            setText('studentAverageSpeed', formatTypingSpeed(summary.averageTypingSpeed));
+            setText('studentAverageAccuracy', formatTypingAccuracy(summary.averageTypingAccuracy));
             setText('studentDashboardUpdated', result.generatedAt ? `آخر تحديث: ${result.generatedAt}` : '');
             renderStudentHistory(Array.isArray(result.records) ? result.records : []);
         }
@@ -2580,23 +2584,18 @@
             const container = document.getElementById('studentHistory');
             if (!container) return;
             if (!records.length) {
-                container.innerHTML = '<div class="teacher-empty">لا توجد سجلات حضور لعرضها.</div>';
+                container.innerHTML = '<div class="teacher-empty">لا توجد نتائج سرعة ودقة صالحة لعرضها بعد.</div>';
                 return;
             }
             container.innerHTML = records.map(record => {
                 const attachment = record.attachmentUrl
                     ? `<a class="teacher-attachment-link" href="${escapeUrlAttribute(record.attachmentUrl)}" target="_blank" rel="noopener">فتح المرفق</a>`
                     : '<span>دون مرفق</span>';
-                const checks = [
-                    record.gpsStatus === 'passed' ? 'GPS' : '',
-                    record.qrStatus === 'passed' ? 'QR' : '',
-                    record.nfcStatus === 'passed' ? 'NFC' : ''
-                ].filter(Boolean).join(' · ') || 'تم التسجيل';
                 return `
                     <article class="student-history-item">
                         <div><strong>${escapeHtml(record.date || '-')}</strong><span>${escapeHtml(record.time || '')}</span></div>
-                        <div><strong>${escapeHtml(record.meetingId || 'لقاء دون معرّف')}</strong><span>${escapeHtml(record.program || '')}</span></div>
-                        <div><strong>${escapeHtml(checks)}</strong><span>السرعة: ${escapeHtml(formatDurationSeconds(record.speedSeconds))} · دقة التحقق: ${escapeHtml(formatPercent(record.verificationAccuracy))}</span></div>
+                        <div><strong>${escapeHtml(record.meetingId || 'نتيجة طباعة')}</strong><span>${escapeHtml(record.program || '')}</span></div>
+                        <div><strong>السرعة: ${escapeHtml(formatTypingSpeed(record.typingSpeed))}</strong><span>الدقة: ${escapeHtml(formatTypingAccuracy(record.typingAccuracy))}</span></div>
                         <div>${attachment}</div>
                     </article>`;
             }).join('');
@@ -2643,7 +2642,7 @@
 
             const tabDefinitions = [
                 { id: 'dashboard', label: 'لوحة المتابعة', title: 'نتائج الحضور', nodes: [filters, message, summary, listTools, rows] },
-                { id: 'analytics', label: 'مقارنة الطلاب', title: 'مقارنة أداء الطلاب', nodes: [getTeacherBlock('analytics')] },
+                { id: 'analytics', label: 'تحليلات الطباعة', title: 'تحليلات مهارات الطباعة', nodes: [getTeacherBlock('analytics')] },
                 { id: 'settings', label: 'الإعدادات', title: 'إعدادات النموذج', nodes: [settingsBlock] },
                 { id: 'setup', label: 'التهيئة', title: 'تهيئة البيانات', nodes: [getTeacherBlock('setup')] },
                 { id: 'courses', label: 'الدورات', title: 'إدارة الدورات', nodes: [getTeacherBlock('courses')] },
@@ -4494,7 +4493,8 @@
                 requireAttachment: Boolean(GLOBAL_SUPPORTING_FORM_SETTINGS.requireAttachment),
                 requireNote: Boolean(GLOBAL_SUPPORTING_FORM_SETTINGS.requireNote),
                 visibleFields: labels.map(Boolean),
-                choiceOptions: []
+                choiceOptions: [],
+                showStudentDashboard: false
             };
         }
 
@@ -4509,7 +4509,8 @@
                 requireAttachment: coerceBooleanSetting(settings?.requireAttachment ?? settings?.a, fallback.requireAttachment),
                 requireNote: coerceBooleanSetting(settings?.requireNote ?? settings?.n, fallback.requireNote),
                 visibleFields: normalizeSupportingFieldVisibility(compactVisibility, fallback.visibleFields),
-                choiceOptions: normalizeSupportingChoiceOptions(settings?.choiceOptions ?? settings?.o ?? fallback.choiceOptions)
+                choiceOptions: normalizeSupportingChoiceOptions(settings?.choiceOptions ?? settings?.o ?? fallback.choiceOptions),
+                showStudentDashboard: coerceBooleanSetting(settings?.showStudentDashboard ?? settings?.r, fallback.showStudentDashboard)
             };
         }
 
@@ -4537,7 +4538,8 @@
                 a: normalized.requireAttachment ? 1 : 0,
                 n: normalized.requireNote ? 1 : 0,
                 v: normalized.visibleFields.map(value => value ? '1' : '0').join(''),
-                o: normalized.choiceOptions
+                o: normalized.choiceOptions,
+                r: normalized.showStudentDashboard ? 1 : 0
             }));
         }
 
@@ -4620,6 +4622,7 @@
                 ? normalizeCourseFormSettings(courseFormSettingsDrafts[courseId])
                 : createDefaultCourseFormSettings();
             setChecked('adminSupportToggle', settings.enabled);
+            setChecked('adminStudentDashboardToggle', settings.showStudentDashboard);
             setChecked('adminRequireAttachmentToggle', settings.requireAttachment);
             setChecked('adminRequireNoteToggle', settings.requireNote);
             setChecked('adminSupportFieldVisible1', settings.visibleFields[0]);
@@ -4632,6 +4635,7 @@
         function readAdminCourseFormSettingsControls() {
             return normalizeCourseFormSettings({
                 enabled: getChecked('adminSupportToggle'),
+                showStudentDashboard: getChecked('adminStudentDashboardToggle'),
                 requireAttachment: getChecked('adminRequireAttachmentToggle'),
                 requireNote: getChecked('adminRequireNoteToggle'),
                 visibleFields: [
@@ -4803,6 +4807,7 @@
                 'adminQrToggle',
                 'adminNfcToggle',
                 'adminSupportToggle',
+                'adminStudentDashboardToggle',
                 'adminRequireAttachmentToggle',
                 'adminRequireNoteToggle',
                 'adminMaintenanceModeToggle',
@@ -4914,7 +4919,10 @@
             if (!select) return;
             const selected = select.value;
             select.innerHTML = '<option value="">كل الدورات</option>';
-            sortTeacherItems(teacherAdminData.courses || [], course => course.courseName || '').forEach(course => {
+            sortTeacherItems(
+                (teacherAdminData.courses || []).filter(course => course.formSettings?.showStudentDashboard),
+                course => course.courseName || ''
+            ).forEach(course => {
                 const option = document.createElement('option');
                 option.value = course.courseId || '';
                 option.textContent = course.courseName || course.courseId || 'دورة دون اسم';
@@ -4957,18 +4965,19 @@
             const summary = result.summary || {};
             setText('analyticsStudentCount', summary.students || 0);
             setText('analyticsSubmissionCount', summary.submissions || 0);
-            setText('analyticsAttendanceAverage', formatPercent(summary.averageAttendanceRate));
-            setText('analyticsSpeedAverage', formatDurationSeconds(summary.averageSpeedSeconds));
+            setText('analyticsAttendanceAverage', formatTypingAccuracy(summary.averageTypingAccuracy));
+            setText('analyticsSpeedAverage', formatTypingSpeed(summary.averageTypingSpeed));
 
-            const attendanceRows = [...rows]
-                .sort((a, b) => Number(b.attendanceRate || 0) - Number(a.attendanceRate || 0))
+            const accuracyRows = rows
+                .filter(row => row.averageTypingAccuracy !== null && Number.isFinite(Number(row.averageTypingAccuracy)))
+                .sort((a, b) => Number(b.averageTypingAccuracy) - Number(a.averageTypingAccuracy))
                 .slice(0, 12);
             const speedRows = rows
-                .filter(row => row.averageSpeedSeconds !== null && row.averageSpeedSeconds !== '' && Number.isFinite(Number(row.averageSpeedSeconds)))
-                .sort((a, b) => Number(a.averageSpeedSeconds) - Number(b.averageSpeedSeconds))
+                .filter(row => row.averageTypingSpeed !== null && Number.isFinite(Number(row.averageTypingSpeed)))
+                .sort((a, b) => Number(b.averageTypingSpeed) - Number(a.averageTypingSpeed))
                 .slice(0, 12);
-            renderAnalyticsBars('analyticsAttendanceBars', attendanceRows, row => Number(row.attendanceRate || 0), row => formatPercent(row.attendanceRate), false);
-            renderAnalyticsBars('analyticsSpeedBars', speedRows, row => Number(row.averageSpeedSeconds), row => formatDurationSeconds(row.averageSpeedSeconds), true);
+            renderAnalyticsBars('analyticsAttendanceBars', accuracyRows, row => Number(row.averageTypingAccuracy), row => formatTypingAccuracy(row.averageTypingAccuracy), false);
+            renderAnalyticsBars('analyticsSpeedBars', speedRows, row => Number(row.averageTypingSpeed), row => formatTypingSpeed(row.averageTypingSpeed), true);
             renderAnalyticsTable(rows);
         }
 
@@ -4981,12 +4990,9 @@
             }
             const values = rows.map(valueGetter).filter(Number.isFinite);
             const maximum = Math.max(...values, 1);
-            const minimum = Math.max(Math.min(...values), 1);
             container.innerHTML = rows.map(row => {
                 const value = valueGetter(row);
-                const percent = inverse
-                    ? Math.max(8, Math.min(100, (minimum / Math.max(value, 1)) * 100))
-                    : Math.max(3, Math.min(100, (value / maximum) * 100));
+                const percent = Math.max(3, Math.min(100, (value / maximum) * 100));
                 return `
                     <div class="analytics-bar-row" title="${escapeHtml(row.name || row.traineeId || '')}">
                         <div class="analytics-bar-name">${escapeHtml(row.name || row.traineeId || '-')}</div>
@@ -5005,29 +5011,31 @@
             }
             container.innerHTML = `
                 <table class="analytics-table">
-                    <thead><tr><th>الطالب</th><th>الدورة</th><th>الحضور</th><th>النسبة</th><th>السرعة</th><th>دقة التحقق</th><th>آخر حضور</th></tr></thead>
+                    <thead><tr><th>الطالب</th><th>الدورة</th><th>النتائج</th><th>متوسط السرعة</th><th>أفضل سرعة</th><th>متوسط الدقة</th><th>آخر نتيجة</th></tr></thead>
                     <tbody>${rows.map(row => `
                         <tr>
                             <td><strong>${escapeHtml(row.name || '-')}</strong><br><span>${escapeHtml(row.traineeId || '')}</span></td>
                             <td>${escapeHtml(row.courseName || '-')}</td>
-                            <td>${Number(row.attendedMeetings || 0)} / ${Number(row.expectedMeetings || 0)}</td>
-                            <td>${escapeHtml(formatPercent(row.attendanceRate))}</td>
-                            <td>${escapeHtml(formatDurationSeconds(row.averageSpeedSeconds))}</td>
-                            <td>${escapeHtml(formatPercent(row.verificationAccuracy))}</td>
-                            <td>${escapeHtml(row.lastAttendance || '-')}</td>
+                            <td>${Number(row.submissionCount || 0)}</td>
+                            <td>${escapeHtml(formatTypingSpeed(row.averageTypingSpeed))}</td>
+                            <td>${escapeHtml(formatTypingSpeed(row.bestTypingSpeed))}</td>
+                            <td>${escapeHtml(formatTypingAccuracy(row.averageTypingAccuracy))}</td>
+                            <td>${escapeHtml(row.lastSubmission || '-')}</td>
                         </tr>`).join('')}</tbody>
                 </table>`;
         }
 
-        function formatPercent(value) {
-            return Number.isFinite(Number(value)) && value !== null ? `${Math.round(Number(value))}%` : '-';
+        function formatTypingAccuracy(value) {
+            return Number.isFinite(Number(value)) && value !== null ? `${formatMetricNumber(value)}%` : '-';
         }
 
-        function formatDurationSeconds(value) {
-            if (!Number.isFinite(Number(value)) || value === null) return '-';
-            const seconds = Math.max(0, Math.round(Number(value)));
-            if (seconds < 60) return `${seconds} ث`;
-            return `${Math.floor(seconds / 60)} د ${seconds % 60} ث`;
+        function formatTypingSpeed(value) {
+            return Number.isFinite(Number(value)) && value !== null ? `${formatMetricNumber(value)} ك/د` : '-';
+        }
+
+        function formatMetricNumber(value) {
+            const number = Number(value);
+            return Number.isInteger(number) ? String(number) : number.toFixed(1);
         }
 
         function scheduleTeacherLogLoad() {
@@ -6353,6 +6361,12 @@
             const dashboardUrl = logResult.dashboardToken
                 ? buildStudentDashboardUrl(trainee.id, logResult.dashboardToken)
                 : REDIRECT_URL;
+            setText(
+                'successNextMessage',
+                logResult.dashboardToken
+                    ? 'سيتم الانتقال إلى تقرير مهارات الطباعة خلال 10 ثوانٍ...'
+                    : 'تم تسجيل الحضور بنجاح. سيتم إغلاق الصفحة خلال 10 ثوانٍ...'
+            );
             // Redirect after delay
             setTimeout(() => {
                 window.location.href = dashboardUrl;
@@ -7334,8 +7348,6 @@
 
             return {
                 attendanceId,
-                journeyStartedAtMs: ATTENDANCE_JOURNEY_STARTED_AT_MS,
-                journeyDurationMs: Math.max(0, Date.now() - ATTENDANCE_JOURNEY_STARTED_AT_MS),
                 id: trainee.id,
                 name: trainee.name,
                 program: trainee.program,
