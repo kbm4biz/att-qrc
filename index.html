@@ -279,6 +279,12 @@
             border-color: var(--brand-primary);
             box-shadow: 0 0 0 4px rgba(14, 90, 138, 0.16);
         }
+        #idInput[readonly] {
+            background: #eef9f2;
+            border-color: rgba(31, 157, 85, 0.42);
+            color: #155d36;
+            cursor: default;
+        }
         .scanner-container {
             width: 90%;
             max-width: 500px;
@@ -996,6 +1002,52 @@
             grid-template-columns: minmax(180px, 1.3fr) repeat(4, minmax(110px, 1fr));
             gap: 12px;
             align-items: center;
+        }
+        .teacher-attendance-view {
+            width: 100%;
+        }
+        .teacher-attendance-heading {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #dbe9e1;
+        }
+        .teacher-attendance-heading h3 {
+            margin: 0;
+            color: #145b37;
+            font-size: 22px;
+        }
+        .teacher-attendance-heading p {
+            margin: 5px 0 0;
+            color: #607d6e;
+            line-height: 1.7;
+            font-size: 14px;
+        }
+        .teacher-record.attendance-only-record {
+            grid-template-columns: minmax(190px, 1.4fr) repeat(4, minmax(115px, 1fr));
+            border-right: 5px solid var(--brand-success);
+        }
+        .attendance-counted-mark {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #166534;
+            font-weight: 800;
+        }
+        .attendance-counted-mark::before {
+            content: '\2713';
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: #fff;
+            background: var(--brand-success);
+            font-size: 14px;
         }
         .teacher-record-main {
             min-width: 0;
@@ -1940,6 +1992,9 @@
             .teacher-record {
                 grid-template-columns: 1fr;
             }
+            .teacher-record.attendance-only-record {
+                grid-template-columns: 1fr;
+            }
             .teacher-actions,
             .teacher-filters button {
                 width: 100%;
@@ -2100,7 +2155,7 @@
             </div>
             <div class="content">
                 <div class="success-icon">✓</div>
-                <div class="status-bar valid">تم تسجيل الحضور بنجاح!</div>
+                <div class="status-bar valid" id="successStatus">تم تسجيل الحضور وحفظ المهمة بنجاح!</div>
                 <div class="trainee-info" id="traineeDetails"></div>
                 <div class="timestamp" id="timestamp"></div>
                 <div class="address-info" id="addressDetails">جاري تحميل معلومات الموقع...</div>
@@ -2125,8 +2180,8 @@
                 <div class="teacher-topbar">
                     <h2>لوحة المعلم</h2>
                     <div class="teacher-actions">
-                        <button type="button" onclick="loadTeacherLog()">تحديث السجل</button>
-                        <button type="button" class="teacher-secondary-button" onclick="downloadTeacherCsv()">تنزيل CSV</button>
+                        <button type="button" onclick="refreshActiveTeacherView()">تحديث العرض</button>
+                        <button type="button" class="teacher-secondary-button" onclick="downloadActiveTeacherCsv()">تنزيل CSV</button>
                         <button type="button" class="teacher-secondary-button" onclick="openStudentView()">نموذج الطالب</button>
                     </div>
                 </div>
@@ -2589,7 +2644,7 @@
                 <div id="teacherMessage" class="status-bar teacher-message waiting">جاري تحميل السجل...</div>
 
                 <div class="teacher-summary" aria-label="ملخص الحضور">
-                    <div class="teacher-stat"><strong id="teacherStatSuccess">0</strong><span>حضور ناجح</span></div>
+                    <div class="teacher-stat"><strong id="teacherStatSuccess">0</strong><span>إرسالات ناجحة</span></div>
                     <div class="teacher-stat"><strong id="teacherStatUnique">0</strong><span>متدربون فريدون</span></div>
                     <div class="teacher-stat"><strong id="teacherStatPending">0</strong><span>روابط لم تكتمل</span></div>
                     <div class="teacher-stat"><strong id="teacherStatAttachments">0</strong><span>مرفقات</span></div>
@@ -2600,6 +2655,45 @@
                     <div id="teacherGeneratedAt"></div>
                 </div>
                 <div id="teacherRows" class="teacher-records"></div>
+
+                <div id="teacherAttendanceOnlyView" class="teacher-attendance-view">
+                    <div class="teacher-attendance-heading">
+                        <div>
+                            <h3>كشف الحضور الفعلي</h3>
+                            <p>يظهر كل متدرب مرة واحدة فقط في كل لقاء، مهما كان عدد المهام التي أرسلها.</p>
+                        </div>
+                    </div>
+                    <div class="teacher-filters teacher-attendance-filters">
+                        <label class="teacher-field">
+                            اليوم
+                            <input type="date" id="teacherAttendanceDate" onchange="loadTeacherAttendance()">
+                        </label>
+                        <label class="teacher-field">
+                            اللقاء
+                            <select id="teacherAttendanceMeetingFilter" onchange="loadTeacherAttendance()">
+                                <option value="">كل اللقاءات</option>
+                            </select>
+                        </label>
+                        <label class="teacher-field teacher-attendance-search">
+                            بحث
+                            <input type="search" id="teacherAttendanceSearch" placeholder="اسم، رقم تدريبي، برنامج" oninput="scheduleTeacherAttendanceLoad()">
+                        </label>
+                        <button type="button" onclick="loadTeacherAttendance()">عرض الحضور</button>
+                        <button type="button" class="teacher-secondary-button" onclick="downloadTeacherAttendanceCsv()">تنزيل كشف الحضور</button>
+                    </div>
+                    <div id="teacherAttendanceMessage" class="status-bar teacher-message waiting">اختر اليوم لعرض الحضور المحتسب.</div>
+                    <div class="teacher-summary" aria-label="ملخص الحضور المحتسب">
+                        <div class="teacher-stat"><strong id="teacherAttendanceCount">0</strong><span>حضور محتسب</span></div>
+                        <div class="teacher-stat"><strong id="teacherAttendanceUnique">0</strong><span>متدربون فريدون</span></div>
+                        <div class="teacher-stat"><strong id="teacherAttendanceMeetings">0</strong><span>لقاءات</span></div>
+                        <div class="teacher-stat"><strong id="teacherAttendanceSubmissions">0</strong><span>إجمالي إرسالاتهم</span></div>
+                    </div>
+                    <div class="teacher-list-tools">
+                        <div id="teacherAttendanceResultCount">0 سجل حضور</div>
+                        <div id="teacherAttendanceGeneratedAt"></div>
+                    </div>
+                    <div id="teacherAttendanceRows" class="teacher-records"></div>
+                </div>
             </div>
         </div>
 
@@ -2742,8 +2836,11 @@
         let supportingFormSubmitting = false;
         let teacherDashboardPassword = '';
         let teacherSearchTimer = null;
+        let teacherAttendanceSearchTimer = null;
         let teacherLastRows = [];
         let teacherLastResponse = null;
+        let teacherAttendanceRows = [];
+        let teacherAttendanceResponse = null;
         let teacherInlineSaveLocks = {};
         let teacherActionLocks = {};
         let teacherLayoutReady = false;
@@ -2858,13 +2955,8 @@
             }
 
             const sessionCookie = getCookie('traineeSession');
-            if(sessionCookie) {
-                if(isSessionActive(sessionCookie)) {
-                    showCooldownScreen();
-                    return;
-                } else {
-                    clearExpiredSession();
-                }
+            if (sessionCookie && !isSessionActive(sessionCookie)) {
+                clearExpiredSession();
             }
 
             setPreflightStatus('جاري تجهيز وسيلة التحقق', 'نقوم الآن بقراءة إعدادات الحضور وتهيئة التحقق المناسب.');
@@ -2895,6 +2987,7 @@
 
             setPreflightStatus('جاهز', 'تم تجهيز شاشة الحضور. يمكنك المتابعة الآن.');
             showStep(1);
+            applyTraineeSessionBinding();
         };
 
         async function initializeStudentDashboard(traineeId, token) {
@@ -3025,6 +3118,7 @@
             const summary = dashboard.querySelector('.teacher-summary');
             const listTools = dashboard.querySelector('.teacher-list-tools');
             const rows = dashboard.querySelector('#teacherRows');
+            const attendanceView = dashboard.querySelector('#teacherAttendanceOnlyView');
 
             const shell = document.createElement('div');
             shell.className = 'teacher-shell';
@@ -3036,7 +3130,8 @@
             panels.className = 'teacher-panels';
 
             const tabDefinitions = [
-                { id: 'dashboard', label: 'لوحة المتابعة', title: 'نتائج الحضور', nodes: [filters, message, summary, listTools, rows] },
+                { id: 'dashboard', label: 'السجل الكامل', title: 'جميع الإرسالات والمحاولات', nodes: [filters, message, summary, listTools, rows] },
+                { id: 'attendance', label: 'الحضور فقط', title: 'كشف الحضور الفعلي', nodes: [attendanceView] },
                 { id: 'analytics', label: 'تقدم الطلاب', title: 'متابعة تقدم الطلاب', nodes: [getTeacherBlock('analytics')] },
                 { id: 'settings', label: 'الإعدادات', title: 'إعدادات النموذج', nodes: [settingsBlock] },
                 { id: 'setup', label: 'التهيئة', title: 'تهيئة البيانات', nodes: [getTeacherBlock('setup')] },
@@ -3104,6 +3199,9 @@
                 populateTeacherAnalyticsCourseOptions();
                 loadTeacherAnalytics();
             }
+            if (activeTeacherTab === 'attendance') {
+                loadTeacherAttendance();
+            }
         }
 
         function activateTeacherEditTab(tabId, statusId, message, focusId) {
@@ -3134,6 +3232,10 @@
             const dateInput = document.getElementById('teacherDate');
             if (dateInput && !dateInput.value) {
                 dateInput.value = getDateInputValue(getSaudiTime());
+            }
+            const attendanceDateInput = document.getElementById('teacherAttendanceDate');
+            if (attendanceDateInput && !attendanceDateInput.value) {
+                attendanceDateInput.value = getDateInputValue(getSaudiTime());
             }
 
             syncAdminSettingsControls(getCurrentAppSettings());
@@ -5376,6 +5478,151 @@
             return fallback;
         }
 
+        function refreshActiveTeacherView() {
+            if (activeTeacherTab === 'attendance') {
+                loadTeacherAttendance();
+                return;
+            }
+            if (activeTeacherTab === 'analytics') {
+                loadTeacherAnalytics();
+                return;
+            }
+            if (activeTeacherTab === 'qr') {
+                initializeTeacherQrPanel();
+                return;
+            }
+            if (['settings', 'setup', 'courses', 'locations', 'students', 'schedules'].includes(activeTeacherTab)) {
+                loadTeacherAdminData();
+                return;
+            }
+            loadTeacherLog();
+        }
+
+        function downloadActiveTeacherCsv() {
+            if (activeTeacherTab === 'attendance') {
+                downloadTeacherAttendanceCsv();
+                return;
+            }
+            downloadTeacherCsv();
+        }
+
+        async function loadTeacherAttendance() {
+            const message = document.getElementById('teacherAttendanceMessage');
+            const dateInput = document.getElementById('teacherAttendanceDate');
+            const meetingInput = document.getElementById('teacherAttendanceMeetingFilter');
+            const searchInput = document.getElementById('teacherAttendanceSearch');
+            if (!message) {
+                return;
+            }
+
+            if (!teacherDashboardPassword) {
+                teacherDashboardPassword = sessionStorage.getItem('teacherDashboardPassword') || '';
+            }
+            if (!teacherDashboardPassword) {
+                message.className = 'status-bar teacher-message invalid';
+                message.textContent = 'كلمة مرور المعلم مطلوبة.';
+                return;
+            }
+
+            message.className = 'status-bar teacher-message waiting';
+            message.textContent = 'جاري إعداد كشف الحضور الفعلي...';
+
+            try {
+                const result = await callAppsScriptJsonp('teacherAttendance', {
+                    password: teacherDashboardPassword,
+                    date: dateInput?.value || getDateInputValue(getSaudiTime()),
+                    meetingId: meetingInput?.value || '',
+                    query: (searchInput?.value || '').trim()
+                });
+                if (!result?.ok) {
+                    if (result?.code === 'TEACHER_AUTH') {
+                        sessionStorage.removeItem('teacherDashboardPassword');
+                        teacherDashboardPassword = '';
+                    }
+                    throw new Error(result?.error || 'تعذر تحميل كشف الحضور.');
+                }
+
+                teacherAttendanceResponse = result;
+                teacherAttendanceRows = Array.isArray(result.rows) ? result.rows : [];
+                updateTeacherAttendanceMeetingOptions(result.meetings || []);
+                renderTeacherAttendanceSummary(result.summary || {});
+                renderTeacherAttendanceRows(teacherAttendanceRows);
+                renderTeacherAttendanceMeta(result);
+                message.className = `status-bar teacher-message ${teacherAttendanceRows.length ? 'valid' : 'waiting'}`;
+                message.textContent = teacherAttendanceRows.length
+                    ? 'تم تحميل كشف الحضور. كل طالب محسوب مرة واحدة فقط في اللقاء.'
+                    : 'لا يوجد حضور محتسب مطابق لهذه الفلاتر.';
+            } catch (error) {
+                console.error('Teacher attendance error:', error);
+                message.className = 'status-bar teacher-message invalid';
+                message.textContent = error.message || 'تعذر تحميل كشف الحضور.';
+            }
+        }
+
+        function scheduleTeacherAttendanceLoad() {
+            clearTimeout(teacherAttendanceSearchTimer);
+            teacherAttendanceSearchTimer = setTimeout(loadTeacherAttendance, 450);
+        }
+
+        function updateTeacherAttendanceMeetingOptions(meetings) {
+            const select = document.getElementById('teacherAttendanceMeetingFilter');
+            if (!select) {
+                return;
+            }
+            const selectedValue = select.value;
+            select.innerHTML = '<option value="">كل اللقاءات</option>';
+            (meetings || []).forEach(meetingId => {
+                const option = document.createElement('option');
+                option.value = meetingId;
+                option.textContent = meetingId;
+                select.appendChild(option);
+            });
+            if ((meetings || []).includes(selectedValue)) {
+                select.value = selectedValue;
+            }
+        }
+
+        function renderTeacherAttendanceSummary(summary) {
+            setText('teacherAttendanceCount', summary.attendance || 0);
+            setText('teacherAttendanceUnique', summary.uniqueTrainees || 0);
+            setText('teacherAttendanceMeetings', summary.meetings || 0);
+            setText('teacherAttendanceSubmissions', summary.submissions || 0);
+        }
+
+        function renderTeacherAttendanceRows(rows) {
+            const container = document.getElementById('teacherAttendanceRows');
+            if (!container) {
+                return;
+            }
+            if (!rows.length) {
+                container.innerHTML = '<div class="teacher-empty">لا توجد سجلات حضور للعرض.</div>';
+                return;
+            }
+
+            container.innerHTML = rows.map(row => `
+                <div class="teacher-record attendance-only-record">
+                    <div class="teacher-record-main">
+                        <div class="teacher-name">${escapeHtml(row.name || 'بدون اسم')}</div>
+                        <div class="teacher-id">${escapeHtml(row.traineeId || 'بدون رقم تدريبي')}</div>
+                    </div>
+                    <div class="teacher-cell"><span>الحضور</span><span class="attendance-counted-mark">محتسب</span></div>
+                    <div class="teacher-cell"><span>أول حضور</span>${escapeHtml(row.time || '-')}</div>
+                    <div class="teacher-cell"><span>اللقاء</span>${escapeHtml(row.meetingId || '-')}</div>
+                    <div class="teacher-cell"><span>البرنامج</span>${escapeHtml(row.program || '-')}</div>
+                    <div class="teacher-cell"><span>إرسالات المهام</span>${escapeHtml(String(row.submissionCount || 1))}</div>
+                    <div class="teacher-cell"><span>الموقع</span>${escapeHtml(row.address || '-')}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderTeacherAttendanceMeta(result) {
+            const countText = result.limited
+                ? `عرض ${teacherAttendanceRows.length} من ${result.totalFilteredRows} سجل حضور`
+                : `${teacherAttendanceRows.length} سجل حضور`;
+            setText('teacherAttendanceResultCount', countText);
+            setText('teacherAttendanceGeneratedAt', result.generatedAt ? `آخر تحديث: ${result.generatedAt}` : '');
+        }
+
         async function loadTeacherLog() {
             const message = document.getElementById('teacherMessage');
             const dateInput = document.getElementById('teacherDate');
@@ -5743,6 +5990,7 @@
                             <div class="teacher-id">${escapeHtml(row.traineeId || 'بدون رقم تدريبي')}</div>
                         </div>
                         <div class="teacher-cell"><span>الحالة</span><span class="teacher-pill ${statusClass}">${escapeHtml(formatTeacherStatus(row.status))}</span></div>
+                        <div class="teacher-cell"><span>احتساب الحضور</span>${escapeHtml(formatAttendanceCountedStatus(row))}</div>
                         <div class="teacher-cell"><span>الوقت</span>${escapeHtml(row.time || '-')}</div>
                         <div class="teacher-cell"><span>اللقاء</span>${escapeHtml(row.meetingId || '-')}</div>
                         <div class="teacher-cell"><span>البرنامج</span>${escapeHtml(row.program || '-')}</div>
@@ -5789,6 +6037,13 @@
             return status || 'غير معروف';
         }
 
+        function formatAttendanceCountedStatus(row) {
+            if (row.status !== 'SUCCESS') {
+                return '-';
+            }
+            return row.attendanceCounted === false ? 'مهمة إضافية' : 'محسوب';
+        }
+
         function getTeacherStatusClass(status) {
             if (status === 'SUCCESS') {
                 return 'success';
@@ -5832,13 +6087,14 @@
                 return;
             }
 
-            const headers = ['التاريخ', 'الوقت', 'الحالة', 'الرقم التدريبي', 'الاسم', 'البرنامج', 'اللقاء', 'GPS', 'Aztec', 'NFC', 'الجهاز', 'المرفق', 'الملاحظة', 'الحقول المخصصة'];
+            const headers = ['التاريخ', 'الوقت', 'الحالة', 'احتساب الحضور', 'الرقم التدريبي', 'الاسم', 'البرنامج', 'اللقاء', 'GPS', 'Aztec', 'NFC', 'الجهاز', 'المرفق', 'الملاحظة', 'الحقول المخصصة'];
             const lines = [
                 headers,
                 ...teacherLastRows.map(row => [
                     row.date || '',
                     row.time || '',
                     formatTeacherStatus(row.status),
+                    formatAttendanceCountedStatus(row),
                     row.traineeId || '',
                     row.name || '',
                     row.program || '',
@@ -5858,6 +6114,42 @@
             const dateValue = document.getElementById('teacherDate')?.value || 'attendance';
             link.href = URL.createObjectURL(blob);
             link.download = `attendance-${dateValue}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(link.href);
+        }
+
+        function downloadTeacherAttendanceCsv() {
+            if (!teacherAttendanceRows.length) {
+                const message = document.getElementById('teacherAttendanceMessage');
+                if (message) {
+                    message.className = 'status-bar teacher-message waiting';
+                    message.textContent = 'لا توجد سجلات حضور لتنزيلها.';
+                }
+                return;
+            }
+
+            const headers = ['التاريخ', 'وقت أول حضور', 'الرقم التدريبي', 'الاسم', 'البرنامج', 'اللقاء', 'الموقع', 'عدد إرسالات المهام'];
+            const lines = [
+                headers,
+                ...teacherAttendanceRows.map(row => [
+                    row.date || '',
+                    row.time || '',
+                    row.traineeId || '',
+                    row.name || '',
+                    row.program || '',
+                    row.meetingId || '',
+                    row.address || '',
+                    row.submissionCount || 1
+                ])
+            ].map(csvLine).join('\n');
+
+            const blob = new Blob(['\ufeff' + lines], { type: 'text/csv;charset=utf-8' });
+            const link = document.createElement('a');
+            const dateValue = document.getElementById('teacherAttendanceDate')?.value || 'attendance';
+            link.href = URL.createObjectURL(blob);
+            link.download = `attendance-only-${dateValue}.csv`;
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -6432,7 +6724,11 @@
             let lastAppsScriptError = null;
 
             try {
-                const result = await callAppsScriptJsonp('lookupTrainee', { traineeId: normalizedTraineeId });
+                const result = await callAppsScriptJsonp('lookupTrainee', {
+                    traineeId: normalizedTraineeId,
+                    deviceId: getOrCreateDeviceId(),
+                    deviceFingerprint: getDeviceFingerprint()
+                });
                 if (result?.ok && result.trainee) {
                     return result;
                 }
@@ -6440,6 +6736,12 @@
                     return {
                         ...result,
                         error: 'هذا الرقم التدريبي موقوف حالياً.'
+                    };
+                }
+                if (result?.code === 'DEVICE_DUPLICATE') {
+                    return {
+                        ...result,
+                        error: 'هذا الجهاز مرتبط برقم تدريبي آخر في هذا اللقاء.'
                     };
                 }
                 if (result?.code === 'NO_ACTIVE_MEETING' && result?.trainee) {
@@ -6638,6 +6940,16 @@
                 return;
             }
             document.getElementById('idInput').value = normalizedInputID;
+
+            const activeTraineeSession = getActiveTraineeSession();
+            if (activeTraineeSession && activeTraineeSession.id !== normalizedInputID) {
+                showError(
+                    'هذا الجهاز مرتبط برقم تدريبي آخر خلال فترة الحضور الحالية.',
+                    document.getElementById('idStatus')
+                );
+                applyTraineeSessionBinding();
+                return;
+            }
 
             const idStatus = document.getElementById('idStatus');
             const idSpinner = document.getElementById('idSpinner');
@@ -6974,14 +7286,22 @@
                 rejectNfcAttendance(nfcTapError || 'انتهت صلاحية الرابط أو تم استخدامه. المس البطاقة مرة أخرى.');
                 return;
             }
+            const attendanceCounted = logResult.attendanceCounted !== false;
             rememberSubmittedSupportingChoice(trainee);
+            setText(
+                'successStatus',
+                attendanceCounted
+                    ? 'تم تسجيل الحضور وحفظ المهمة بنجاح!'
+                    : 'تم حفظ المهمة بنجاح، وحضورك مسجل لهذا اللقاء.'
+            );
             
             // Display trainee details
             document.getElementById('traineeDetails').innerHTML = `
                 <strong>رقم المتدرب:</strong> ${trainee.id}<br>
                 <strong>الاسم:</strong> ${trainee.name}<br>
                 <strong>البرنامج:</strong> ${trainee.program}<br>
-                <strong>معرّف الاجتماع:</strong> ${meetingId}
+                <strong>معرّف الاجتماع:</strong> ${meetingId}<br>
+                <strong>حالة الحضور:</strong> ${attendanceCounted ? 'تم احتساب الحضور' : 'مسجل مسبقاً لهذا اللقاء'}
             `;
             
             // Display the address
@@ -6993,8 +7313,8 @@
             const timestamp = getSaudiTime().toLocaleString('ar-SA', { hour12: false });
             document.getElementById('timestamp').textContent = `التاريخ والوقت: ${timestamp}`;
 
-            // Set session cookie to prevent duplicate attendance
-            setCookie('traineeSession', `${traineeID}_${Date.now()}`, SESSION_DURATION);
+            // Keep this browser linked to the same trainee without blocking later task submissions.
+            bindTraineeSession(trainee.id);
             
             // Show success screen
             showStep(4);
@@ -7041,6 +7361,7 @@
             if (idInput && traineeID) {
                 idInput.value = traineeID;
             }
+            applyTraineeSessionBinding();
 
             const idStatus = document.getElementById('idStatus');
             if (idStatus) {
@@ -8181,36 +8502,76 @@
         }
 
         // ================== SESSION MANAGEMENT ================== //
-        function isSessionActive(cookieValue) {
-            const [id, timestamp] = cookieValue.split('_');
-            return (Date.now() - parseInt(timestamp)) < SESSION_DURATION;
+        function parseTraineeSession(cookieValue) {
+            const value = String(cookieValue || '');
+            const separatorIndex = value.lastIndexOf('_');
+            if (separatorIndex <= 0) {
+                return null;
+            }
+
+            const id = normalizeTraineeIdValue(value.slice(0, separatorIndex));
+            const timestamp = Number(value.slice(separatorIndex + 1));
+            if (!id || !Number.isFinite(timestamp)) {
+                return null;
+            }
+
+            return {
+                id,
+                timestamp,
+                expiresAt: timestamp + SESSION_DURATION
+            };
         }
 
-        function showCooldownScreen() {
-            document.querySelectorAll('.step').forEach(step => {
-                step.classList.remove('active-step');
-            });
+        function getActiveTraineeSession() {
+            const session = parseTraineeSession(getCookie('traineeSession'));
+            return session && session.expiresAt > Date.now() ? session : null;
+        }
 
-            const step = document.getElementById('step1');
-            
-            step.innerHTML = `
-                <h2>نظام الحضور</h2>
-                <div class="cooldown-message">
-                    تم تسجيل حضورك مسبقاً، يرجى المحاولة مرة أخرى بعد 12 ساعة
-                </div>
-            `;
-            step.classList.add('active-step');
+        function isSessionActive(cookieValue) {
+            const session = parseTraineeSession(cookieValue);
+            return Boolean(session && session.expiresAt > Date.now());
+        }
 
-            if (adminMode) {
-                const adminBtn = document.getElementById('adminReset');
-                adminBtn.style.display = 'block';
-                step.appendChild(adminBtn);
+        function applyTraineeSessionBinding() {
+            const session = getActiveTraineeSession();
+            const idInput = document.getElementById('idInput');
+            const idStatus = document.getElementById('idStatus');
+            if (!session || !idInput) {
+                return false;
             }
+
+            idInput.value = session.id;
+            idInput.readOnly = true;
+            idInput.dataset.boundTrainee = session.id;
+            if (idStatus && !idStatus.textContent.trim()) {
+                idStatus.className = 'status-bar waiting';
+                idStatus.textContent = 'يمكنك إرسال أكثر من مهمة. سيبقى هذا الجهاز مرتبطاً برقمك التدريبي.';
+            }
+            return true;
+        }
+
+        function bindTraineeSession(traineeId) {
+            const normalizedId = normalizeTraineeIdValue(traineeId);
+            if (!normalizedId) {
+                return;
+            }
+
+            const existingSession = getActiveTraineeSession();
+            const timestamp = existingSession && existingSession.id === normalizedId
+                ? existingSession.timestamp
+                : Date.now();
+            const remainingDuration = Math.max(1000, timestamp + SESSION_DURATION - Date.now());
+            setCookie('traineeSession', `${normalizedId}_${timestamp}`, remainingDuration);
+            applyTraineeSessionBinding();
         }
 
         function clearExpiredSession() {
             document.cookie = 'traineeSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-            sessionStorage.clear();
+            const idInput = document.getElementById('idInput');
+            if (idInput) {
+                idInput.readOnly = false;
+                delete idInput.dataset.boundTrainee;
+            }
         }
 
         // ================== UTILITIES ================== //
