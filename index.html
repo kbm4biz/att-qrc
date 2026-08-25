@@ -864,6 +864,26 @@
             border-color: #2196F3;
             box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.14);
         }
+        .teacher-bulk-preview {
+            margin-top: 8px;
+            padding: 10px 12px;
+            border: 1px solid #d5e3ec;
+            border-radius: 8px;
+            background: #fff;
+            color: #526d82;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+        .teacher-bulk-preview.valid {
+            border-color: #81c784;
+            background: #f1f8e9;
+            color: #256029;
+        }
+        .teacher-bulk-preview.invalid {
+            border-color: #ef9a9a;
+            background: #fff5f5;
+            color: #b71c1c;
+        }
         .teacher-summary {
             display: grid;
             grid-template-columns: repeat(4, minmax(130px, 1fr));
@@ -1792,7 +1812,7 @@
 
                 <div class="teacher-block" data-teacher-block="students">
                     <h3>الطلاب - إضافة وتعديل جماعي</h3>
-                    <div class="teacher-block-note">يمكنك حفظ طالب واحد من النموذج، أو لصق مجموعة كبيرة. كل سطر بالشكل: الرقم التدريبي, الاسم</div>
+                    <div class="teacher-block-note">يمكنك حفظ طالب واحد، أو نسخ عمودَي الرقم التدريبي والاسم مباشرة من Excel ثم لصقهما في مربع الاستيراد.</div>
                     <div class="teacher-form-grid">
                         <label class="teacher-field">
                             الرقم التدريبي
@@ -1840,8 +1860,9 @@
                             <button type="button" onclick="bulkAddStudents()">استيراد دفعة</button>
                         </div>
                         <label class="teacher-field teacher-form-wide">
-                            القائمة
-                            <textarea id="studentsBulkInput" placeholder="441234567, أحمد محمد&#10;441234568, خالد علي"></textarea>
+                            قائمة الطلاب من Excel
+                            <textarea id="studentsBulkInput" placeholder="انسخ الصفوف من Excel والصقها هنا مباشرة:&#10;الرقم التدريبي    الاسم&#10;441234567    أحمد محمد&#10;441234568    خالد علي" oninput="updateBulkStudentsPreview()" onpaste="setTimeout(updateBulkStudentsPreview, 0)"></textarea>
+                            <div id="studentsBulkPreview" class="teacher-bulk-preview">يدعم أعمدة Excel المفصولة تلقائياً، مع أو بدون صف العناوين.</div>
                         </label>
                     </div>
                     <div id="teacherStudentsMessage" class="status-bar teacher-message waiting">يمكنك إضافة طالب واحد أو عدة طلاب دفعة واحدة.</div>
@@ -3656,19 +3677,20 @@
             const locationId = document.getElementById('studentBulkLocationSelect')?.value || '';
             const active = Boolean(document.getElementById('studentBulkActiveInput')?.checked);
             const bulkText = document.getElementById('studentsBulkInput')?.value || '';
-            const students = parseBulkStudentsInput(bulkText);
+            const analysis = analyzeBulkStudentsInput(bulkText);
+            const students = analysis.students;
 
             if (!courseId) {
                 setTeacherStatus('teacherStudentsMessage', 'يرجى اختيار الدورة قبل حفظ الطلاب.', 'invalid');
                 return;
             }
             if (!students.length) {
-                setTeacherStatus('teacherStudentsMessage', 'الصق طالباً واحداً على الأقل بصيغة الرقم,الاسم.', 'invalid');
+                setTeacherStatus('teacherStudentsMessage', 'لم يتم التعرف على طلاب صالحين. انسخ عمودَي الرقم التدريبي والاسم من Excel والصقهما مباشرة.', 'invalid');
                 return;
             }
 
             setTeacherActionLock(lockKey, true);
-            setTeacherStatus('teacherStudentsMessage', 'جاري حفظ الطلاب دفعة واحدة...', 'waiting');
+            setTeacherStatus('teacherStudentsMessage', `تم التعرف على ${students.length} طالب. جاري الحفظ دفعة واحدة...`, 'waiting');
             try {
                 const result = await postAppsScriptBackgroundTask('bulkUpsertStudents', {
                     password: teacherDashboardPassword,
@@ -3683,8 +3705,12 @@
                 }
 
                 document.getElementById('studentsBulkInput').value = '';
+                updateBulkStudentsPreview();
                 await loadTeacherAdminData();
-                setTeacherStatus('teacherStudentsMessage', `تم حفظ الطلاب. جديد: ${result.inserted || 0} | تحديث: ${result.updated || 0}`, 'valid');
+                const ignoredMessage = analysis.skippedRows || analysis.duplicateCount
+                    ? ` | متجاهل: ${analysis.skippedRows + analysis.duplicateCount}`
+                    : '';
+                setTeacherStatus('teacherStudentsMessage', `تم حفظ الطلاب. جديد: ${result.inserted || 0} | تحديث: ${result.updated || 0}${ignoredMessage}`, 'valid');
             } catch (error) {
                 console.error('Bulk students error:', error);
                 setTeacherStatus('teacherStudentsMessage', error.message || 'تعذر حفظ الطلاب.', 'invalid');
@@ -3783,19 +3809,179 @@
             resetScheduleForm();
         }
 
-        function parseBulkStudentsInput(text) {
-            return String(text || '')
+        function normalizeBulkStudentHeader(value) {
+            return normalizeArabicDigits(String(value || ''))
+                .trim()
+                .toLocaleLowerCase('ar')
+                .replace(/[\s_\-./\\()[\]{}:،,]+/g, '');
+        }
+
+        function getBulkStudentHeaderKind(value) {
+            const normalized = normalizeBulkStudentHeader(value);
+            const idHeaders = new Set([
+                'id', 'studentid', 'traineeid', 'studentnumber', 'traineenumber',
+                'الرقمالتدريبي', 'رقمالمتدرب', 'رقمالمتدربة', 'رقمالطالب', 'رقمالطالبة',
+                'رقمالهوية', 'الرقم', 'كودالطالب'
+            ]);
+            const nameHeaders = new Set([
+                'name', 'studentname', 'traineename', 'fullname',
+                'الاسم', 'اسمالمتدرب', 'اسمالمتدربة', 'اسمالطالب', 'اسمالطالبة', 'الاسمالكامل'
+            ]);
+            if (idHeaders.has(normalized)) return 'id';
+            if (nameHeaders.has(normalized)) return 'name';
+            return '';
+        }
+
+        function splitBulkStudentRow(line) {
+            const value = String(line || '').trim();
+            if (!value) return [];
+            if (value.includes('\t')) return value.split('\t').map(part => part.trim());
+            if (/[|;؛]/.test(value)) return value.split(/[|;؛]/).map(part => part.trim());
+            if (/[,،]/.test(value)) return value.split(/[,،]/).map(part => part.trim());
+            if (/\s{2,}/.test(value)) return value.split(/\s{2,}/).map(part => part.trim());
+            return [value];
+        }
+
+        function normalizeBulkStudentIdCandidate(value) {
+            const normalized = normalizeArabicDigits(String(value || ''))
+                .replace(/[\u200e\u200f]/g, '')
+                .trim()
+                .replace(/^['’`]+/, '')
+                .replace(/\.0+$/, '');
+            if (!normalized || /[A-Za-z\u0600-\u06FF]/.test(normalized)) {
+                return '';
+            }
+            const traineeId = normalizeTraineeIdValue(normalized);
+            return traineeId.length >= 5 && traineeId.length <= 20 ? traineeId : '';
+        }
+
+        function findBulkStudentIdColumn(parts) {
+            let bestIndex = -1;
+            let bestScore = -Infinity;
+            parts.forEach((part, index) => {
+                const traineeId = normalizeBulkStudentIdCandidate(part);
+                if (!traineeId) return;
+                const score = (traineeId.length === 9 ? 100 : 50 - Math.abs(traineeId.length - 9)) - index * 0.01;
+                if (score > bestScore) {
+                    bestIndex = index;
+                    bestScore = score;
+                }
+            });
+            return bestIndex;
+        }
+
+        function normalizeBulkStudentNameCandidate(value) {
+            const name = String(value || '').replace(/\s+/g, ' ').trim();
+            if (!name || normalizeBulkStudentIdCandidate(name) || getBulkStudentHeaderKind(name)) {
+                return '';
+            }
+            return /[A-Za-z\u0600-\u06FF]/.test(name) ? name.slice(0, 160) : '';
+        }
+
+        function parseBulkStudentRow(parts, idColumn = -1, nameColumn = -1) {
+            if (!parts.length) return null;
+
+            if (idColumn >= 0 && nameColumn >= 0) {
+                const traineeId = normalizeBulkStudentIdCandidate(parts[idColumn]);
+                const name = normalizeBulkStudentNameCandidate(parts[nameColumn]);
+                return traineeId && name ? { traineeId, name } : null;
+            }
+
+            if (parts.length === 1) {
+                const tokens = String(parts[0] || '').trim().split(/\s+/);
+                const tokenIdIndex = findBulkStudentIdColumn(tokens);
+                if (tokenIdIndex < 0) return null;
+                const traineeId = normalizeBulkStudentIdCandidate(tokens[tokenIdIndex]);
+                const name = normalizeBulkStudentNameCandidate(tokens.filter((_, index) => index !== tokenIdIndex).join(' '));
+                return traineeId && name ? { traineeId, name } : null;
+            }
+
+            const detectedIdColumn = findBulkStudentIdColumn(parts);
+            if (detectedIdColumn < 0) return null;
+            const candidateOrder = [
+                detectedIdColumn + 1,
+                detectedIdColumn - 1,
+                ...parts.map((_, index) => index)
+            ];
+            let name = '';
+            for (const index of candidateOrder) {
+                if (index < 0 || index >= parts.length || index === detectedIdColumn) continue;
+                name = normalizeBulkStudentNameCandidate(parts[index]);
+                if (name) break;
+            }
+            const traineeId = normalizeBulkStudentIdCandidate(parts[detectedIdColumn]);
+            return traineeId && name ? { traineeId, name } : null;
+        }
+
+        function analyzeBulkStudentsInput(text) {
+            const lines = String(text || '')
                 .split(/\r?\n/)
                 .map(line => line.trim())
-                .filter(Boolean)
-                .map(line => {
-                    const parts = line.split(/[,;\t|]/).map(part => part.trim()).filter(Boolean);
-                    return {
-                        traineeId: normalizeTraineeIdValue(parts[0] || ''),
-                        name: parts.slice(1).join(' ')
-                    };
-                })
-                .filter(student => student.traineeId && student.name);
+                .filter(Boolean);
+            if (!lines.length) {
+                return { students: [], skippedRows: 0, duplicateCount: 0, headerDetected: false, totalRows: 0 };
+            }
+
+            const firstParts = splitBulkStudentRow(lines[0]);
+            const idHeaderColumn = firstParts.findIndex(part => getBulkStudentHeaderKind(part) === 'id');
+            const nameHeaderColumn = firstParts.findIndex(part => getBulkStudentHeaderKind(part) === 'name');
+            const headerDetected = idHeaderColumn >= 0 && nameHeaderColumn >= 0;
+            const uniqueStudents = new Map();
+            let skippedRows = 0;
+            let duplicateCount = 0;
+
+            lines.slice(headerDetected ? 1 : 0).forEach(line => {
+                const student = parseBulkStudentRow(
+                    splitBulkStudentRow(line),
+                    headerDetected ? idHeaderColumn : -1,
+                    headerDetected ? nameHeaderColumn : -1
+                );
+                if (!student) {
+                    skippedRows++;
+                    return;
+                }
+                if (uniqueStudents.has(student.traineeId)) {
+                    duplicateCount++;
+                    return;
+                }
+                uniqueStudents.set(student.traineeId, student);
+            });
+
+            return {
+                students: [...uniqueStudents.values()],
+                skippedRows,
+                duplicateCount,
+                headerDetected,
+                totalRows: lines.length - (headerDetected ? 1 : 0)
+            };
+        }
+
+        function parseBulkStudentsInput(text) {
+            return analyzeBulkStudentsInput(text).students;
+        }
+
+        function updateBulkStudentsPreview() {
+            const preview = document.getElementById('studentsBulkPreview');
+            if (!preview) return;
+            const text = document.getElementById('studentsBulkInput')?.value || '';
+            const analysis = analyzeBulkStudentsInput(text);
+            if (!String(text).trim()) {
+                preview.className = 'teacher-bulk-preview';
+                preview.textContent = 'يدعم أعمدة Excel المفصولة تلقائياً، مع أو بدون صف العناوين.';
+                return;
+            }
+            if (!analysis.students.length) {
+                preview.className = 'teacher-bulk-preview invalid';
+                preview.textContent = 'لم أتعرف على صفوف صالحة. تأكد أن كل صف يحتوي على رقم تدريبي واسم.';
+                return;
+            }
+
+            const details = [`تم التعرف على ${analysis.students.length} طالب`];
+            if (analysis.headerDetected) details.push('تم اكتشاف عناوين الأعمدة');
+            if (analysis.duplicateCount) details.push(`مكرر: ${analysis.duplicateCount}`);
+            if (analysis.skippedRows) details.push(`صفوف غير صالحة: ${analysis.skippedRows}`);
+            preview.className = 'teacher-bulk-preview valid';
+            preview.textContent = details.join(' | ');
         }
 
         async function postAppsScriptBackgroundTask(action, payload) {
