@@ -1150,6 +1150,13 @@
             max-width: 100%;
             max-height: 100%;
         }
+        .teacher-qr-code.verification-code {
+            border: 2px solid rgba(14, 90, 138, 0.28);
+            background: #ffffff;
+            box-shadow:
+                0 12px 28px rgba(16, 42, 67, 0.12),
+                inset 0 0 0 7px #edf5f8;
+        }
         .teacher-qr-empty {
             color: #7b8794;
             font-size: 14px;
@@ -1380,12 +1387,17 @@
         }
         .analytics-toolbar {
             display: grid;
-            grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.4fr) auto;
+            grid-template-columns: repeat(3, minmax(160px, 1fr));
             gap: 10px;
             align-items: end;
             margin-bottom: 14px;
         }
-        .analytics-summary,
+        .analytics-summary {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(120px, 1fr));
+            gap: 10px;
+            margin: 14px 0;
+        }
         .student-summary {
             display: grid;
             grid-template-columns: repeat(4, minmax(130px, 1fr));
@@ -1480,7 +1492,7 @@
         }
         .analytics-table {
             width: 100%;
-            min-width: 760px;
+            min-width: 1050px;
             border-collapse: collapse;
         }
         .analytics-table th,
@@ -1493,6 +1505,117 @@
         .analytics-table th {
             background: #edf5f8;
             color: #12324a;
+        }
+        .analytics-section-heading {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 20px 0 10px;
+        }
+        .analytics-section-heading h4 {
+            margin: 0;
+            color: #12324a;
+            font-size: 18px;
+        }
+        .analytics-section-heading p {
+            margin: 4px 0 0;
+            color: #607d8b;
+            font-size: 12px;
+        }
+        .analytics-section-heading > strong {
+            color: #0e5a8a;
+            white-space: nowrap;
+        }
+        .analytics-progress-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .analytics-progress-card {
+            min-width: 0;
+            padding: 14px;
+            border: 1px solid #dbe6ee;
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: 0 8px 20px rgba(16, 42, 67, 0.06);
+        }
+        .analytics-progress-card-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .analytics-progress-card-head h5 {
+            margin: 0;
+            color: #12324a;
+            font-size: 16px;
+        }
+        .analytics-progress-card-head p {
+            margin: 3px 0 0;
+            color: #607d8b;
+            font-size: 12px;
+        }
+        .analytics-progress-percent {
+            direction: ltr;
+            color: #0e5a8a;
+            font-size: 20px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .analytics-progress-track {
+            height: 10px;
+            margin: 12px 0;
+            border-radius: 5px;
+            background: #e5edf2;
+            overflow: hidden;
+        }
+        .analytics-progress-fill {
+            height: 100%;
+            border-radius: 5px;
+            background: #1f9d55;
+        }
+        .analytics-task-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin: 10px 0 12px;
+        }
+        .analytics-task {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            max-width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #dce6ed;
+            border-radius: 7px;
+            background: #f5f8fa;
+            color: #607d8b;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .analytics-task.completed {
+            border-color: #b8ddc4;
+            background: #edf9f1;
+            color: #176b35;
+        }
+        .analytics-progress-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 6px;
+            padding-top: 10px;
+            border-top: 1px solid #edf1f4;
+        }
+        .analytics-progress-metrics span {
+            color: #607d8b;
+            font-size: 11px;
+        }
+        .analytics-progress-metrics strong {
+            display: block;
+            margin-top: 2px;
+            color: #12324a;
+            font-size: 13px;
         }
         .student-dashboard-step.active-step {
             align-items: stretch;
@@ -1645,6 +1768,12 @@
             .student-exercise-list {
                 grid-template-columns: 1fr;
             }
+            .analytics-progress-grid {
+                grid-template-columns: minmax(0, 1fr);
+            }
+            .analytics-section-heading {
+                align-items: flex-start;
+            }
             .analytics-toolbar button {
                 width: 100%;
             }
@@ -1745,6 +1874,10 @@
             .teacher-filters {
                 grid-template-columns: 1fr 1fr;
             }
+            .analytics-toolbar,
+            .analytics-summary {
+                grid-template-columns: 1fr 1fr;
+            }
             .teacher-settings-grid {
                 grid-template-columns: 1fr 1fr;
             }
@@ -1829,7 +1962,7 @@
             <button onclick="retryLocationCheck()" id="retryButton" style="display:none">إعادة المحاولة</button>
         </div>
 
-        <!-- STEP 3: SCAN QR (ONLY IF ENABLED) -->
+        <!-- STEP 3: SCAN AZTEC VERIFICATION CODE (ONLY IF ENABLED) -->
         <div id="step3" class="step">
             <h2>امسح كود الحضور</h2>
             <div class="scanner-container">
@@ -1911,7 +2044,7 @@
                             <span class="teacher-toggle-switch"></span>
                         </label>
                         <label class="teacher-toggle">
-                            <span>QR Code</span>
+                            <span>رمز التحقق Aztec</span>
                             <input type="checkbox" id="adminQrToggle" onchange="markAdminSettingsDirty()">
                             <span class="teacher-toggle-switch"></span>
                         </label>
@@ -1997,7 +2130,7 @@
                             <div class="teacher-settings-note">لمقررات مهارات الطباعة: سمِّ الحقل الأول "السرعة" أو Speed/WPM، والحقل الثاني "الدقة" أو Accuracy. عند تفعيل التقرير ستُستخدم هذه القيم في مقارنة الطلاب ولوحة الطالب. إذا تركت خيارات الحقل الثالث فارغة، يبقى مربع نص.</div>
                         </div>
                     </div>
-                    <div class="teacher-settings-note">إعدادات GPS وQR وNFC والصيانة عامة. إعدادات النموذج والمرفق والملاحظة والحقول المخصصة تُضبط لكل دورة على حدة. الحقول المخصصة تظهر فقط إذا كتبت لها أسماء وفعلتها للدورة.</div>
+                    <div class="teacher-settings-note">إعدادات GPS ورمز التحقق Aztec وNFC والصيانة عامة. إعدادات النموذج والمرفق والملاحظة والحقول المخصصة تُضبط لكل دورة على حدة. الحقول المخصصة تظهر فقط إذا كتبت لها أسماء وفعلتها للدورة.</div>
                     <div id="teacherSettingsMessage" class="status-bar teacher-message waiting">جاري تحميل الإعدادات...</div>
                 </div>
 
@@ -2216,20 +2349,20 @@
                 </div>
 
                 <div class="teacher-block" data-teacher-block="qr">
-                    <h3>عرض QR كود</h3>
-                    <div class="teacher-block-note">هذه الشاشة مخصصة لعرض رموز QR للمتدربين عند تفعيل التحقق بواسطة QR. ابدأ الجلسة ثم اعرض الشاشة أمام الطلاب.</div>
+                    <h3>رموز الدخول والتحقق</h3>
+                    <div class="teacher-block-note">اعرض QR الثابت لفتح الموقع، ثم رمز Aztec المتغير الذي لا يقبله إلا ماسح التحقق داخل نموذج الحضور.</div>
                     <div class="teacher-qr-shell">
                         <div class="teacher-qr-toolbar">
                             <div class="teacher-qr-session-state">
                                 <span id="teacherQrSessionDot" class="teacher-qr-session-dot inactive"></span>
-                                <span id="teacherQrSessionText">جلسة QR متوقفة</span>
+                                <span id="teacherQrSessionText">جلسة التحقق متوقفة</span>
                             </div>
                             <div class="teacher-actions">
-                                <button type="button" id="teacherQrToggleButton" onclick="toggleTeacherQrSession()">بدء جلسة QR</button>
+                                <button type="button" id="teacherQrToggleButton" onclick="toggleTeacherQrSession()">بدء جلسة التحقق</button>
                                 <button type="button" id="teacherQrRefreshButton" class="teacher-secondary-button" onclick="refreshTeacherQrSession()" disabled>تحديث الرمز الآن</button>
                             </div>
                         </div>
-                        <div id="teacherQrConfigBadge" class="teacher-qr-config-badge">QR مفعّل حالياً في الإعدادات</div>
+                        <div id="teacherQrConfigBadge" class="teacher-qr-config-badge">التحقق بواسطة Aztec مفعّل حالياً</div>
                         <div class="teacher-qr-stage">
                             <div class="teacher-qr-card">
                                 <h4>الخطوة الأولى</h4>
@@ -2244,24 +2377,24 @@
                             </div>
                             <div class="teacher-qr-card">
                                 <h4>الخطوة الثانية</h4>
-                                <p>بعد فتح النموذج، امسح رمز التحقق المتغير لإكمال شرط QR عند تفعيله.</p>
-                                <div id="teacherDynamicQrCode" class="teacher-qr-code">
+                                <p>بعد فتح النموذج، استخدم ماسح الحضور لقراءة رمز Aztec المتغير وإكمال التحقق.</p>
+                                <div id="teacherDynamicQrCode" class="teacher-qr-code verification-code">
                                     <div class="teacher-qr-empty">ابدأ الجلسة لعرض رمز التحقق المتغير.</div>
                                 </div>
                                 <div class="teacher-qr-meta">
                                     <span id="teacherQrSessionIdPill" class="teacher-qr-pill">لا توجد جلسة</span>
-                                    <span id="teacherQrRefreshPill" class="teacher-qr-pill">يتحدث كل 10 ثوانٍ</span>
+                                    <span id="teacherQrRefreshPill" class="teacher-qr-pill">Aztec · يتحدث كل 10 ثوانٍ</span>
                                 </div>
                                 <div id="teacherQrFooter" class="teacher-qr-footer">عند إيقاف الجلسة يختفي رمز التحقق مباشرة.</div>
                             </div>
                         </div>
-                        <div id="teacherQrMessage" class="status-bar teacher-message waiting">جاهز لبدء جلسة QR جديدة.</div>
+                        <div id="teacherQrMessage" class="status-bar teacher-message waiting">جاهز لبدء جلسة تحقق جديدة.</div>
                     </div>
                 </div>
 
                 <div class="teacher-block" data-teacher-block="analytics">
-                    <h3>تحليلات مهارات الطباعة</h3>
-                    <div class="teacher-block-note">تقارن هذه اللوحة سرعة الطباعة ودقتها من نتائج النموذج المساند للدورات التي فُعّل لها تقرير الطالب. السرعة تُعرض بالكلمات في الدقيقة، والدقة كنسبة مئوية.</div>
+                    <h3>متابعة تقدم الطلاب</h3>
+                    <div class="teacher-block-note">تابع إنجاز تمارين مهارات الطباعة وقارن السرعة والدقة للدورات التي فُعّل لها تقرير الطالب. أسماء التمارين تُقرأ من خيارات الحقل المخصص 3.</div>
                     <div class="analytics-toolbar">
                         <label class="teacher-field">
                             الفترة
@@ -2277,6 +2410,25 @@
                                 <option value="">كل الدورات</option>
                             </select>
                         </label>
+                        <label class="teacher-field">
+                            الطالب
+                            <input type="search" id="analyticsStudentSearch" placeholder="الاسم أو الرقم التدريبي" oninput="applyTeacherAnalyticsFilters()">
+                        </label>
+                        <label class="teacher-field">
+                            حالة التقدم
+                            <select id="analyticsProgressFilter" onchange="applyTeacherAnalyticsFilters()">
+                                <option value="">كل الحالات</option>
+                                <option value="complete">أكمل جميع التمارين</option>
+                                <option value="in-progress">بدأ ولم يكمل</option>
+                                <option value="not-started">لم يبدأ</option>
+                            </select>
+                        </label>
+                        <label class="teacher-field">
+                            أنجز التمرين
+                            <select id="analyticsExerciseFilter" onchange="applyTeacherAnalyticsFilters()">
+                                <option value="">كل التمارين</option>
+                            </select>
+                        </label>
                         <button type="button" onclick="loadTeacherAnalytics()">تحديث المقارنة</button>
                     </div>
                     <div id="analyticsMessage" class="status-bar teacher-message waiting">اختر الفترة ثم حدّث المقارنة.</div>
@@ -2285,6 +2437,7 @@
                         <div class="analytics-stat"><strong id="analyticsSubmissionCount">0</strong><span>نتائج طباعة</span></div>
                         <div class="analytics-stat"><strong id="analyticsAttendanceAverage">-</strong><span>متوسط الدقة</span></div>
                         <div class="analytics-stat"><strong id="analyticsSpeedAverage">-</strong><span>متوسط سرعة الطباعة</span></div>
+                        <div class="analytics-stat"><strong id="analyticsCompletionAverage">-</strong><span>إنجاز التمارين</span></div>
                     </div>
                     <div class="analytics-grid">
                         <section class="analytics-chart">
@@ -2296,6 +2449,11 @@
                             <div id="analyticsSpeedBars" class="analytics-bars"></div>
                         </section>
                     </div>
+                    <div class="analytics-section-heading">
+                        <div><h4>تقدم الطلاب في التمارين</h4><p>أسماء التمارين مأخوذة من خيارات الحقل المخصص 3 للدورة.</p></div>
+                        <strong id="analyticsFilteredCount">0 طالب</strong>
+                    </div>
+                    <div id="analyticsProgressCards" class="analytics-progress-grid"></div>
                     <div id="analyticsTable" class="analytics-table-wrap"></div>
                 </div>
 
@@ -2390,7 +2548,6 @@
     </div>
 
     <audio id="successSound" src="https://raw.githubusercontent.com/kbm4biz/att-qrc/main/assets/notification.wav" preload="auto"></audio>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
 
     <script>
@@ -2440,6 +2597,7 @@
         const SECRET_PHRASE = 'SCHOOL_SECRET_2026';
         const TEACHER_QR_REFRESH_INTERVAL = 10000;
         const TEACHER_QR_TIME_API_URL = 'https://timeapi.io/api/Time/current/zone?timeZone=Asia/Riyadh';
+        const ZXING_LIBRARY_URL = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.23.0/umd/index.min.js';
         const SESSION_DURATION = 12 * 60 * 60 * 1000;
         const MAX_ATTEMPTS = 5;
         const REDIRECT_URL = 'https://tvtc.gov.sa/ar/Pages/default1.aspx';
@@ -2456,6 +2614,14 @@
         let idVerificationInProgress = false;
         let scannerStartupInProgress = false;
         let scannerActivationToken = 0;
+        let verificationCodeReader = null;
+        let verificationDecodeHints = null;
+        let verificationScanCanvas = null;
+        let verificationGrayscaleBuffer = null;
+        let verificationLastScanAt = 0;
+        let verificationLastRejectedData = '';
+        let verificationLastRejectedAt = 0;
+        let zxingLibraryPromise = null;
         let nfcTapData = null;
         let nfcTapError = '';
         let nfcTapUsedForThisAttempt = false;
@@ -2484,6 +2650,7 @@
         let teacherQrInterval = null;
         let teacherQrSessionId = '';
         let teacherQrBusy = false;
+        let teacherAnalyticsResult = { rows: [], summary: {} };
         let courseFormSettingsDrafts = {};
         let courseFormSettingsDirtyIds = new Set();
         let adminSelectedSupportCourseId = '';
@@ -2768,14 +2935,14 @@
 
             const tabDefinitions = [
                 { id: 'dashboard', label: 'لوحة المتابعة', title: 'نتائج الحضور', nodes: [filters, message, summary, listTools, rows] },
-                { id: 'analytics', label: 'تحليلات الطباعة', title: 'تحليلات مهارات الطباعة', nodes: [getTeacherBlock('analytics')] },
+                { id: 'analytics', label: 'تقدم الطلاب', title: 'متابعة تقدم الطلاب', nodes: [getTeacherBlock('analytics')] },
                 { id: 'settings', label: 'الإعدادات', title: 'إعدادات النموذج', nodes: [settingsBlock] },
                 { id: 'setup', label: 'التهيئة', title: 'تهيئة البيانات', nodes: [getTeacherBlock('setup')] },
                 { id: 'courses', label: 'الدورات', title: 'إدارة الدورات', nodes: [getTeacherBlock('courses')] },
                 { id: 'locations', label: 'المواقع', title: 'إدارة المواقع', nodes: [getTeacherBlock('locations')] },
                 { id: 'students', label: 'الطلاب', title: 'إدارة الطلاب', nodes: [getTeacherBlock('students')] },
                 { id: 'schedules', label: 'الجداول', title: 'إدارة الجداول', nodes: [getTeacherBlock('schedules')] },
-                { id: 'qr', label: 'عرض QR كود', title: 'عرض QR كود', nodes: [getTeacherBlock('qr')] }
+                { id: 'qr', label: 'رموز التحقق', title: 'رموز الدخول والتحقق', nodes: [getTeacherBlock('qr')] }
             ];
 
             tabDefinitions.forEach(tab => {
@@ -2907,10 +3074,10 @@
                 sessionDot.classList.toggle('inactive', !isActive);
             }
             if (sessionText) {
-                sessionText.textContent = isActive ? 'جلسة QR نشطة الآن' : 'جلسة QR متوقفة';
+                sessionText.textContent = isActive ? 'جلسة التحقق نشطة الآن' : 'جلسة التحقق متوقفة';
             }
             if (toggleButton) {
-                toggleButton.textContent = isActive ? 'إيقاف جلسة QR' : 'بدء جلسة QR';
+                toggleButton.textContent = isActive ? 'إيقاف جلسة التحقق' : 'بدء جلسة التحقق';
             }
             if (refreshButton) {
                 refreshButton.disabled = !isActive || teacherQrBusy;
@@ -2934,11 +3101,49 @@
 
             if (ENABLE_QR_VALIDATION) {
                 badge.classList.remove('off');
-                badge.textContent = 'QR مفعّل حالياً في الإعدادات';
+                badge.textContent = 'التحقق بواسطة Aztec مفعّل حالياً';
             } else {
                 badge.classList.add('off');
-                badge.textContent = 'QR متوقف حالياً في الإعدادات - يمكن تجهيز الجلسة مسبقاً عند الحاجة';
+                badge.textContent = 'التحقق بواسطة Aztec متوقف - يمكن تجهيز الجلسة مسبقاً';
             }
+        }
+
+        function loadZxingLibrary() {
+            if (window.ZXing?.AztecCodeWriter && window.ZXing?.AztecCodeReader) {
+                return Promise.resolve(window.ZXing);
+            }
+            if (zxingLibraryPromise) {
+                return zxingLibraryPromise;
+            }
+
+            zxingLibraryPromise = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                let settled = false;
+                const timeout = setTimeout(() => finish(false), 15000);
+
+                function finish(success) {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timeout);
+                    if (success && window.ZXing?.AztecCodeWriter && window.ZXing?.AztecCodeReader) {
+                        resolve(window.ZXing);
+                        return;
+                    }
+                    script.remove();
+                    zxingLibraryPromise = null;
+                    reject(new Error('تعذر تحميل قارئ رمز التحقق. تحقق من الاتصال ثم حاول مرة أخرى.'));
+                }
+
+                script.src = ZXING_LIBRARY_URL;
+                script.async = true;
+                script.crossOrigin = 'anonymous';
+                script.dataset.attendanceZxing = 'true';
+                script.onload = () => finish(true);
+                script.onerror = () => finish(false);
+                document.head.appendChild(script);
+            });
+
+            return zxingLibraryPromise;
         }
 
         function renderTeacherQrCode(containerId, text, size = 212) {
@@ -2962,6 +3167,66 @@
                 correctLevel: QRCode.CorrectLevel.H
             });
             return true;
+        }
+
+        function renderTeacherAztecCode(containerId, text, size = 212) {
+            const container = document.getElementById(containerId);
+            if (!container || !window.ZXing?.AztecCodeWriter) {
+                return false;
+            }
+
+            try {
+                const hints = new Map();
+                hints.set(ZXing.EncodeHintType.ERROR_CORRECTION, 40);
+                const matrix = new ZXing.AztecCodeWriter().encodeWithHints(
+                    text,
+                    ZXing.BarcodeFormat.AZTEC,
+                    0,
+                    0,
+                    hints
+                );
+                const moduleCount = matrix.getWidth();
+                const quietZone = 3;
+                const cellSize = Math.max(2, Math.floor(size / (moduleCount + quietZone * 2)));
+                const renderedSize = cellSize * (moduleCount + quietZone * 2);
+                const offset = Math.floor((size - renderedSize) / 2);
+                const pixelRatio = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                if (!context) return false;
+
+                canvas.width = Math.round(size * pixelRatio);
+                canvas.height = Math.round(size * pixelRatio);
+                canvas.style.width = `${size}px`;
+                canvas.style.height = `${size}px`;
+                canvas.setAttribute('role', 'img');
+                canvas.setAttribute('aria-label', 'رمز Aztec المتغير للتحقق');
+                context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+                context.imageSmoothingEnabled = false;
+                context.fillStyle = '#ffffff';
+                context.fillRect(0, 0, size, size);
+                context.fillStyle = '#102a43';
+
+                for (let y = 0; y < moduleCount; y += 1) {
+                    for (let x = 0; x < moduleCount; x += 1) {
+                        if (matrix.get(x, y)) {
+                            context.fillRect(
+                                offset + (x + quietZone) * cellSize,
+                                offset + (y + quietZone) * cellSize,
+                                cellSize,
+                                cellSize
+                            );
+                        }
+                    }
+                }
+
+                container.innerHTML = '';
+                container.appendChild(canvas);
+                return true;
+            } catch (error) {
+                console.error('Aztec rendering error:', error);
+                return false;
+            }
         }
 
         function renderTeacherStaticQr() {
@@ -3003,6 +3268,11 @@
             };
         }
 
+        function buildTeacherAztecToken(timestampWindow) {
+            const signature = simpleHash(`${timestampWindow}${teacherQrSessionId}${SECRET_PHRASE}`);
+            return `A1.${timestampWindow.toString(36)}.${teacherQrSessionId}.${signature}`;
+        }
+
         async function generateTeacherDynamicQr() {
             if (!teacherQrSessionId || teacherQrBusy) {
                 return;
@@ -3014,11 +3284,11 @@
             try {
                 const accurateTime = await fetchTeacherQrTime();
                 const timestampWindow = Math.floor(accurateTime.getTime() / 10000);
-                const payload = buildTeacherQrTokenPayload(timestampWindow);
-                const token = btoa(JSON.stringify(payload)).replace(/=+$/, '');
-                const rendered = renderTeacherQrCode('teacherDynamicQrCode', token, 212);
+                const token = buildTeacherAztecToken(timestampWindow);
+                await loadZxingLibrary();
+                const rendered = renderTeacherAztecCode('teacherDynamicQrCode', token, 212);
                 if (!rendered) {
-                    throw new Error('تعذر رسم رمز QR.');
+                    throw new Error('تعذر رسم رمز Aztec للتحقق.');
                 }
 
                 const refreshPill = document.getElementById('teacherQrRefreshPill');
@@ -3028,13 +3298,13 @@
 
                 setTeacherQrMessage(
                     ENABLE_QR_VALIDATION
-                        ? 'رمز التحقق جاهز للعرض ويتحدث كل 10 ثوانٍ.'
-                        : 'تم توليد رمز التحقق، لكن خيار QR ما يزال متوقفاً في الإعدادات.',
+                        ? 'رمز Aztec جاهز ويتحدث كل 10 ثوانٍ. ماسح الحضور وحده يقبله.'
+                        : 'تم توليد رمز Aztec، لكن خيار التحقق ما يزال متوقفاً في الإعدادات.',
                     ENABLE_QR_VALIDATION ? 'valid' : 'waiting'
                 );
             } catch (error) {
                 console.error('Teacher dynamic QR generation error:', error);
-                setTeacherQrMessage(error.message || 'تعذر توليد رمز QR حالياً.', 'invalid');
+                setTeacherQrMessage(error.message || 'تعذر توليد رمز Aztec حالياً.', 'invalid');
             } finally {
                 teacherQrBusy = false;
                 updateTeacherQrSessionUi();
@@ -3042,7 +3312,7 @@
         }
 
         function startTeacherQrSession() {
-            teacherQrSessionId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+            teacherQrSessionId = `${Date.now().toString(36).slice(-4)}${Math.random().toString(36).slice(2, 6)}`;
             clearInterval(teacherQrInterval);
             teacherQrInterval = setInterval(generateTeacherDynamicQr, TEACHER_QR_REFRESH_INTERVAL);
             updateTeacherQrSessionUi();
@@ -3056,7 +3326,7 @@
             teacherQrBusy = false;
             clearTeacherDynamicQr();
             updateTeacherQrSessionUi();
-            setTeacherQrMessage('تم إيقاف جلسة QR الحالية.', 'waiting');
+            setTeacherQrMessage('تم إيقاف جلسة التحقق الحالية.', 'waiting');
         }
 
         function toggleTeacherQrSession() {
@@ -3070,7 +3340,7 @@
 
         function refreshTeacherQrSession() {
             if (!teacherQrSessionId) {
-                setTeacherQrMessage('ابدأ جلسة QR أولاً حتى يظهر رمز التحقق.', 'invalid');
+                setTeacherQrMessage('ابدأ جلسة التحقق أولاً حتى يظهر رمز Aztec.', 'invalid');
                 return;
             }
             generateTeacherDynamicQr();
@@ -5087,12 +5357,67 @@
         }
 
         function renderTeacherAnalytics(result) {
-            const rows = Array.isArray(result.rows) ? result.rows : [];
-            const summary = result.summary || {};
-            setText('analyticsStudentCount', summary.students || 0);
-            setText('analyticsSubmissionCount', summary.submissions || 0);
-            setText('analyticsAttendanceAverage', formatTypingAccuracy(summary.averageTypingAccuracy));
-            setText('analyticsSpeedAverage', formatTypingSpeed(summary.averageTypingSpeed));
+            teacherAnalyticsResult = {
+                ...result,
+                rows: Array.isArray(result.rows) ? result.rows : [],
+                summary: result.summary || {}
+            };
+            populateTeacherAnalyticsExerciseOptions(teacherAnalyticsResult.rows);
+            applyTeacherAnalyticsFilters();
+        }
+
+        function populateTeacherAnalyticsExerciseOptions(rows) {
+            const select = document.getElementById('analyticsExerciseFilter');
+            if (!select) return;
+            const selected = select.value;
+            const names = new Map();
+            rows.forEach(row => {
+                (Array.isArray(row.exercises) ? row.exercises : []).forEach(exercise => {
+                    const name = String(exercise?.name || '').trim();
+                    const key = normalizeTeacherSearchValue(name);
+                    if (key && !names.has(key)) names.set(key, name);
+                });
+            });
+            select.innerHTML = '<option value="">كل التمارين</option>';
+            [...names.entries()]
+                .sort((left, right) => left[1].localeCompare(right[1], 'ar'))
+                .forEach(([key, name]) => {
+                    const option = document.createElement('option');
+                    option.value = key;
+                    option.textContent = name;
+                    select.appendChild(option);
+                });
+            if ([...select.options].some(option => option.value === selected)) {
+                select.value = selected;
+            }
+        }
+
+        function applyTeacherAnalyticsFilters() {
+            const allRows = Array.isArray(teacherAnalyticsResult.rows) ? teacherAnalyticsResult.rows : [];
+            const query = normalizeTeacherSearchValue(document.getElementById('analyticsStudentSearch')?.value || '');
+            const progressFilter = document.getElementById('analyticsProgressFilter')?.value || '';
+            const exerciseFilter = document.getElementById('analyticsExerciseFilter')?.value || '';
+
+            const rows = allRows.filter(row => {
+                const haystack = normalizeTeacherSearchValue([row.name, row.traineeId, row.courseName].filter(Boolean).join(' '));
+                if (query && !haystack.includes(query)) return false;
+
+                const total = Number(row.totalExercises || 0);
+                const completed = Number(row.completedExercises || 0);
+                if (progressFilter === 'complete' && !(total > 0 && completed >= total)) return false;
+                if (progressFilter === 'in-progress' && !(completed > 0 && (total === 0 || completed < total))) return false;
+                if (progressFilter === 'not-started' && completed !== 0) return false;
+
+                if (exerciseFilter) {
+                    const completedSelectedExercise = (Array.isArray(row.exercises) ? row.exercises : []).some(exercise =>
+                        exercise.completed && normalizeTeacherSearchValue(exercise.name) === exerciseFilter
+                    );
+                    if (!completedSelectedExercise) return false;
+                }
+                return true;
+            });
+
+            renderTeacherAnalyticsSummary(rows);
 
             const accuracyRows = rows
                 .filter(row => row.averageTypingAccuracy !== null && Number.isFinite(Number(row.averageTypingAccuracy)))
@@ -5104,7 +5429,33 @@
                 .slice(0, 12);
             renderAnalyticsBars('analyticsAttendanceBars', accuracyRows, row => Number(row.averageTypingAccuracy), row => formatTypingAccuracy(row.averageTypingAccuracy), false);
             renderAnalyticsBars('analyticsSpeedBars', speedRows, row => Number(row.averageTypingSpeed), row => formatTypingSpeed(row.averageTypingSpeed), true);
+            renderAnalyticsProgressCards(rows);
             renderAnalyticsTable(rows);
+        }
+
+        function renderTeacherAnalyticsSummary(rows) {
+            const speedValues = rows
+                .filter(row => row.averageTypingSpeed !== null && row.averageTypingSpeed !== undefined)
+                .map(row => Number(row.averageTypingSpeed))
+                .filter(Number.isFinite);
+            const accuracyValues = rows
+                .filter(row => row.averageTypingAccuracy !== null && row.averageTypingAccuracy !== undefined)
+                .map(row => Number(row.averageTypingAccuracy))
+                .filter(Number.isFinite);
+            const totalExercises = rows.reduce((total, row) => total + Number(row.totalExercises || 0), 0);
+            const completedExercises = rows.reduce((total, row) => total + Number(row.completedExercises || 0), 0);
+            const completionPercent = totalExercises ? Math.round(completedExercises / totalExercises * 100) : 0;
+
+            setText('analyticsStudentCount', rows.length);
+            setText('analyticsSubmissionCount', rows.reduce((total, row) => total + Number(row.submissionCount || 0), 0));
+            setText('analyticsAttendanceAverage', formatTypingAccuracy(averageAnalyticsValues(accuracyValues)));
+            setText('analyticsSpeedAverage', formatTypingSpeed(averageAnalyticsValues(speedValues)));
+            setText('analyticsCompletionAverage', totalExercises ? `${completionPercent}%` : '-');
+            setText('analyticsFilteredCount', `${rows.length} طالب`);
+        }
+
+        function averageAnalyticsValues(values) {
+            return values.length ? values.reduce((total, value) => total + value, 0) / values.length : null;
         }
 
         function renderAnalyticsBars(containerId, rows, valueGetter, labelGetter, inverse) {
@@ -5128,6 +5479,53 @@
             }).join('');
         }
 
+        function renderAnalyticsProgressCards(rows) {
+            const container = document.getElementById('analyticsProgressCards');
+            if (!container) return;
+            if (!rows.length) {
+                container.innerHTML = '<div class="teacher-empty">لا يوجد طلاب مطابقون للفلاتر الحالية.</div>';
+                return;
+            }
+
+            container.innerHTML = rows.map(row => {
+                const exercises = Array.isArray(row.exercises) ? row.exercises : [];
+                const total = Number(row.totalExercises || exercises.length || 0);
+                const completed = Number(row.completedExercises || exercises.filter(exercise => exercise.completed).length || 0);
+                const percent = total ? Math.max(0, Math.min(100, Math.round(completed / total * 100))) : 0;
+                const tasks = exercises.length
+                    ? exercises.map(exercise => {
+                        const state = exercise.completed ? 'completed' : '';
+                        const symbol = exercise.completed ? '✓' : '○';
+                        const attempts = Number(exercise.submissionCount || 0);
+                        const title = exercise.completed
+                            ? `${attempts} محاولة، أفضل سرعة ${formatTypingSpeed(exercise.bestTypingSpeed)}، أفضل دقة ${formatTypingAccuracy(exercise.bestTypingAccuracy)}`
+                            : 'متبقٍ';
+                        return `<span class="analytics-task ${state}" title="${escapeHtml(title)}"><b>${symbol}</b>${escapeHtml(exercise.name || 'تمرين دون اسم')}</span>`;
+                    }).join('')
+                    : '<span class="analytics-task">لم تُضف تمارين لهذه الدورة</span>';
+
+                return `
+                    <article class="analytics-progress-card">
+                        <div class="analytics-progress-card-head">
+                            <div>
+                                <h5>${escapeHtml(row.name || '-')}</h5>
+                                <p>${escapeHtml(row.traineeId || '')} · ${escapeHtml(row.courseName || '-')}</p>
+                            </div>
+                            <div class="analytics-progress-percent">${total ? `${percent}%` : '-'}</div>
+                        </div>
+                        <div class="analytics-progress-track" aria-label="أنجز ${completed} من ${total}">
+                            <div class="analytics-progress-fill" style="width:${percent}%"></div>
+                        </div>
+                        <div class="analytics-task-list">${tasks}</div>
+                        <div class="analytics-progress-metrics">
+                            <span>التمارين<strong>${completed} من ${total}</strong></span>
+                            <span>أفضل سرعة<strong>${escapeHtml(formatTypingSpeed(row.bestTypingSpeed))}</strong></span>
+                            <span>متوسط الدقة<strong>${escapeHtml(formatTypingAccuracy(row.averageTypingAccuracy))}</strong></span>
+                        </div>
+                    </article>`;
+            }).join('');
+        }
+
         function renderAnalyticsTable(rows) {
             const container = document.getElementById('analyticsTable');
             if (!container) return;
@@ -5137,15 +5535,17 @@
             }
             container.innerHTML = `
                 <table class="analytics-table">
-                    <thead><tr><th>الطالب</th><th>الدورة</th><th>النتائج</th><th>متوسط السرعة</th><th>أفضل سرعة</th><th>متوسط الدقة</th><th>آخر نتيجة</th></tr></thead>
+                    <thead><tr><th>الطالب</th><th>الدورة</th><th>تقدم التمارين</th><th>النتائج</th><th>متوسط السرعة</th><th>أفضل سرعة</th><th>متوسط الدقة</th><th>أفضل دقة</th><th>آخر نتيجة</th></tr></thead>
                     <tbody>${rows.map(row => `
                         <tr>
                             <td><strong>${escapeHtml(row.name || '-')}</strong><br><span>${escapeHtml(row.traineeId || '')}</span></td>
                             <td>${escapeHtml(row.courseName || '-')}</td>
+                            <td><strong>${Number(row.completedExercises || 0)} من ${Number(row.totalExercises || 0)}</strong><br><span>${Number(row.totalExercises || 0) ? `${Number(row.progressPercent || 0)}%` : 'دون تمارين'}</span></td>
                             <td>${Number(row.submissionCount || 0)}</td>
                             <td>${escapeHtml(formatTypingSpeed(row.averageTypingSpeed))}</td>
                             <td>${escapeHtml(formatTypingSpeed(row.bestTypingSpeed))}</td>
                             <td>${escapeHtml(formatTypingAccuracy(row.averageTypingAccuracy))}</td>
+                            <td>${escapeHtml(formatTypingAccuracy(row.bestTypingAccuracy))}</td>
                             <td>${escapeHtml(row.lastSubmission || '-')}</td>
                         </tr>`).join('')}</tbody>
                 </table>`;
@@ -5240,7 +5640,7 @@
         function formatGateSummary(row) {
             return [
                 `GPS: ${formatGateStatus(row.gpsStatus)}`,
-                `QR: ${formatGateStatus(row.qrStatus)}`,
+                `Aztec: ${formatGateStatus(row.qrStatus)}`,
                 `NFC: ${formatGateStatus(row.nfcStatus)}`
             ].join(' | ');
         }
@@ -5314,7 +5714,7 @@
                 return;
             }
 
-            const headers = ['التاريخ', 'الوقت', 'الحالة', 'الرقم التدريبي', 'الاسم', 'البرنامج', 'اللقاء', 'GPS', 'QR', 'NFC', 'الجهاز', 'المرفق', 'الملاحظة', 'الحقول المخصصة'];
+            const headers = ['التاريخ', 'الوقت', 'الحالة', 'الرقم التدريبي', 'الاسم', 'البرنامج', 'اللقاء', 'GPS', 'Aztec', 'NFC', 'الجهاز', 'المرفق', 'الملاحظة', 'الحقول المخصصة'];
             const lines = [
                 headers,
                 ...teacherLastRows.map(row => [
@@ -6243,7 +6643,7 @@
             supportingFormData = null;
             setPreflightStatus(
                 ENABLE_QR_VALIDATION
-                    ? 'تم التحقق من رمز QR'
+                    ? 'تم التحقق من الرمز الخاص'
                     : 'جاري إكمال تسجيل الحضور',
                 'جاري إكمال تسجيل الحضور، لا تغلق الصفحة.'
             );
@@ -6757,7 +7157,7 @@
                 .filter(meeting => meeting.meetingId && meeting.date && meeting.startClass && meeting.endClass);
         }
 
-        // ================== STEP 3: SCAN QR ================== //
+        // ================== STEP 3: SCAN AZTEC VERIFICATION CODE ================== //
         async function toggleScanner() {
             if (scannerStartupInProgress) {
                 return;
@@ -6780,6 +7180,44 @@
             scanStatus.textContent = message;
         }
 
+        function initializeVerificationCodeReader() {
+            if (verificationCodeReader || !window.ZXing?.AztecCodeReader) {
+                return;
+            }
+            verificationDecodeHints = new Map();
+            verificationDecodeHints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+            verificationCodeReader = new ZXing.AztecCodeReader();
+        }
+
+        function decodeAztecFromCanvas(canvas) {
+            if (!verificationCodeReader || !canvas) {
+                return null;
+            }
+
+            const context = canvas.getContext('2d', { willReadFrequently: true });
+            const image = context.getImageData(0, 0, canvas.width, canvas.height);
+            const pixelCount = canvas.width * canvas.height;
+            if (!verificationGrayscaleBuffer || verificationGrayscaleBuffer.length !== pixelCount) {
+                verificationGrayscaleBuffer = new Uint8ClampedArray(pixelCount);
+            }
+
+            for (let sourceIndex = 0, targetIndex = 0; targetIndex < pixelCount; sourceIndex += 4, targetIndex += 1) {
+                verificationGrayscaleBuffer[targetIndex] = (
+                    image.data[sourceIndex] +
+                    image.data[sourceIndex + 1] * 2 +
+                    image.data[sourceIndex + 2]
+                ) >> 2;
+            }
+
+            const luminance = new ZXing.RGBLuminanceSource(
+                verificationGrayscaleBuffer,
+                canvas.width,
+                canvas.height
+            );
+            const bitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminance));
+            return verificationCodeReader.decode(bitmap, verificationDecodeHints);
+        }
+
         async function startScanner(options = {}) {
             const autoStart = Boolean(options?.auto);
             if (scannerActive || scannerStartupInProgress) {
@@ -6795,8 +7233,8 @@
             const activationToken = ++scannerActivationToken;
             scannerStartupInProgress = true;
             controlBtn.disabled = true;
-            controlBtn.textContent = 'جاري فتح الكاميرا...';
-            setScanStatus('جاري فتح الكاميرا...', 'waiting');
+            controlBtn.textContent = 'جاري تجهيز الماسح...';
+            setScanStatus('جاري تجهيز قارئ رمز التحقق...', 'waiting');
 
             function finalizeScannerReady() {
                 if (activationToken !== scannerActivationToken || scannerActive) {
@@ -6811,11 +7249,17 @@
                 scannerActive = true;
                 controlBtn.disabled = false;
                 controlBtn.textContent = 'إيقاف الماسح';
-                setScanStatus('وجّه الكاميرا نحو رمز QR الآن.', 'waiting');
+                setScanStatus('وجّه الكاميرا نحو رمز Aztec المتغير الآن.', 'waiting');
                 scanFrame();
             }
 
             try {
+                await loadZxingLibrary();
+                initializeVerificationCodeReader();
+                if (!verificationCodeReader) {
+                    throw new Error('تعذر تهيئة قارئ Aztec.');
+                }
+
                 let stream = null;
                 try {
                     stream = await navigator.mediaDevices.getUserMedia({
@@ -6871,7 +7315,9 @@
                 controlBtn.disabled = false;
                 controlBtn.textContent = 'بدء الماسح';
                 showError(
-                    autoStart
+                    /Aztec|قارئ رمز التحقق|ZXing/i.test(error?.message || '')
+                        ? (error.message || 'تعذر تجهيز قارئ رمز التحقق.')
+                        : autoStart
                         ? 'اسمح للكاميرا ثم اضغط "بدء الماسح" للمتابعة.'
                         : 'يجب السماح بالوصول للكاميرا',
                     document.getElementById('scanStatus')
@@ -6905,6 +7351,9 @@
             }
 
             scannerActive = false;
+            verificationLastScanAt = 0;
+            verificationLastRejectedData = '';
+            verificationLastRejectedAt = 0;
             const controlBtn = document.getElementById('controlBtn');
             if (controlBtn) {
                 controlBtn.disabled = false;
@@ -6918,29 +7367,47 @@
         async function scanFrame() {
             if (!scannerActive || qrCompletionInProgress) return;
 
+            const now = performance.now();
+            if (now - verificationLastScanAt < 160) {
+                requestAnimationFrame(scanFrame);
+                return;
+            }
+            verificationLastScanAt = now;
+
             const video = document.getElementById('video-preview');
             if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
                 requestAnimationFrame(scanFrame);
                 return;
             }
 
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            verificationScanCanvas = verificationScanCanvas || document.createElement('canvas');
+            const canvas = verificationScanCanvas;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const scale = Math.min(1, 720 / Math.max(video.videoWidth, video.videoHeight));
+            const targetWidth = Math.max(1, Math.round(video.videoWidth * scale));
+            const targetHeight = Math.max(1, Math.round(video.videoHeight * scale));
+            if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+            }
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            let verificationData = '';
+            try {
+                const result = decodeAztecFromCanvas(canvas);
+                if (result?.getBarcodeFormat?.() === ZXing.BarcodeFormat.AZTEC) {
+                    verificationData = result.getText() || '';
+                }
+            } catch (error) {
+                // A frame without a complete Aztec symbol is expected while aiming the camera.
+            }
 
-            if (code) {
-                const isValid = await validateQRData(code.data);
+            if (verificationData) {
+                const isValid = await validateQRData(verificationData);
                 if (isValid) {
-                    // QR is valid - complete attendance
                     qrCompletionInProgress = true;
                     qrValidationPassed = true;
-                    setScanStatus('تم التحقق من QR. جاري تسجيل الحضور، لا تغلق الصفحة.', 'valid');
+                    setScanStatus('تم التحقق من الرمز الخاص. جاري تسجيل الحضور، لا تغلق الصفحة.', 'valid');
                     const controlBtn = document.getElementById('controlBtn');
                     if (controlBtn) {
                         controlBtn.disabled = true;
@@ -6950,7 +7417,12 @@
                     proceedAfterQrVerification();
                     return;
                 } else {
-                    showError('كود غير صحيح', document.getElementById('scanStatus'));
+                    const rejectedNow = Date.now();
+                    if (verificationData !== verificationLastRejectedData || rejectedNow - verificationLastRejectedAt > 1500) {
+                        verificationLastRejectedData = verificationData;
+                        verificationLastRejectedAt = rejectedNow;
+                        showError('رمز التحقق منتهي أو غير صحيح. امسح الرمز المتغير الحالي.', document.getElementById('scanStatus'));
+                    }
                 }
             }
             requestAnimationFrame(scanFrame);
@@ -6958,10 +7430,23 @@
 
         async function validateQRData(data) {
             try {
-                const decoded = atob(data);
-                const payload = JSON.parse(decoded);
+                let payload;
+                if (String(data || '').startsWith('A1.')) {
+                    const parts = String(data).split('.');
+                    if (parts.length !== 4 || !/^[a-z0-9]+$/i.test(parts[1]) || !/^[a-z0-9]+$/i.test(parts[2])) {
+                        return false;
+                    }
+                    payload = {
+                        t: parseInt(parts[1], 36),
+                        s: parts[2],
+                        h: parts[3]
+                    };
+                } else {
+                    const decoded = atob(data);
+                    payload = JSON.parse(decoded);
+                }
 
-                if (!payload.t || !payload.s || !payload.h) {
+                if (!Number.isInteger(payload.t) || !payload.s || !payload.h) {
                     console.error('Payload missing required fields:', payload);
                     return false;
                 }
@@ -6983,7 +7468,7 @@
                     return false;
                 }
 
-                console.log('QR Code is valid.');
+                console.log('Aztec verification code is valid.');
                 return true;
             } catch (error) {
                 console.error('خطأ في التحقق:', error);
@@ -7531,7 +8016,7 @@
                 return 'لم يكتمل التحقق من الموقع. أعد المحاولة من البداية.';
             }
             if (ENABLE_QR_VALIDATION && !qrValidationPassed) {
-                return 'لم يكتمل التحقق من QR. امسح الرمز مرة أخرى.';
+                return 'لم يكتمل التحقق من الرمز الخاص. امسح رمز Aztec المتغير مرة أخرى.';
             }
             if (ENABLE_SUPPORTING_FORM && !supportingFormCompleted) {
                 return 'أكمل النموذج المطلوب قبل تسجيل الحضور.';
