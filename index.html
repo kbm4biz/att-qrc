@@ -483,6 +483,58 @@
         .support-custom-field span {
             font-size: 14px;
         }
+        .support-choice-list {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+        .support-choice-option {
+            display: grid;
+            grid-template-columns: 22px minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 10px;
+            min-height: 52px;
+            padding: 10px 12px;
+            border: 2px solid #d9e2ec;
+            border-radius: 12px;
+            background: #fff;
+            color: #243b53;
+            cursor: pointer;
+            transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+        }
+        .support-choice-option:hover {
+            border-color: #64b5f6;
+            transform: translateY(-1px);
+        }
+        .support-choice-option:has(input:checked) {
+            border-color: #1976d2;
+            background: #e3f2fd;
+        }
+        .support-choice-option.submitted {
+            border-color: #66bb6a;
+            background: #e8f5e9;
+            color: #1b5e20;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .support-choice-option input[type="radio"] {
+            width: 20px;
+            height: 20px;
+            margin: 0;
+            accent-color: #1976d2;
+        }
+        .support-choice-check {
+            color: #2e7d32;
+            font-size: 13px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+        .support-choice-device-note {
+            color: #607d8b;
+            font-size: 12px;
+            font-weight: 400;
+            line-height: 1.6;
+        }
         .support-form textarea {
             min-height: 96px;
             resize: vertical;
@@ -776,6 +828,41 @@
             font-size: 13px;
             line-height: 1.7;
             margin-top: 10px;
+        }
+        .teacher-settings-section {
+            grid-column: 1 / -1;
+            margin-top: 8px;
+            padding: 14px;
+            border: 1px solid #cfe0ec;
+            border-radius: 10px;
+            background: #eef7fc;
+        }
+        .teacher-settings-section h4 {
+            margin: 0 0 10px;
+            color: #0f4c75;
+            font-size: 16px;
+        }
+        .teacher-course-form-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(180px, 1fr));
+            gap: 10px;
+        }
+        .teacher-field textarea {
+            width: 100%;
+            min-height: 118px;
+            border: 1px solid #cfd8dc;
+            border-radius: 8px;
+            padding: 10px;
+            font: inherit;
+            line-height: 1.7;
+            resize: vertical;
+            background: #fff;
+            color: #263238;
+            outline: none;
+        }
+        .teacher-field textarea:focus {
+            border-color: #2196F3;
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.14);
         }
         .teacher-summary {
             display: grid;
@@ -1330,6 +1417,7 @@
             }
             .teacher-filters,
             .teacher-settings-grid,
+            .teacher-course-form-grid,
             .teacher-summary,
             .teacher-form-grid,
             .teacher-entity-list {
@@ -1366,6 +1454,9 @@
                 grid-template-columns: 1fr 1fr;
             }
             .teacher-settings-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .teacher-course-form-grid {
                 grid-template-columns: 1fr 1fr;
             }
             .teacher-summary,
@@ -1537,21 +1628,6 @@
                             <input type="checkbox" id="adminNfcToggle" onchange="markAdminSettingsDirty()">
                             <span class="teacher-toggle-switch"></span>
                         </label>
-                        <label class="teacher-toggle">
-                            <span>نموذج المرفقات</span>
-                            <input type="checkbox" id="adminSupportToggle" onchange="markAdminSettingsDirty()">
-                            <span class="teacher-toggle-switch"></span>
-                        </label>
-                        <label class="teacher-toggle">
-                            <span>إلزام المرفق</span>
-                            <input type="checkbox" id="adminRequireAttachmentToggle" onchange="markAdminSettingsDirty()">
-                            <span class="teacher-toggle-switch"></span>
-                        </label>
-                        <label class="teacher-toggle">
-                            <span>إلزام الملاحظة</span>
-                            <input type="checkbox" id="adminRequireNoteToggle" onchange="markAdminSettingsDirty()">
-                            <span class="teacher-toggle-switch"></span>
-                        </label>
                         <label class="teacher-field">
                             نصف قطر GPS بالكيلومتر
                             <input type="number" id="adminRadiusKm" min="0.02" max="5" step="0.01" onchange="markAdminSettingsDirty()">
@@ -1577,8 +1653,54 @@
                             رسالة الصيانة
                             <input type="text" id="adminMaintenanceMessage" maxlength="220" placeholder="اكتب الرسالة التي تظهر للطالب أثناء الصيانة" oninput="markAdminSettingsDirty()">
                         </label>
+                        <div class="teacher-settings-section">
+                            <h4>إعدادات النموذج حسب الدورة</h4>
+                            <div class="teacher-course-form-grid">
+                                <label class="teacher-field teacher-form-wide">
+                                    الدورة
+                                    <select id="adminSupportCourseSelect" onchange="handleAdminSupportCourseChange()">
+                                        <option value="">جاري تحميل الدورات...</option>
+                                    </select>
+                                </label>
+                                <label class="teacher-toggle">
+                                    <span>إظهار النموذج لهذه الدورة</span>
+                                    <input type="checkbox" id="adminSupportToggle" onchange="markCourseFormSettingsDirty()">
+                                    <span class="teacher-toggle-switch"></span>
+                                </label>
+                                <label class="teacher-toggle">
+                                    <span>إلزام المرفق</span>
+                                    <input type="checkbox" id="adminRequireAttachmentToggle" onchange="markCourseFormSettingsDirty()">
+                                    <span class="teacher-toggle-switch"></span>
+                                </label>
+                                <label class="teacher-toggle">
+                                    <span>إلزام الملاحظة</span>
+                                    <input type="checkbox" id="adminRequireNoteToggle" onchange="markCourseFormSettingsDirty()">
+                                    <span class="teacher-toggle-switch"></span>
+                                </label>
+                                <label class="teacher-toggle">
+                                    <span id="adminSupportField1ChoiceLabel">إظهار الحقل المخصص 1</span>
+                                    <input type="checkbox" id="adminSupportFieldVisible1" onchange="markCourseFormSettingsDirty()">
+                                    <span class="teacher-toggle-switch"></span>
+                                </label>
+                                <label class="teacher-toggle">
+                                    <span id="adminSupportField2ChoiceLabel">إظهار الحقل المخصص 2</span>
+                                    <input type="checkbox" id="adminSupportFieldVisible2" onchange="markCourseFormSettingsDirty()">
+                                    <span class="teacher-toggle-switch"></span>
+                                </label>
+                                <label class="teacher-toggle">
+                                    <span id="adminSupportField3ChoiceLabel">إظهار الحقل المخصص 3</span>
+                                    <input type="checkbox" id="adminSupportFieldVisible3" onchange="markCourseFormSettingsDirty()">
+                                    <span class="teacher-toggle-switch"></span>
+                                </label>
+                                <label class="teacher-field teacher-form-wide">
+                                    خيارات الحقل المخصص 3 (خيار واحد في كل سطر)
+                                    <textarea id="adminSupportChoiceOptions" maxlength="3000" placeholder="مثال:&#10;الخيار الأول&#10;الخيار الثاني&#10;الخيار الثالث" oninput="markCourseFormSettingsDirty()"></textarea>
+                                </label>
+                            </div>
+                            <div class="teacher-settings-note">تُحفظ هذه الخيارات داخل ملاحظات الدورة دون تغيير نص الملاحظات الظاهر. إذا تركت قائمة الخيارات فارغة، يبقى الحقل المخصص 3 مربع نص كما هو حالياً.</div>
+                        </div>
                     </div>
-                    <div class="teacher-settings-note">هذه الإعدادات تطبق على الطلاب عند فتح الصفحة أو إعادة تحميلها. إذا كانت كل وسائل التحقق مغلقة سيبقى تسجيل الرقم التدريبي فقط. الحقول المخصصة في النموذج تظهر فقط إذا كتبت لها أسماء هنا.</div>
+                    <div class="teacher-settings-note">إعدادات GPS وQR وNFC والصيانة عامة. إعدادات النموذج والمرفق والملاحظة والحقول المخصصة تُضبط لكل دورة على حدة. الحقول المخصصة تظهر فقط إذا كتبت لها أسماء وفعلتها للدورة.</div>
                     <div id="teacherSettingsMessage" class="status-bar teacher-message waiting">جاري تحميل الإعدادات...</div>
                 </div>
 
@@ -1923,6 +2045,14 @@
         let REQUIRE_SUPPORTING_ATTACHMENT = DEFAULT_APP_SETTINGS.requireSupportingAttachment;
         let REQUIRE_SUPPORTING_NOTE = DEFAULT_APP_SETTINGS.requireSupportingNote;
         let SUPPORTING_CUSTOM_FIELDS = [...DEFAULT_APP_SETTINGS.supportingCustomFields];
+        let SUPPORTING_CUSTOM_FIELD_VISIBILITY = [true, true, true];
+        let SUPPORTING_CHOICE_OPTIONS = [];
+        let ACTIVE_SUPPORTING_COURSE_ID = '';
+        let GLOBAL_SUPPORTING_FORM_SETTINGS = {
+            enabled: DEFAULT_APP_SETTINGS.enableSupportingForm,
+            requireAttachment: DEFAULT_APP_SETTINGS.requireSupportingAttachment,
+            requireNote: DEFAULT_APP_SETTINGS.requireSupportingNote
+        };
         let MAINTENANCE_MODE = DEFAULT_APP_SETTINGS.maintenanceMode;
         let MAINTENANCE_MESSAGE = DEFAULT_APP_SETTINGS.maintenanceMessage;
         const SUPPORTING_NOTE_MAX_LENGTH = 300;
@@ -1985,6 +2115,11 @@
         let teacherQrInterval = null;
         let teacherQrSessionId = '';
         let teacherQrBusy = false;
+        let courseFormSettingsDrafts = {};
+        let courseFormSettingsDirtyIds = new Set();
+        let adminSelectedSupportCourseId = '';
+        const COURSE_FORM_CONFIG_MARKER = 'ATTQ_FORM_V1';
+        const SUBMITTED_CHOICE_HISTORY_KEY = 'attqSubmittedChoiceHistoryV1';
         let teacherAdminData = {
             courses: [],
             locations: [],
@@ -2519,11 +2654,13 @@
                 teacherDashboardPassword = sessionStorage.getItem('teacherDashboardPassword') || '';
             }
 
+            captureAdminCourseFormSettings(false);
             const settings = readAdminSettingsControls();
             setAdminSettingsDisabled(true);
             showAdminSettingsMessage('جاري حفظ الإعدادات...', 'waiting');
 
             try {
+                const savedCourseCount = await saveCourseFormSettingsChanges();
                 const result = await callAppsScriptJsonp('updateAppConfig', {
                     password: teacherDashboardPassword,
                     settings
@@ -2538,7 +2675,10 @@
 
                 applyRuntimeSettings(result.settings);
                 syncAdminSettingsControls(getCurrentAppSettings());
-                showAdminSettingsMessage(result.savedAt ? `تم حفظ الإعدادات. آخر حفظ: ${result.savedAt}` : 'تم حفظ الإعدادات بنجاح.', 'valid');
+                const courseMessage = savedCourseCount
+                    ? ` وتم حفظ إعدادات ${savedCourseCount} من الدورات.`
+                    : '';
+                showAdminSettingsMessage(result.savedAt ? `تم حفظ الإعدادات. آخر حفظ: ${result.savedAt}${courseMessage}` : `تم حفظ الإعدادات بنجاح.${courseMessage}`, 'valid');
             } catch (error) {
                 console.error('Settings save error:', error);
                 showAdminSettingsMessage(error.message || 'تعذر حفظ الإعدادات.', 'invalid');
@@ -2600,6 +2740,7 @@
             renderTeacherStudentsList();
             renderTeacherSchedulesList();
             populateTeacherReferenceSelects();
+            initializeCourseFormSettingsEditor();
         }
 
         function normalizeArabicDigits(value) {
@@ -2782,6 +2923,7 @@
 
         function renderTeacherCourseRow(course) {
             const rowNumber = Number(course.rowNumber);
+            const visibleNotes = stripCourseFormSettingsMarker(course.notes);
             return `
                 <tr id="courseRow_${rowNumber}">
                     <td>${escapeHtml(course.courseId || '-')}</td>
@@ -2790,7 +2932,7 @@
                     </td>
                     <td><input class="teacher-grid-checkbox" type="checkbox" id="${teacherCellId('course', rowNumber, 'active')}" ${course.active ? 'checked' : ''} onchange="saveInlineCourse(${rowNumber})"></td>
                     <td class="teacher-grid-cell-note">
-                        <input class="teacher-grid-input" id="${teacherCellId('course', rowNumber, 'notes')}" value="${escapeAttribute(course.notes || '')}" onblur="saveInlineCourse(${rowNumber})" onkeydown="handleTeacherGridEnter(event)">
+                        <input class="teacher-grid-input" id="${teacherCellId('course', rowNumber, 'notes')}" value="${escapeAttribute(visibleNotes)}" onblur="saveInlineCourse(${rowNumber})" onkeydown="handleTeacherGridEnter(event)">
                     </td>
                     <td>
                         <div class="teacher-table-actions">
@@ -2883,7 +3025,7 @@
             if (!container) return;
 
             const allCourses = sortTeacherItems(teacherAdminData.courses, course => `${course.courseName || ''} ${course.courseId || ''}`);
-            const filteredCourses = filterTeacherItems(allCourses, 'teacherCourseSearch', course => `${course.courseId || ''} ${course.courseName || ''} ${course.notes || ''} ${course.active ? 'فعالة' : 'موقوفة'}`);
+            const filteredCourses = filterTeacherItems(allCourses, 'teacherCourseSearch', course => `${course.courseId || ''} ${course.courseName || ''} ${stripCourseFormSettingsMarker(course.notes)} ${course.active ? 'فعالة' : 'موقوفة'}`);
             updateTeacherListCount('teacherCoursesCount', filteredCourses.length, allCourses.length, 'الدورات');
 
             if (!allCourses.length) {
@@ -3069,7 +3211,11 @@
             if (!course || isTeacherRowLocked(lockKey)) return;
 
             const courseName = document.getElementById(teacherCellId('course', rowNumber, 'name'))?.value.trim() || '';
-            const notes = document.getElementById(teacherCellId('course', rowNumber, 'notes'))?.value.trim() || '';
+            const visibleNotes = document.getElementById(teacherCellId('course', rowNumber, 'notes'))?.value.trim() || '';
+            const existingFormSettings = parseCourseFormSettingsFromNotes(course.notes);
+            const notes = existingFormSettings
+                ? upsertCourseFormSettingsMarker(visibleNotes, existingFormSettings)
+                : visibleNotes;
             const active = Boolean(document.getElementById(teacherCellId('course', rowNumber, 'active'))?.checked);
 
             if (!courseName) {
@@ -3077,7 +3223,7 @@
                 renderTeacherCoursesList();
                 return;
             }
-            if (courseName === (course.courseName || '') && notes === (course.notes || '') && active === Boolean(course.active)) {
+            if (courseName === (course.courseName || '') && visibleNotes === stripCourseFormSettingsMarker(course.notes) && active === Boolean(course.active)) {
                 return;
             }
 
@@ -3783,6 +3929,245 @@
             return normalized;
         }
 
+        function normalizeSupportingFieldVisibility(fields, fallback = [true, true, true]) {
+            const source = Array.isArray(fields) ? fields : [];
+            return [0, 1, 2].map(index => coerceBooleanSetting(source[index], Boolean(fallback[index])));
+        }
+
+        function normalizeSupportingChoiceOptions(options) {
+            const source = Array.isArray(options)
+                ? options
+                : String(options || '').split(/\r?\n/);
+            const unique = [];
+            const seen = new Set();
+
+            source.forEach(option => {
+                const normalized = String(option || '').trim().slice(0, 100);
+                const key = normalized.toLocaleLowerCase('ar');
+                if (normalized && !seen.has(key) && unique.length < 30) {
+                    seen.add(key);
+                    unique.push(normalized);
+                }
+            });
+
+            return unique;
+        }
+
+        function createDefaultCourseFormSettings() {
+            const labels = normalizeSupportingCustomFieldLabels(SUPPORTING_CUSTOM_FIELDS);
+            return {
+                enabled: false,
+                requireAttachment: Boolean(GLOBAL_SUPPORTING_FORM_SETTINGS.requireAttachment),
+                requireNote: Boolean(GLOBAL_SUPPORTING_FORM_SETTINGS.requireNote),
+                visibleFields: labels.map(Boolean),
+                choiceOptions: []
+            };
+        }
+
+        function normalizeCourseFormSettings(settings, fallbackSettings) {
+            const fallback = fallbackSettings || createDefaultCourseFormSettings();
+            const visibleSource = settings?.visibleFields ?? settings?.v;
+            const compactVisibility = typeof visibleSource === 'string'
+                ? visibleSource.split('').map(value => value === '1')
+                : visibleSource;
+            return {
+                enabled: coerceBooleanSetting(settings?.enabled ?? settings?.e, fallback.enabled),
+                requireAttachment: coerceBooleanSetting(settings?.requireAttachment ?? settings?.a, fallback.requireAttachment),
+                requireNote: coerceBooleanSetting(settings?.requireNote ?? settings?.n, fallback.requireNote),
+                visibleFields: normalizeSupportingFieldVisibility(compactVisibility, fallback.visibleFields),
+                choiceOptions: normalizeSupportingChoiceOptions(settings?.choiceOptions ?? settings?.o ?? fallback.choiceOptions)
+            };
+        }
+
+        function encodeUtf8Base64Url(value) {
+            const bytes = new TextEncoder().encode(String(value));
+            let binary = '';
+            bytes.forEach(byte => {
+                binary += String.fromCharCode(byte);
+            });
+            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        }
+
+        function decodeUtf8Base64Url(value) {
+            const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+            const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+            const binary = atob(padded);
+            const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+            return new TextDecoder().decode(bytes);
+        }
+
+        function encodeCourseFormSettings(settings) {
+            const normalized = normalizeCourseFormSettings(settings);
+            return encodeUtf8Base64Url(JSON.stringify({
+                e: normalized.enabled ? 1 : 0,
+                a: normalized.requireAttachment ? 1 : 0,
+                n: normalized.requireNote ? 1 : 0,
+                v: normalized.visibleFields.map(value => value ? '1' : '0').join(''),
+                o: normalized.choiceOptions
+            }));
+        }
+
+        function parseCourseFormSettingsFromNotes(notes) {
+            const pattern = new RegExp(`\\[\\[${COURSE_FORM_CONFIG_MARKER}:([A-Za-z0-9_-]+)\\]\\]`);
+            const match = String(notes || '').match(pattern);
+            if (!match) {
+                return null;
+            }
+
+            try {
+                return normalizeCourseFormSettings(JSON.parse(decodeUtf8Base64Url(match[1])));
+            } catch (error) {
+                console.warn('Unable to read course form settings:', error);
+                return null;
+            }
+        }
+
+        function stripCourseFormSettingsMarker(notes) {
+            const pattern = new RegExp(`\\s*\\[\\[${COURSE_FORM_CONFIG_MARKER}:[A-Za-z0-9_-]+\\]\\]\\s*`, 'g');
+            return String(notes || '').replace(pattern, '\n').trim();
+        }
+
+        function upsertCourseFormSettingsMarker(notes, settings) {
+            const visibleNotes = stripCourseFormSettingsMarker(notes);
+            const marker = `[[${COURSE_FORM_CONFIG_MARKER}:${encodeCourseFormSettings(settings)}]]`;
+            return visibleNotes ? `${visibleNotes}\n${marker}` : marker;
+        }
+
+        function initializeCourseFormSettingsEditor() {
+            const select = document.getElementById('adminSupportCourseSelect');
+            if (!select) {
+                return;
+            }
+
+            const courses = sortTeacherItems(teacherAdminData.courses || [], course => `${course.courseName || ''} ${course.courseId || ''}`);
+            const previousSelection = select.value || adminSelectedSupportCourseId;
+            const nextDrafts = {};
+
+            courses.forEach(course => {
+                const courseId = String(course.courseId || '');
+                if (!courseId) {
+                    return;
+                }
+                nextDrafts[courseId] = courseFormSettingsDirtyIds.has(courseId) && courseFormSettingsDrafts[courseId]
+                    ? courseFormSettingsDrafts[courseId]
+                    : (parseCourseFormSettingsFromNotes(course.notes) || createDefaultCourseFormSettings());
+            });
+            courseFormSettingsDrafts = nextDrafts;
+            courseFormSettingsDirtyIds = new Set([...courseFormSettingsDirtyIds].filter(courseId => nextDrafts[courseId]));
+
+            select.innerHTML = '';
+            if (!courses.length) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'لا توجد دورات. أضف دورة أولاً.';
+                select.appendChild(option);
+                adminSelectedSupportCourseId = '';
+                loadAdminCourseFormSettings('');
+                return;
+            }
+
+            courses.forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.courseId || '';
+                option.textContent = formatTeacherReferenceLabel(course.courseName || course.courseId || '', course.active);
+                select.appendChild(option);
+            });
+
+            const selectedCourseId = courses.some(course => course.courseId === previousSelection)
+                ? previousSelection
+                : String(courses[0].courseId || '');
+            select.value = selectedCourseId;
+            adminSelectedSupportCourseId = selectedCourseId;
+            loadAdminCourseFormSettings(selectedCourseId);
+        }
+
+        function loadAdminCourseFormSettings(courseId) {
+            const settings = courseId && courseFormSettingsDrafts[courseId]
+                ? normalizeCourseFormSettings(courseFormSettingsDrafts[courseId])
+                : createDefaultCourseFormSettings();
+            setChecked('adminSupportToggle', settings.enabled);
+            setChecked('adminRequireAttachmentToggle', settings.requireAttachment);
+            setChecked('adminRequireNoteToggle', settings.requireNote);
+            setChecked('adminSupportFieldVisible1', settings.visibleFields[0]);
+            setChecked('adminSupportFieldVisible2', settings.visibleFields[1]);
+            setChecked('adminSupportFieldVisible3', settings.visibleFields[2]);
+            setValue('adminSupportChoiceOptions', settings.choiceOptions.join('\n'));
+            updateAdminSupportFieldLabels();
+        }
+
+        function readAdminCourseFormSettingsControls() {
+            return normalizeCourseFormSettings({
+                enabled: getChecked('adminSupportToggle'),
+                requireAttachment: getChecked('adminRequireAttachmentToggle'),
+                requireNote: getChecked('adminRequireNoteToggle'),
+                visibleFields: [
+                    getChecked('adminSupportFieldVisible1'),
+                    getChecked('adminSupportFieldVisible2'),
+                    getChecked('adminSupportFieldVisible3')
+                ],
+                choiceOptions: document.getElementById('adminSupportChoiceOptions')?.value || ''
+            });
+        }
+
+        function captureAdminCourseFormSettings(markDirty = true) {
+            const courseId = adminSelectedSupportCourseId || document.getElementById('adminSupportCourseSelect')?.value || '';
+            if (!courseId) {
+                return;
+            }
+            courseFormSettingsDrafts[courseId] = readAdminCourseFormSettingsControls();
+            if (markDirty) {
+                courseFormSettingsDirtyIds.add(courseId);
+            }
+        }
+
+        function handleAdminSupportCourseChange() {
+            const selectedCourseId = document.getElementById('adminSupportCourseSelect')?.value || '';
+            adminSelectedSupportCourseId = selectedCourseId;
+            loadAdminCourseFormSettings(selectedCourseId);
+        }
+
+        function updateAdminSupportFieldLabels() {
+            [0, 1, 2].forEach(index => {
+                const configuredLabel = (document.getElementById(`adminSupportField${index + 1}`)?.value || '').trim();
+                const label = configuredLabel || `الحقل المخصص ${index + 1}`;
+                setText(`adminSupportField${index + 1}ChoiceLabel`, `إظهار: ${label}`);
+            });
+        }
+
+        function markCourseFormSettingsDirty() {
+            captureAdminCourseFormSettings(true);
+            showAdminSettingsMessage('لديك تغييرات غير محفوظة في إعدادات الدورة. اضغط حفظ الإعدادات.', 'waiting');
+        }
+
+        async function saveCourseFormSettingsChanges() {
+            const dirtyCourseIds = [...courseFormSettingsDirtyIds];
+            for (let index = 0; index < dirtyCourseIds.length; index++) {
+                const courseId = dirtyCourseIds[index];
+                const course = teacherAdminData.courses.find(item => item.courseId === courseId);
+                if (!course) {
+                    continue;
+                }
+                showAdminSettingsMessage(`جاري حفظ إعدادات الدورة ${index + 1} من ${dirtyCourseIds.length}...`, 'waiting');
+                const notes = upsertCourseFormSettingsMarker(course.notes, courseFormSettingsDrafts[courseId]);
+                const result = await callAppsScriptJsonp('saveCourse', {
+                    password: teacherDashboardPassword,
+                    course: {
+                        rowNumber: Number(course.rowNumber || 0),
+                        courseId: course.courseId,
+                        courseName: course.courseName,
+                        notes,
+                        active: Boolean(course.active)
+                    }
+                });
+                if (!result?.ok) {
+                    throw new Error(result?.error || `تعذر حفظ إعدادات الدورة: ${course.courseName || courseId}`);
+                }
+                course.notes = notes;
+                courseFormSettingsDirtyIds.delete(courseId);
+            }
+            return dirtyCourseIds.length;
+        }
+
         function applyRuntimeSettings(settings) {
             ENABLE_GPS_VALIDATION = coerceBooleanSetting(settings?.enableGpsValidation, DEFAULT_APP_SETTINGS.enableGpsValidation);
             ENABLE_QR_VALIDATION = coerceBooleanSetting(settings?.enableQrValidation, DEFAULT_APP_SETTINGS.enableQrValidation);
@@ -3790,7 +4175,15 @@
             ENABLE_SUPPORTING_FORM = coerceBooleanSetting(settings?.enableSupportingForm, DEFAULT_APP_SETTINGS.enableSupportingForm);
             REQUIRE_SUPPORTING_ATTACHMENT = coerceBooleanSetting(settings?.requireSupportingAttachment, DEFAULT_APP_SETTINGS.requireSupportingAttachment);
             REQUIRE_SUPPORTING_NOTE = coerceBooleanSetting(settings?.requireSupportingNote, DEFAULT_APP_SETTINGS.requireSupportingNote);
+            GLOBAL_SUPPORTING_FORM_SETTINGS = {
+                enabled: ENABLE_SUPPORTING_FORM,
+                requireAttachment: REQUIRE_SUPPORTING_ATTACHMENT,
+                requireNote: REQUIRE_SUPPORTING_NOTE
+            };
             SUPPORTING_CUSTOM_FIELDS = normalizeSupportingCustomFieldLabels(settings?.supportingCustomFields ?? DEFAULT_APP_SETTINGS.supportingCustomFields);
+            SUPPORTING_CUSTOM_FIELD_VISIBILITY = [true, true, true];
+            SUPPORTING_CHOICE_OPTIONS = [];
+            ACTIVE_SUPPORTING_COURSE_ID = '';
             MAINTENANCE_MODE = coerceBooleanSetting(settings?.maintenanceMode, DEFAULT_APP_SETTINGS.maintenanceMode);
             MAINTENANCE_MESSAGE = String(settings?.maintenanceMessage || '').trim() || DEFAULT_APP_SETTINGS.maintenanceMessage;
             const radiusKm = Number(settings?.radiusKm);
@@ -3804,9 +4197,9 @@
                 enableGpsValidation: ENABLE_GPS_VALIDATION,
                 enableQrValidation: ENABLE_QR_VALIDATION,
                 enableNfcTapValidation: ENABLE_NFC_TAP_VALIDATION,
-                enableSupportingForm: ENABLE_SUPPORTING_FORM,
-                requireSupportingAttachment: REQUIRE_SUPPORTING_ATTACHMENT,
-                requireSupportingNote: REQUIRE_SUPPORTING_NOTE,
+                enableSupportingForm: GLOBAL_SUPPORTING_FORM_SETTINGS.enabled,
+                requireSupportingAttachment: GLOBAL_SUPPORTING_FORM_SETTINGS.requireAttachment,
+                requireSupportingNote: GLOBAL_SUPPORTING_FORM_SETTINGS.requireNote,
                 radiusKm: RADIUS_KM,
                 supportingCustomFields: [...SUPPORTING_CUSTOM_FIELDS],
                 maintenanceMode: MAINTENANCE_MODE,
@@ -3819,9 +4212,6 @@
             setChecked('adminGpsToggle', settings.enableGpsValidation);
             setChecked('adminQrToggle', settings.enableQrValidation);
             setChecked('adminNfcToggle', settings.enableNfcTapValidation);
-            setChecked('adminSupportToggle', settings.enableSupportingForm);
-            setChecked('adminRequireAttachmentToggle', settings.requireSupportingAttachment);
-            setChecked('adminRequireNoteToggle', settings.requireSupportingNote);
             setChecked('adminMaintenanceModeToggle', settings.maintenanceMode);
             const radiusInput = document.getElementById('adminRadiusKm');
             if (radiusInput) {
@@ -3831,6 +4221,8 @@
             setValue('adminSupportField2', customFields[1] || '');
             setValue('adminSupportField3', customFields[2] || '');
             setValue('adminMaintenanceMessage', settings.maintenanceMessage || DEFAULT_APP_SETTINGS.maintenanceMessage);
+            updateAdminSupportFieldLabels();
+            initializeCourseFormSettingsEditor();
         }
 
         function readAdminSettingsControls() {
@@ -3839,9 +4231,9 @@
                 enableGpsValidation: getChecked('adminGpsToggle'),
                 enableQrValidation: getChecked('adminQrToggle'),
                 enableNfcTapValidation: getChecked('adminNfcToggle'),
-                enableSupportingForm: getChecked('adminSupportToggle'),
-                requireSupportingAttachment: getChecked('adminRequireAttachmentToggle'),
-                requireSupportingNote: getChecked('adminRequireNoteToggle'),
+                enableSupportingForm: false,
+                requireSupportingAttachment: false,
+                requireSupportingNote: false,
                 radiusKm: Number(radiusInput?.value || DEFAULT_APP_SETTINGS.radiusKm),
                 supportingCustomFields: normalizeSupportingCustomFieldLabels([
                     document.getElementById('adminSupportField1')?.value || '',
@@ -3854,6 +4246,7 @@
         }
 
         function markAdminSettingsDirty() {
+            updateAdminSupportFieldLabels();
             showAdminSettingsMessage('لديك تغييرات غير محفوظة. اضغط حفظ الإعدادات لتطبيقها على الطلاب.', 'waiting');
         }
 
@@ -3879,6 +4272,11 @@
                 'adminSupportField1',
                 'adminSupportField2',
                 'adminSupportField3',
+                'adminSupportCourseSelect',
+                'adminSupportFieldVisible1',
+                'adminSupportFieldVisible2',
+                'adminSupportFieldVisible3',
+                'adminSupportChoiceOptions',
                 'adminMaintenanceMessage'
             ].forEach(id => {
                 const element = document.getElementById(id);
@@ -4823,6 +5221,126 @@
             }
         }
 
+        function parseCsvRows(csvText) {
+            const rows = [];
+            let row = [];
+            let field = '';
+            let insideQuotes = false;
+            const source = String(csvText || '');
+
+            for (let index = 0; index < source.length; index++) {
+                const character = source[index];
+                if (insideQuotes) {
+                    if (character === '"' && source[index + 1] === '"') {
+                        field += '"';
+                        index++;
+                    } else if (character === '"') {
+                        insideQuotes = false;
+                    } else {
+                        field += character;
+                    }
+                    continue;
+                }
+
+                if (character === '"') {
+                    insideQuotes = true;
+                } else if (character === ',') {
+                    row.push(field);
+                    field = '';
+                } else if (character === '\n') {
+                    row.push(field.replace(/\r$/, ''));
+                    if (row.some(value => String(value).trim())) {
+                        rows.push(row);
+                    }
+                    row = [];
+                    field = '';
+                } else {
+                    field += character;
+                }
+            }
+
+            row.push(field.replace(/\r$/, ''));
+            if (row.some(value => String(value).trim())) {
+                rows.push(row);
+            }
+            return rows;
+        }
+
+        function findCsvColumn(headers, candidates, fallbackIndex) {
+            const normalizedHeaders = headers.map(header => String(header || '').replace(/^\uFEFF/, '').trim().toLowerCase());
+            const index = normalizedHeaders.findIndex(header => candidates.includes(header));
+            return index >= 0 ? index : fallbackIndex;
+        }
+
+        async function fetchPublishedCourseFormSettings(courseId, courseName) {
+            const url = new URL(GOOGLE_SHEET_URL);
+            url.searchParams.set('_courseFormRefresh', Date.now().toString());
+            const response = await fetch(url.toString(), { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error('Course settings CSV is unavailable');
+            }
+
+            const rows = parseCsvRows(await response.text());
+            if (rows.length < 2) {
+                return null;
+            }
+            const headers = rows[0];
+            const courseIdIndex = findCsvColumn(headers, ['course id', 'courseid', 'معرف الدورة', 'معرّف الدورة'], 0);
+            const courseNameIndex = findCsvColumn(headers, ['course name', 'coursename', 'اسم الدورة'], 1);
+            const notesIndex = findCsvColumn(headers, ['notes', 'note', 'ملاحظات'], 3);
+            const normalizedCourseId = String(courseId || '').trim().toLowerCase();
+            const normalizedCourseName = String(courseName || '').trim().toLocaleLowerCase('ar');
+            const courseRow = rows.slice(1).find(row => {
+                const rowCourseId = String(row[courseIdIndex] || '').trim().toLowerCase();
+                const rowCourseName = String(row[courseNameIndex] || '').trim().toLocaleLowerCase('ar');
+                return (normalizedCourseId && rowCourseId === normalizedCourseId) ||
+                    (normalizedCourseName && rowCourseName === normalizedCourseName);
+            });
+            return courseRow ? parseCourseFormSettingsFromNotes(courseRow[notesIndex] || '') : null;
+        }
+
+        function applyCourseSupportingFormSettings(courseId, settings) {
+            const normalized = normalizeCourseFormSettings(settings, {
+                enabled: GLOBAL_SUPPORTING_FORM_SETTINGS.enabled,
+                requireAttachment: GLOBAL_SUPPORTING_FORM_SETTINGS.requireAttachment,
+                requireNote: GLOBAL_SUPPORTING_FORM_SETTINGS.requireNote,
+                visibleFields: [true, true, true],
+                choiceOptions: []
+            });
+            ACTIVE_SUPPORTING_COURSE_ID = String(courseId || '');
+            ENABLE_SUPPORTING_FORM = normalized.enabled;
+            REQUIRE_SUPPORTING_ATTACHMENT = normalized.requireAttachment;
+            REQUIRE_SUPPORTING_NOTE = normalized.requireNote;
+            SUPPORTING_CUSTOM_FIELD_VISIBILITY = normalized.visibleFields;
+            SUPPORTING_CHOICE_OPTIONS = normalized.choiceOptions;
+            renderSupportingCustomFields();
+        }
+
+        async function configureSupportingFormForTrainee(trainee) {
+            const courseId = String(trainee?.courseId || trainee?.course?.courseId || '').trim();
+            const courseName = String(trainee?.courseName || trainee?.program || trainee?.course?.courseName || '').trim();
+            applyCourseSupportingFormSettings(courseId, {
+                enabled: GLOBAL_SUPPORTING_FORM_SETTINGS.enabled,
+                requireAttachment: GLOBAL_SUPPORTING_FORM_SETTINGS.requireAttachment,
+                requireNote: GLOBAL_SUPPORTING_FORM_SETTINGS.requireNote,
+                visibleFields: [true, true, true],
+                choiceOptions: []
+            });
+
+            if (!courseId && !courseName) {
+                return;
+            }
+
+            try {
+                const settings = await fetchPublishedCourseFormSettings(courseId, courseName);
+                if (settings) {
+                    applyCourseSupportingFormSettings(courseId, settings);
+                }
+            } catch (error) {
+                console.warn('Using global supporting form fallback because course settings could not be loaded:', error);
+            }
+        }
+
         function setIdLoadingState(isLoading, message) {
             const idInput = document.getElementById('idInput');
             const idButton = document.getElementById('idButton');
@@ -4927,6 +5445,8 @@
                     requiredLocationId = attendanceContext.trainee.requiredLocationId ||
                         attendanceContext.requiredLocation?.locationId ||
                         '';
+
+                    await configureSupportingFormForTrainee(attendanceContext.trainee);
 
                     idStatus.className = 'status-bar waiting';
                     idStatus.textContent = 'تم التحقق من الرقم. جاري إكمال تسجيل الحضور، لا تغلق الصفحة.';
@@ -5222,6 +5742,7 @@
                 rejectNfcAttendance(nfcTapError || 'انتهت صلاحية الرابط أو تم استخدامه. المس البطاقة مرة أخرى.');
                 return;
             }
+            rememberSubmittedSupportingChoice(trainee);
             
             // Display trainee details
             document.getElementById('traineeDetails').innerHTML = `
@@ -5759,7 +6280,46 @@
         function getConfiguredSupportingCustomFields() {
             return normalizeSupportingCustomFieldLabels(SUPPORTING_CUSTOM_FIELDS)
                 .map((label, index) => ({ index, label }))
-                .filter(field => field.label);
+                .filter(field => field.label && SUPPORTING_CUSTOM_FIELD_VISIBILITY[field.index]);
+        }
+
+        function readSubmittedChoiceHistory() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(SUBMITTED_CHOICE_HISTORY_KEY) || '{}');
+                return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+            } catch (error) {
+                console.warn('Unable to read submitted choice history:', error);
+                return {};
+            }
+        }
+
+        function getSubmittedChoiceHistoryKey(trainee) {
+            const traineeId = String(trainee?.id || traineeID || '').trim();
+            const courseId = String(ACTIVE_SUPPORTING_COURSE_ID || trainee?.courseId || trainee?.program || '').trim();
+            return traineeId && courseId ? `${traineeId}::${courseId}` : '';
+        }
+
+        function getPreviouslySubmittedChoices(trainee) {
+            const key = getSubmittedChoiceHistoryKey(trainee);
+            const history = readSubmittedChoiceHistory();
+            return key && Array.isArray(history[key]) ? history[key] : [];
+        }
+
+        function rememberSubmittedSupportingChoice(trainee) {
+            const selectedChoice = supportingFormData?.customFields?.find(field => field.index === 2)?.value || '';
+            const key = getSubmittedChoiceHistoryKey(trainee);
+            if (!selectedChoice || !key || !SUPPORTING_CHOICE_OPTIONS.length) {
+                return;
+            }
+
+            try {
+                const history = readSubmittedChoiceHistory();
+                const previous = Array.isArray(history[key]) ? history[key] : [];
+                history[key] = [...new Set([...previous, selectedChoice])].slice(-100);
+                localStorage.setItem(SUBMITTED_CHOICE_HISTORY_KEY, JSON.stringify(history));
+            } catch (error) {
+                console.warn('Unable to save submitted choice history:', error);
+            }
         }
 
         function renderSupportingCustomFields() {
@@ -5778,26 +6338,71 @@
             container.style.display = 'flex';
             container.style.flexDirection = 'column';
             container.style.gap = '12px';
-            container.innerHTML = fields.map(field => `
-                <label class="support-custom-field">
-                    <span>${escapeHtml(field.label)}</span>
-                    <input type="text" id="supportCustomField${field.index + 1}" maxlength="160" placeholder="اكتب ${escapeAttribute(field.label)}" aria-label="${escapeAttribute(field.label)}">
-                </label>
-            `).join('');
+            const trainee = readSessionJson('traineeDetails', {});
+            const submittedChoices = new Set(getPreviouslySubmittedChoices(trainee));
+            container.innerHTML = fields.map(field => {
+                if (field.index === 2 && SUPPORTING_CHOICE_OPTIONS.length) {
+                    const choices = SUPPORTING_CHOICE_OPTIONS.map((option, optionIndex) => {
+                        const wasSubmitted = submittedChoices.has(option);
+                        return `
+                            <label class="support-choice-option ${wasSubmitted ? 'submitted' : ''}">
+                                <input type="radio" name="supportCustomField3" id="supportCustomField3Choice${optionIndex + 1}" value="${escapeAttribute(option)}" data-submitted="${wasSubmitted ? 'true' : 'false'}" ${wasSubmitted ? 'disabled' : ''}>
+                                <span>${escapeHtml(option)}</span>
+                                ${wasSubmitted ? '<span class="support-choice-check">✓ تم إرساله</span>' : ''}
+                            </label>
+                        `;
+                    }).join('');
+                    return `
+                        <div class="support-custom-field">
+                            <span>${escapeHtml(field.label)}</span>
+                            <div class="support-choice-list" role="radiogroup" aria-label="${escapeAttribute(field.label)}">${choices}</div>
+                            <div class="support-choice-device-note">الخيار الذي يحمل علامة خضراء سبق إرساله من هذا المتصفح، لذلك لا يمكن اختياره مرة أخرى.</div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <label class="support-custom-field">
+                        <span>${escapeHtml(field.label)}</span>
+                        <input type="text" id="supportCustomField${field.index + 1}" maxlength="160" placeholder="اكتب ${escapeAttribute(field.label)}" aria-label="${escapeAttribute(field.label)}">
+                    </label>
+                `;
+            }).join('');
         }
 
         function readSupportingCustomFieldValues() {
-            return getConfiguredSupportingCustomFields().map(field => ({
-                index: field.index,
-                label: field.label,
-                value: (document.getElementById(`supportCustomField${field.index + 1}`)?.value || '').trim()
-            }));
+            return getConfiguredSupportingCustomFields().map(field => {
+                const value = field.index === 2 && SUPPORTING_CHOICE_OPTIONS.length
+                    ? (document.querySelector('input[name="supportCustomField3"]:checked')?.value || '')
+                    : (document.getElementById(`supportCustomField${field.index + 1}`)?.value || '');
+                return {
+                    index: field.index,
+                    label: field.label,
+                    value: String(value).trim()
+                };
+            });
+        }
+
+        function setSupportingCustomFieldsDisabled(disabled) {
+            getConfiguredSupportingCustomFields().forEach(field => {
+                if (field.index === 2 && SUPPORTING_CHOICE_OPTIONS.length) {
+                    document.querySelectorAll('input[name="supportCustomField3"]').forEach(input => {
+                        input.disabled = Boolean(disabled) || input.dataset.submitted === 'true';
+                    });
+                    return;
+                }
+                const input = document.getElementById(`supportCustomField${field.index + 1}`);
+                if (input) {
+                    input.disabled = Boolean(disabled);
+                }
+            });
         }
 
         function resetSupportingFormState() {
             supportingFormCompleted = false;
             supportingFormData = null;
             supportingFormSubmitting = false;
+            renderSupportingCustomFields();
 
             const button = document.getElementById('supportButton');
             const spinner = document.getElementById('supportSpinner');
@@ -5824,13 +6429,7 @@
                 attachment.value = '';
                 attachment.disabled = false;
             }
-            getConfiguredSupportingCustomFields().forEach(field => {
-                const input = document.getElementById(`supportCustomField${field.index + 1}`);
-                if (input) {
-                    input.value = '';
-                    input.disabled = false;
-                }
-            });
+            setSupportingCustomFieldsDisabled(false);
         }
 
         async function submitSupportingForm() {
@@ -5854,6 +6453,11 @@
 
             const missingCustomField = customFields.find(field => !field.value);
             if (missingCustomField) {
+                if (missingCustomField.index === 2 && SUPPORTING_CHOICE_OPTIONS.length &&
+                    document.querySelectorAll('input[name="supportCustomField3"]:not(:disabled)').length === 0) {
+                    showError('تم إرسال جميع الخيارات المتاحة سابقاً من هذا المتصفح. تواصل مع المعلم لإضافة خيار جديد.', status);
+                    return;
+                }
                 showError(`يرجى تعبئة الحقل: ${missingCustomField.label}`, status);
                 return;
             }
@@ -5889,12 +6493,7 @@
             if (fileElement) {
                 fileElement.disabled = true;
             }
-            customFields.forEach(field => {
-                const input = document.getElementById(`supportCustomField${field.index + 1}`);
-                if (input) {
-                    input.disabled = true;
-                }
-            });
+            setSupportingCustomFieldsDisabled(true);
             if (spinner) {
                 spinner.style.display = 'block';
             }
@@ -5935,12 +6534,7 @@
                 if (fileElement) {
                     fileElement.disabled = false;
                 }
-                customFields.forEach(field => {
-                    const input = document.getElementById(`supportCustomField${field.index + 1}`);
-                    if (input) {
-                        input.disabled = false;
-                    }
-                });
+                setSupportingCustomFieldsDisabled(false);
                 if (spinner) {
                     spinner.style.display = 'none';
                 }
