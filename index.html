@@ -1378,7 +1378,196 @@
         .teacher-danger-button:hover {
             background: #b71c1c;
         }
+        .analytics-toolbar {
+            display: grid;
+            grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.4fr) auto;
+            gap: 10px;
+            align-items: end;
+            margin-bottom: 14px;
+        }
+        .analytics-summary,
+        .student-summary {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(130px, 1fr));
+            gap: 10px;
+            margin: 14px 0;
+        }
+        .analytics-stat,
+        .student-stat {
+            min-height: 92px;
+            padding: 14px;
+            background: #fff;
+            border: 1px solid #dce6ed;
+            border-radius: 8px;
+        }
+        .analytics-stat strong,
+        .student-stat strong {
+            display: block;
+            color: #12324a;
+            font-size: 27px;
+            line-height: 1.25;
+        }
+        .analytics-stat span,
+        .student-stat span {
+            color: #607d8b;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 14px 0;
+        }
+        .analytics-chart {
+            background: #f8fbfd;
+            border: 1px solid #dbe6ee;
+            border-radius: 8px;
+            padding: 14px;
+            min-width: 0;
+        }
+        .analytics-chart h4 {
+            margin: 0 0 12px;
+            color: #12324a;
+        }
+        .analytics-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .analytics-bar-row {
+            display: grid;
+            grid-template-columns: minmax(90px, 0.8fr) minmax(130px, 2fr) 58px;
+            gap: 8px;
+            align-items: center;
+            min-height: 30px;
+        }
+        .analytics-bar-name {
+            color: #334e68;
+            font-size: 12px;
+            font-weight: bold;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .analytics-bar-track {
+            height: 14px;
+            border-radius: 7px;
+            background: #e2e8ed;
+            overflow: hidden;
+        }
+        .analytics-bar-fill {
+            height: 100%;
+            min-width: 3px;
+            border-radius: 7px;
+            background: #1f9d55;
+        }
+        .analytics-bar-fill.speed {
+            background: #0f76a8;
+        }
+        .analytics-bar-value {
+            direction: ltr;
+            color: #12324a;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: left;
+        }
+        .analytics-table-wrap {
+            overflow-x: auto;
+            border: 1px solid #dbe6ee;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .analytics-table {
+            width: 100%;
+            min-width: 760px;
+            border-collapse: collapse;
+        }
+        .analytics-table th,
+        .analytics-table td {
+            padding: 11px 10px;
+            border-bottom: 1px solid #e7edf2;
+            text-align: right;
+            font-size: 13px;
+        }
+        .analytics-table th {
+            background: #edf5f8;
+            color: #12324a;
+        }
+        .student-dashboard-step.active-step {
+            align-items: stretch;
+            justify-content: flex-start;
+            text-align: right;
+            padding: 18px;
+        }
+        body.student-dashboard-view {
+            background: #edf4f7;
+            padding: 12px;
+        }
+        body.student-dashboard-view .floating-emojis,
+        body.student-dashboard-view .meeting-indicator,
+        body.student-dashboard-view .header-subline {
+            display: none;
+        }
+        body.student-dashboard-view .container {
+            max-width: 980px;
+        }
+        .student-dashboard {
+            width: 100%;
+        }
+        .student-hero {
+            background: #12324a;
+            color: #fff;
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 14px;
+        }
+        .student-hero h2 {
+            color: #fff;
+            margin: 0 0 6px;
+        }
+        .student-hero p {
+            margin: 0;
+            color: #d8e7ef;
+        }
+        .student-history {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .student-history-item {
+            display: grid;
+            grid-template-columns: minmax(130px, 0.8fr) minmax(160px, 1fr) minmax(180px, 1.2fr) auto;
+            gap: 12px;
+            align-items: center;
+            padding: 14px;
+            background: #fff;
+            border: 1px solid #dce6ed;
+            border-radius: 8px;
+        }
+        .student-history-item strong,
+        .student-history-item span {
+            display: block;
+        }
+        .student-history-item span {
+            color: #607d8b;
+            font-size: 12px;
+            margin-top: 3px;
+        }
         @media (max-width: 600px) {
+            .analytics-toolbar,
+            .analytics-summary,
+            .student-summary,
+            .analytics-grid,
+            .student-history-item {
+                grid-template-columns: 1fr;
+            }
+            .analytics-toolbar button {
+                width: 100%;
+            }
+            .analytics-bar-row {
+                grid-template-columns: minmax(76px, 0.8fr) minmax(100px, 1.6fr) 52px;
+            }
             body {
                 padding: 8px;
             }
@@ -1597,7 +1786,7 @@
                 <div class="trainee-info" id="traineeDetails"></div>
                 <div class="timestamp" id="timestamp"></div>
                 <div class="address-info" id="addressDetails">جاري تحميل معلومات الموقع...</div>
-                <div class="cooldown-message">سيتم الخروج تلقائياً خلال 10 ثواني...</div>
+                <div class="cooldown-message">سيتم الانتقال إلى لوحة حضورك خلال 10 ثوانٍ...</div>
             </div>
         </div>
         
@@ -1982,6 +2171,46 @@
                     </div>
                 </div>
 
+                <div class="teacher-block" data-teacher-block="analytics">
+                    <h3>مقارنة أداء الطلاب</h3>
+                    <div class="teacher-block-note">نسبة الحضور تقارن لقاءات الطالب باللقاءات المرصودة لدورته خلال الفترة. السرعة هي الزمن من فتح صفحة التحضير إلى اكتمال التسجيل، وتظهر فقط للسجلات التي تحتوي قياساً صالحاً.</div>
+                    <div class="analytics-toolbar">
+                        <label class="teacher-field">
+                            الفترة
+                            <select id="analyticsDays" onchange="loadTeacherAnalytics()">
+                                <option value="7">آخر 7 أيام</option>
+                                <option value="30" selected>آخر 30 يوماً</option>
+                                <option value="90">آخر 90 يوماً</option>
+                            </select>
+                        </label>
+                        <label class="teacher-field">
+                            الدورة
+                            <select id="analyticsCourse" onchange="loadTeacherAnalytics()">
+                                <option value="">كل الدورات</option>
+                            </select>
+                        </label>
+                        <button type="button" onclick="loadTeacherAnalytics()">تحديث المقارنة</button>
+                    </div>
+                    <div id="analyticsMessage" class="status-bar teacher-message waiting">اختر الفترة ثم حدّث المقارنة.</div>
+                    <div class="analytics-summary">
+                        <div class="analytics-stat"><strong id="analyticsStudentCount">0</strong><span>طلاب في المقارنة</span></div>
+                        <div class="analytics-stat"><strong id="analyticsSubmissionCount">0</strong><span>عمليات حضور</span></div>
+                        <div class="analytics-stat"><strong id="analyticsAttendanceAverage">-</strong><span>متوسط الحضور</span></div>
+                        <div class="analytics-stat"><strong id="analyticsSpeedAverage">-</strong><span>متوسط سرعة الإكمال</span></div>
+                    </div>
+                    <div class="analytics-grid">
+                        <section class="analytics-chart">
+                            <h4>نسبة الحضور</h4>
+                            <div id="analyticsAttendanceBars" class="analytics-bars"></div>
+                        </section>
+                        <section class="analytics-chart">
+                            <h4>أسرع أزمنة الإكمال</h4>
+                            <div id="analyticsSpeedBars" class="analytics-bars"></div>
+                        </section>
+                    </div>
+                    <div id="analyticsTable" class="analytics-table-wrap"></div>
+                </div>
+
                 <div class="teacher-filters">
                     <label class="teacher-field">
                         اليوم
@@ -2031,6 +2260,27 @@
                 <div class="maintenance-icon">🛠️</div>
                 <h2>النظام تحت الصيانة</h2>
                 <div id="maintenanceMessageBox" class="status-bar waiting">يرجى المحاولة لاحقاً.</div>
+            </div>
+        </div>
+
+        <div id="step9" class="step student-dashboard-step">
+            <div class="student-dashboard">
+                <div class="student-hero">
+                    <h2 id="studentDashboardName">لوحة الطالب</h2>
+                    <p id="studentDashboardCourse">جاري تحميل بياناتك...</p>
+                </div>
+                <div id="studentDashboardMessage" class="status-bar waiting">جاري تحميل سجل الحضور...</div>
+                <div class="student-summary">
+                    <div class="student-stat"><strong id="studentAttendanceCount">0</strong><span>مرات الحضور</span></div>
+                    <div class="student-stat"><strong id="studentMeetingCount">0</strong><span>لقاءات مختلفة</span></div>
+                    <div class="student-stat"><strong id="studentAverageSpeed">-</strong><span>متوسط سرعة الإكمال</span></div>
+                    <div class="student-stat"><strong id="studentAttachmentCount">0</strong><span>مرفقات مرفوعة</span></div>
+                </div>
+                <div class="teacher-list-tools">
+                    <strong>سجل الحضور</strong>
+                    <span id="studentDashboardUpdated"></span>
+                </div>
+                <div id="studentHistory" class="student-history"></div>
             </div>
         </div>
 
@@ -2096,6 +2346,7 @@
         const MAX_ATTEMPTS = 5;
         const REDIRECT_URL = 'https://tvtc.gov.sa/ar/Pages/default1.aspx';
         const REDIRECT_DELAY = 10000;
+        const ATTENDANCE_JOURNEY_STARTED_AT_MS = Date.now();
         let traineeID = '';
         let scannerActive = false;
         let videoStream = null;
@@ -2139,6 +2390,7 @@
         let courseFormSettingsDrafts = {};
         let courseFormSettingsDirtyIds = new Set();
         let adminSelectedSupportCourseId = '';
+        let backendSubmittedSupportingChoices = [];
         const COURSE_FORM_CONFIG_MARKER = 'ATTQ_FORM_V1';
         const SUBMITTED_CHOICE_HISTORY_KEY = 'attqSubmittedChoiceHistoryV1';
         let teacherAdminData = {
@@ -2205,6 +2457,15 @@
 
         // ================== ON PAGE LOAD ================== //
         window.onload = async () => {
+            const pageParams = new URLSearchParams(window.location.search);
+            if (pageParams.get('view') === 'student') {
+                initializeStudentDashboard(
+                    pageParams.get('student') || '',
+                    pageParams.get('token') || ''
+                );
+                return;
+            }
+
             if (location.hash === '#admin' || location.hash === '#teacher') {
                 const pass = prompt('أدخل كلمة مرور المعلم:');
                 if (!pass) {
@@ -2270,6 +2531,87 @@
             showStep(1);
         };
 
+        async function initializeStudentDashboard(traineeId, token) {
+            document.body.classList.add('student-dashboard-view');
+            const headerTitle = document.querySelector('.header h1');
+            if (headerTitle) headerTitle.textContent = 'سجل حضوري';
+            showStep(9);
+
+            const message = document.getElementById('studentDashboardMessage');
+            if (!traineeId || !token) {
+                message.className = 'status-bar invalid';
+                message.textContent = 'رابط لوحة الحضور غير مكتمل. سجّل حضورك للحصول على رابط صالح.';
+                renderStudentHistory([]);
+                return;
+            }
+
+            try {
+                const result = await callAppsScriptJsonp('studentDashboard', { traineeId, token });
+                if (!result?.ok) {
+                    throw new Error(result?.error || 'تعذر تحميل سجل الحضور.');
+                }
+                renderStudentDashboard(result);
+                message.className = 'status-bar valid';
+                message.textContent = 'تم تحميل سجل حضورك بنجاح.';
+            } catch (error) {
+                console.error('Student dashboard error:', error);
+                message.className = 'status-bar invalid';
+                message.textContent = /unable to load|failed to fetch|network/i.test(error?.message || '')
+                    ? 'تعذر الاتصال بسجل الحضور حالياً. حاول تحديث الصفحة بعد قليل.'
+                    : (error.message || 'تعذر فتح لوحة الحضور. سجّل حضورك مرة أخرى للحصول على رابط جديد.');
+                renderStudentHistory([]);
+            }
+        }
+
+        function renderStudentDashboard(result) {
+            const student = result.student || {};
+            const summary = result.summary || {};
+            setText('studentDashboardName', student.name ? `مرحباً، ${student.name}` : 'لوحة الطالب');
+            setText('studentDashboardCourse', `${student.courseName || 'دون دورة'} · الرقم التدريبي ${student.traineeId || '-'}`);
+            setText('studentAttendanceCount', summary.attendanceCount || 0);
+            setText('studentMeetingCount', summary.uniqueMeetings || 0);
+            setText('studentAverageSpeed', formatDurationSeconds(summary.averageSpeedSeconds));
+            setText('studentAttachmentCount', summary.attachments || 0);
+            setText('studentDashboardUpdated', result.generatedAt ? `آخر تحديث: ${result.generatedAt}` : '');
+            renderStudentHistory(Array.isArray(result.records) ? result.records : []);
+        }
+
+        function renderStudentHistory(records) {
+            const container = document.getElementById('studentHistory');
+            if (!container) return;
+            if (!records.length) {
+                container.innerHTML = '<div class="teacher-empty">لا توجد سجلات حضور لعرضها.</div>';
+                return;
+            }
+            container.innerHTML = records.map(record => {
+                const attachment = record.attachmentUrl
+                    ? `<a class="teacher-attachment-link" href="${escapeUrlAttribute(record.attachmentUrl)}" target="_blank" rel="noopener">فتح المرفق</a>`
+                    : '<span>دون مرفق</span>';
+                const checks = [
+                    record.gpsStatus === 'passed' ? 'GPS' : '',
+                    record.qrStatus === 'passed' ? 'QR' : '',
+                    record.nfcStatus === 'passed' ? 'NFC' : ''
+                ].filter(Boolean).join(' · ') || 'تم التسجيل';
+                return `
+                    <article class="student-history-item">
+                        <div><strong>${escapeHtml(record.date || '-')}</strong><span>${escapeHtml(record.time || '')}</span></div>
+                        <div><strong>${escapeHtml(record.meetingId || 'لقاء دون معرّف')}</strong><span>${escapeHtml(record.program || '')}</span></div>
+                        <div><strong>${escapeHtml(checks)}</strong><span>السرعة: ${escapeHtml(formatDurationSeconds(record.speedSeconds))} · دقة التحقق: ${escapeHtml(formatPercent(record.verificationAccuracy))}</span></div>
+                        <div>${attachment}</div>
+                    </article>`;
+            }).join('');
+        }
+
+        function buildStudentDashboardUrl(traineeId, token) {
+            const url = new URL(window.location.href);
+            url.hash = '';
+            Array.from(url.searchParams.keys()).forEach(key => url.searchParams.delete(key));
+            url.searchParams.set('view', 'student');
+            url.searchParams.set('student', traineeId);
+            url.searchParams.set('token', token);
+            return url.toString();
+        }
+
         // ================== TEACHER DASHBOARD ================== //
         function setupTeacherAdminLayout() {
             if (teacherLayoutReady) {
@@ -2301,6 +2643,7 @@
 
             const tabDefinitions = [
                 { id: 'dashboard', label: 'لوحة المتابعة', title: 'نتائج الحضور', nodes: [filters, message, summary, listTools, rows] },
+                { id: 'analytics', label: 'مقارنة الطلاب', title: 'مقارنة أداء الطلاب', nodes: [getTeacherBlock('analytics')] },
                 { id: 'settings', label: 'الإعدادات', title: 'إعدادات النموذج', nodes: [settingsBlock] },
                 { id: 'setup', label: 'التهيئة', title: 'تهيئة البيانات', nodes: [getTeacherBlock('setup')] },
                 { id: 'courses', label: 'الدورات', title: 'إدارة الدورات', nodes: [getTeacherBlock('courses')] },
@@ -2362,6 +2705,10 @@
 
             if (activeTeacherTab === 'qr') {
                 initializeTeacherQrPanel();
+            }
+            if (activeTeacherTab === 'analytics') {
+                populateTeacherAnalyticsCourseOptions();
+                loadTeacherAnalytics();
             }
         }
 
@@ -2761,6 +3108,7 @@
             renderTeacherStudentsList();
             renderTeacherSchedulesList();
             populateTeacherReferenceSelects();
+            populateTeacherAnalyticsCourseOptions();
             initializeCourseFormSettingsEditor();
         }
 
@@ -4236,7 +4584,7 @@
                 }
                 nextDrafts[courseId] = courseFormSettingsDirtyIds.has(courseId) && courseFormSettingsDrafts[courseId]
                     ? courseFormSettingsDrafts[courseId]
-                    : (parseCourseFormSettingsFromNotes(course.notes) || createDefaultCourseFormSettings());
+                    : (course.formSettings || parseCourseFormSettingsFromNotes(course.notes) || createDefaultCourseFormSettings());
             });
             courseFormSettingsDrafts = nextDrafts;
             courseFormSettingsDirtyIds = new Set([...courseFormSettingsDirtyIds].filter(courseId => nextDrafts[courseId]));
@@ -4334,7 +4682,8 @@
                     continue;
                 }
                 showAdminSettingsMessage(`جاري حفظ إعدادات الدورة ${index + 1} من ${dirtyCourseIds.length}...`, 'waiting');
-                const notes = upsertCourseFormSettingsMarker(course.notes, courseFormSettingsDrafts[courseId]);
+                const notes = stripCourseFormSettingsMarker(course.notes);
+                const formSettings = normalizeCourseFormSettings(courseFormSettingsDrafts[courseId]);
                 const result = await callAppsScriptJsonp('saveCourse', {
                     password: teacherDashboardPassword,
                     course: {
@@ -4342,13 +4691,15 @@
                         courseId: course.courseId,
                         courseName: course.courseName,
                         notes,
-                        active: Boolean(course.active)
+                        active: Boolean(course.active),
+                        formSettings
                     }
                 });
                 if (!result?.ok) {
                     throw new Error(result?.error || `تعذر حفظ إعدادات الدورة: ${course.courseName || courseId}`);
                 }
                 course.notes = notes;
+                course.formSettings = result.formSettings || formSettings;
                 courseFormSettingsDirtyIds.delete(courseId);
             }
             return dirtyCourseIds.length;
@@ -4370,6 +4721,7 @@
             SUPPORTING_CUSTOM_FIELD_VISIBILITY = [true, true, true];
             SUPPORTING_CHOICE_OPTIONS = [];
             ACTIVE_SUPPORTING_COURSE_ID = '';
+            backendSubmittedSupportingChoices = [];
             MAINTENANCE_MODE = coerceBooleanSetting(settings?.maintenanceMode, DEFAULT_APP_SETTINGS.maintenanceMode);
             MAINTENANCE_MESSAGE = String(settings?.maintenanceMessage || '').trim() || DEFAULT_APP_SETTINGS.maintenanceMessage;
             const radiusKm = Number(settings?.radiusKm);
@@ -4555,6 +4907,127 @@
                 console.error('Teacher log error:', error);
                 showTeacherMessage(error.message || 'تعذر تحميل السجل.', 'invalid');
             }
+        }
+
+        function populateTeacherAnalyticsCourseOptions() {
+            const select = document.getElementById('analyticsCourse');
+            if (!select) return;
+            const selected = select.value;
+            select.innerHTML = '<option value="">كل الدورات</option>';
+            sortTeacherItems(teacherAdminData.courses || [], course => course.courseName || '').forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.courseId || '';
+                option.textContent = course.courseName || course.courseId || 'دورة دون اسم';
+                select.appendChild(option);
+            });
+            if ([...select.options].some(option => option.value === selected)) {
+                select.value = selected;
+            }
+        }
+
+        async function loadTeacherAnalytics() {
+            const message = document.getElementById('analyticsMessage');
+            if (!message || activeTeacherTab !== 'analytics') return;
+            message.className = 'status-bar teacher-message waiting';
+            message.textContent = 'جاري إعداد المقارنة...';
+
+            try {
+                const result = await callAppsScriptJsonp('teacherAnalytics', {
+                    password: teacherDashboardPassword || sessionStorage.getItem('teacherDashboardPassword') || '',
+                    days: Number(document.getElementById('analyticsDays')?.value || 30),
+                    courseId: document.getElementById('analyticsCourse')?.value || ''
+                });
+                if (!result?.ok) {
+                    throw new Error(result?.error || 'تعذر تحميل المقارنة.');
+                }
+                renderTeacherAnalytics(result);
+                message.className = 'status-bar teacher-message valid';
+                message.textContent = result.rows?.length
+                    ? `تم تحديث المقارنة في ${result.generatedAt || ''}.`
+                    : 'لا توجد بيانات كافية في الفترة المختارة.';
+            } catch (error) {
+                console.error('Teacher analytics error:', error);
+                message.className = 'status-bar teacher-message invalid';
+                message.textContent = error.message || 'تعذر تحميل المقارنة.';
+            }
+        }
+
+        function renderTeacherAnalytics(result) {
+            const rows = Array.isArray(result.rows) ? result.rows : [];
+            const summary = result.summary || {};
+            setText('analyticsStudentCount', summary.students || 0);
+            setText('analyticsSubmissionCount', summary.submissions || 0);
+            setText('analyticsAttendanceAverage', formatPercent(summary.averageAttendanceRate));
+            setText('analyticsSpeedAverage', formatDurationSeconds(summary.averageSpeedSeconds));
+
+            const attendanceRows = [...rows]
+                .sort((a, b) => Number(b.attendanceRate || 0) - Number(a.attendanceRate || 0))
+                .slice(0, 12);
+            const speedRows = rows
+                .filter(row => row.averageSpeedSeconds !== null && row.averageSpeedSeconds !== '' && Number.isFinite(Number(row.averageSpeedSeconds)))
+                .sort((a, b) => Number(a.averageSpeedSeconds) - Number(b.averageSpeedSeconds))
+                .slice(0, 12);
+            renderAnalyticsBars('analyticsAttendanceBars', attendanceRows, row => Number(row.attendanceRate || 0), row => formatPercent(row.attendanceRate), false);
+            renderAnalyticsBars('analyticsSpeedBars', speedRows, row => Number(row.averageSpeedSeconds), row => formatDurationSeconds(row.averageSpeedSeconds), true);
+            renderAnalyticsTable(rows);
+        }
+
+        function renderAnalyticsBars(containerId, rows, valueGetter, labelGetter, inverse) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            if (!rows.length) {
+                container.innerHTML = '<div class="teacher-empty">لا توجد بيانات قابلة للقياس.</div>';
+                return;
+            }
+            const values = rows.map(valueGetter).filter(Number.isFinite);
+            const maximum = Math.max(...values, 1);
+            const minimum = Math.max(Math.min(...values), 1);
+            container.innerHTML = rows.map(row => {
+                const value = valueGetter(row);
+                const percent = inverse
+                    ? Math.max(8, Math.min(100, (minimum / Math.max(value, 1)) * 100))
+                    : Math.max(3, Math.min(100, (value / maximum) * 100));
+                return `
+                    <div class="analytics-bar-row" title="${escapeHtml(row.name || row.traineeId || '')}">
+                        <div class="analytics-bar-name">${escapeHtml(row.name || row.traineeId || '-')}</div>
+                        <div class="analytics-bar-track"><div class="analytics-bar-fill ${inverse ? 'speed' : ''}" style="width:${percent}%"></div></div>
+                        <div class="analytics-bar-value">${escapeHtml(labelGetter(row))}</div>
+                    </div>`;
+            }).join('');
+        }
+
+        function renderAnalyticsTable(rows) {
+            const container = document.getElementById('analyticsTable');
+            if (!container) return;
+            if (!rows.length) {
+                container.innerHTML = '<div class="teacher-empty">لا يوجد طلاب لعرضهم.</div>';
+                return;
+            }
+            container.innerHTML = `
+                <table class="analytics-table">
+                    <thead><tr><th>الطالب</th><th>الدورة</th><th>الحضور</th><th>النسبة</th><th>السرعة</th><th>دقة التحقق</th><th>آخر حضور</th></tr></thead>
+                    <tbody>${rows.map(row => `
+                        <tr>
+                            <td><strong>${escapeHtml(row.name || '-')}</strong><br><span>${escapeHtml(row.traineeId || '')}</span></td>
+                            <td>${escapeHtml(row.courseName || '-')}</td>
+                            <td>${Number(row.attendedMeetings || 0)} / ${Number(row.expectedMeetings || 0)}</td>
+                            <td>${escapeHtml(formatPercent(row.attendanceRate))}</td>
+                            <td>${escapeHtml(formatDurationSeconds(row.averageSpeedSeconds))}</td>
+                            <td>${escapeHtml(formatPercent(row.verificationAccuracy))}</td>
+                            <td>${escapeHtml(row.lastAttendance || '-')}</td>
+                        </tr>`).join('')}</tbody>
+                </table>`;
+        }
+
+        function formatPercent(value) {
+            return Number.isFinite(Number(value)) && value !== null ? `${Math.round(Number(value))}%` : '-';
+        }
+
+        function formatDurationSeconds(value) {
+            if (!Number.isFinite(Number(value)) || value === null) return '-';
+            const seconds = Math.max(0, Math.round(Number(value)));
+            if (seconds < 60) return `${seconds} ث`;
+            return `${Math.floor(seconds / 60)} د ${seconds % 60} ث`;
         }
 
         function scheduleTeacherLogLoad() {
@@ -5345,6 +5818,10 @@
                 trainee: baseContext.trainee,
                 meeting: readSessionJson('currentMeeting', null),
                 requiredLocation: baseContext.requiredLocation || null,
+                courseFormSettings: baseContext.courseFormSettings || null,
+                previousSubmittedChoices: Array.isArray(baseContext.previousSubmittedChoices)
+                    ? baseContext.previousSubmittedChoices
+                    : [],
                 source: 'hybrid_apps_script_legacy_meeting'
             };
         }
@@ -5407,84 +5884,6 @@
             }
         }
 
-        function parseCsvRows(csvText) {
-            const rows = [];
-            let row = [];
-            let field = '';
-            let insideQuotes = false;
-            const source = String(csvText || '');
-
-            for (let index = 0; index < source.length; index++) {
-                const character = source[index];
-                if (insideQuotes) {
-                    if (character === '"' && source[index + 1] === '"') {
-                        field += '"';
-                        index++;
-                    } else if (character === '"') {
-                        insideQuotes = false;
-                    } else {
-                        field += character;
-                    }
-                    continue;
-                }
-
-                if (character === '"') {
-                    insideQuotes = true;
-                } else if (character === ',') {
-                    row.push(field);
-                    field = '';
-                } else if (character === '\n') {
-                    row.push(field.replace(/\r$/, ''));
-                    if (row.some(value => String(value).trim())) {
-                        rows.push(row);
-                    }
-                    row = [];
-                    field = '';
-                } else {
-                    field += character;
-                }
-            }
-
-            row.push(field.replace(/\r$/, ''));
-            if (row.some(value => String(value).trim())) {
-                rows.push(row);
-            }
-            return rows;
-        }
-
-        function findCsvColumn(headers, candidates, fallbackIndex) {
-            const normalizedHeaders = headers.map(header => String(header || '').replace(/^\uFEFF/, '').trim().toLowerCase());
-            const index = normalizedHeaders.findIndex(header => candidates.includes(header));
-            return index >= 0 ? index : fallbackIndex;
-        }
-
-        async function fetchPublishedCourseFormSettings(courseId, courseName) {
-            const url = new URL(GOOGLE_SHEET_URL);
-            url.searchParams.set('_courseFormRefresh', Date.now().toString());
-            const response = await fetch(url.toString(), { cache: 'no-store' });
-            if (!response.ok) {
-                throw new Error('Course settings CSV is unavailable');
-            }
-
-            const rows = parseCsvRows(await response.text());
-            if (rows.length < 2) {
-                return null;
-            }
-            const headers = rows[0];
-            const courseIdIndex = findCsvColumn(headers, ['course id', 'courseid', 'معرف الدورة', 'معرّف الدورة'], 0);
-            const courseNameIndex = findCsvColumn(headers, ['course name', 'coursename', 'اسم الدورة'], 1);
-            const notesIndex = findCsvColumn(headers, ['notes', 'note', 'ملاحظات'], 3);
-            const normalizedCourseId = String(courseId || '').trim().toLowerCase();
-            const normalizedCourseName = String(courseName || '').trim().toLocaleLowerCase('ar');
-            const courseRow = rows.slice(1).find(row => {
-                const rowCourseId = String(row[courseIdIndex] || '').trim().toLowerCase();
-                const rowCourseName = String(row[courseNameIndex] || '').trim().toLocaleLowerCase('ar');
-                return (normalizedCourseId && rowCourseId === normalizedCourseId) ||
-                    (normalizedCourseName && rowCourseName === normalizedCourseName);
-            });
-            return courseRow ? parseCourseFormSettingsFromNotes(courseRow[notesIndex] || '') : null;
-        }
-
         function applyCourseSupportingFormSettings(courseId, settings) {
             const normalized = normalizeCourseFormSettings(settings, {
                 enabled: GLOBAL_SUPPORTING_FORM_SETTINGS.enabled,
@@ -5502,9 +5901,9 @@
             renderSupportingCustomFields();
         }
 
-        async function configureSupportingFormForTrainee(trainee) {
+        function configureSupportingFormForTrainee(trainee, backendSettings, previousSubmittedChoices) {
             const courseId = String(trainee?.courseId || trainee?.course?.courseId || '').trim();
-            const courseName = String(trainee?.courseName || trainee?.program || trainee?.course?.courseName || '').trim();
+            backendSubmittedSupportingChoices = normalizeSupportingChoiceOptions(previousSubmittedChoices || []);
             applyCourseSupportingFormSettings(courseId, {
                 enabled: GLOBAL_SUPPORTING_FORM_SETTINGS.enabled,
                 requireAttachment: GLOBAL_SUPPORTING_FORM_SETTINGS.requireAttachment,
@@ -5513,17 +5912,8 @@
                 choiceOptions: []
             });
 
-            if (!courseId && !courseName) {
-                return;
-            }
-
-            try {
-                const settings = await fetchPublishedCourseFormSettings(courseId, courseName);
-                if (settings) {
-                    applyCourseSupportingFormSettings(courseId, settings);
-                }
-            } catch (error) {
-                console.warn('Using global supporting form fallback because course settings could not be loaded:', error);
+            if (backendSettings && typeof backendSettings === 'object') {
+                applyCourseSupportingFormSettings(courseId, backendSettings);
             }
         }
 
@@ -5632,7 +6022,11 @@
                         attendanceContext.requiredLocation?.locationId ||
                         '';
 
-                    await configureSupportingFormForTrainee(attendanceContext.trainee);
+                    configureSupportingFormForTrainee(
+                        attendanceContext.trainee,
+                        attendanceContext.courseFormSettings,
+                        attendanceContext.previousSubmittedChoices
+                    );
 
                     idStatus.className = 'status-bar waiting';
                     idStatus.textContent = 'تم التحقق من الرقم. جاري إكمال تسجيل الحضور، لا تغلق الصفحة.';
@@ -5922,8 +6316,8 @@
             const meetingId = meeting?.meetingId || 'غير متوفر';
             const address = sessionStorage.getItem('attendanceAddress') || 'غير معروف';
 
-            const logAccepted = await sendAttendanceLog(trainee);
-            if (!logAccepted) {
+            const logResult = await sendAttendanceLog(trainee);
+            if (!logResult?.ok) {
                 attendanceRecorded = false;
                 rejectNfcAttendance(nfcTapError || 'انتهت صلاحية الرابط أو تم استخدامه. المس البطاقة مرة أخرى.');
                 return;
@@ -5956,9 +6350,12 @@
             // Play success sound
             const successSound = document.getElementById('successSound');
             successSound.play().catch(err => console.error('Audio play error:', err));
+            const dashboardUrl = logResult.dashboardToken
+                ? buildStudentDashboardUrl(trainee.id, logResult.dashboardToken)
+                : REDIRECT_URL;
             // Redirect after delay
             setTimeout(() => {
-                window.location.href = REDIRECT_URL;
+                window.location.href = dashboardUrl;
             }, REDIRECT_DELAY);
         }
 
@@ -6488,7 +6885,11 @@
         function getPreviouslySubmittedChoices(trainee) {
             const key = getSubmittedChoiceHistoryKey(trainee);
             const history = readSubmittedChoiceHistory();
-            return key && Array.isArray(history[key]) ? history[key] : [];
+            const localChoices = key && Array.isArray(history[key]) ? history[key] : [];
+            return normalizeSupportingChoiceOptions([
+                ...backendSubmittedSupportingChoices,
+                ...localChoices
+            ]);
         }
 
         function rememberSubmittedSupportingChoice(trainee) {
@@ -6933,9 +7334,12 @@
 
             return {
                 attendanceId,
+                journeyStartedAtMs: ATTENDANCE_JOURNEY_STARTED_AT_MS,
+                journeyDurationMs: Math.max(0, Date.now() - ATTENDANCE_JOURNEY_STARTED_AT_MS),
                 id: trainee.id,
                 name: trainee.name,
                 program: trainee.program,
+                courseId: trainee.courseId || ACTIVE_SUPPORTING_COURSE_ID || '',
                 meetingId,
                 address,
                 requiredLocation,
@@ -6957,6 +7361,7 @@
                     counter: nfcTapData.counter || '',
                     c: nfcTapData.cmac || '',
                     reservationId: nfcReservationId || nfcTapData.reservationId || '',
+                    capturedAt: nfcTapData.capturedAt || '',
                     capturedAtSaudi: nfcTapData.capturedAtSaudi || ''
                 } : null,
                 supportingForm: ENABLE_SUPPORTING_FORM
@@ -7002,19 +7407,19 @@
                 console.log('Logging attendance:', payload);
 
                 if (window.google?.script?.run) {
-                    await new Promise((resolve, reject) => {
+                    const result = await new Promise((resolve, reject) => {
                         google.script.run
                             .withSuccessHandler(resolve)
                             .withFailureHandler(reject)
                             .logAttendance(payload);
                     });
-                    return true;
+                    return result?.ok ? result : { ok: true };
                 }
 
                 if (!APPS_SCRIPT_LOG_URL) {
                     console.warn('APPS_SCRIPT_LOG_URL is empty. Attendance was rejected because no LOG sheet entry can be sent.');
                     nfcTapError = 'تعذر تسجيل الحضور. رابط السجل غير مضبوط.';
-                    return false;
+                    return { ok: false };
                 }
 
                 const result = await callAppsScriptJsonp('complete', payload);
@@ -7022,13 +7427,13 @@
                     nfcTapError = getNfcReserveErrorMessage(result);
                     throw new Error(result?.error || 'Attendance log was rejected.');
                 }
-                return true;
+                return result;
             } catch (error) {
                 console.error('خطأ في تسجيل بيانات الحضور:', error);
                 if (!nfcTapError) {
                     nfcTapError = 'تعذر تسجيل الحضور. حاول مرة أخرى أو المس البطاقة من جديد.';
                 }
-                return false;
+                return { ok: false };
             }
         }
 
