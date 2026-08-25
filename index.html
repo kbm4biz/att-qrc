@@ -1535,6 +1535,86 @@
             flex-direction: column;
             gap: 10px;
         }
+        .student-exercise-panel {
+            margin: 16px 0;
+            padding: 14px;
+            background: #f8fbfd;
+            border: 1px solid #dce6ed;
+            border-radius: 8px;
+        }
+        .student-exercise-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .student-exercise-header h3 {
+            margin: 0;
+            color: #12324a;
+            font-size: 18px;
+        }
+        .student-progress-track {
+            height: 12px;
+            border-radius: 6px;
+            background: #dfe8ed;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+        .student-progress-fill {
+            height: 100%;
+            width: 0;
+            border-radius: 6px;
+            background: #1f9d55;
+            transition: width 0.25s ease;
+        }
+        .student-exercise-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .student-exercise-item {
+            display: grid;
+            grid-template-columns: 30px minmax(0, 1fr);
+            gap: 9px;
+            align-items: center;
+            min-height: 62px;
+            padding: 10px;
+            border: 1px solid #dce6ed;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .student-exercise-item.completed {
+            border-color: #81c784;
+            background: #f1f8f3;
+        }
+        .student-exercise-check {
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #b0bec5;
+            border-radius: 50%;
+            color: transparent;
+            font-size: 17px;
+            font-weight: bold;
+        }
+        .student-exercise-item.completed .student-exercise-check {
+            border-color: #1f9d55;
+            background: #1f9d55;
+            color: #fff;
+        }
+        .student-exercise-name {
+            color: #12324a;
+            font-weight: bold;
+            overflow-wrap: anywhere;
+        }
+        .student-exercise-meta {
+            margin-top: 3px;
+            color: #607d8b;
+            font-size: 11px;
+        }
         .student-history-item {
             display: grid;
             grid-template-columns: minmax(130px, 0.8fr) minmax(160px, 1fr) minmax(180px, 1.2fr) auto;
@@ -1560,6 +1640,9 @@
             .student-summary,
             .analytics-grid,
             .student-history-item {
+                grid-template-columns: 1fr;
+            }
+            .student-exercise-list {
                 grid-template-columns: 1fr;
             }
             .analytics-toolbar button {
@@ -2277,10 +2360,20 @@
                 <div id="studentDashboardMessage" class="status-bar waiting">جاري تحميل تقرير السرعة والدقة...</div>
                 <div class="student-summary">
                     <div class="student-stat"><strong id="studentSubmissionCount">0</strong><span>عدد النتائج</span></div>
+                    <div class="student-stat"><strong id="studentCompletedExercises">0</strong><span>تمارين منجزة</span></div>
+                    <div class="student-stat"><strong id="studentRemainingExercises">0</strong><span>تمارين متبقية</span></div>
                     <div class="student-stat"><strong id="studentBestSpeed">-</strong><span>أفضل سرعة</span></div>
                     <div class="student-stat"><strong id="studentAverageSpeed">-</strong><span>متوسط السرعة</span></div>
                     <div class="student-stat"><strong id="studentAverageAccuracy">-</strong><span>متوسط الدقة</span></div>
                 </div>
+                <section class="student-exercise-panel">
+                    <div class="student-exercise-header">
+                        <h3>تقدم التمارين</h3>
+                        <strong id="studentExerciseProgressText">0 من 0</strong>
+                    </div>
+                    <div class="student-progress-track"><div id="studentExerciseProgressFill" class="student-progress-fill"></div></div>
+                    <div id="studentExerciseList" class="student-exercise-list"></div>
+                </section>
                 <div class="teacher-list-tools">
                     <strong>نتائج مهارات الطباعة</strong>
                     <span id="studentDashboardUpdated"></span>
@@ -2545,6 +2638,7 @@
             if (!traineeId || !token) {
                 message.className = 'status-bar invalid';
                 message.textContent = 'رابط لوحة الحضور غير مكتمل. سجّل حضورك للحصول على رابط صالح.';
+                renderStudentExerciseProgress([]);
                 renderStudentHistory([]);
                 return;
             }
@@ -2563,6 +2657,7 @@
                 message.textContent = /unable to load|failed to fetch|network/i.test(error?.message || '')
                     ? 'تعذر الاتصال بالتقرير حالياً. حاول تحديث الصفحة بعد قليل.'
                     : (error.message || 'تعذر فتح تقرير مهارات الطباعة. أرسل النموذج مرة أخرى للحصول على رابط جديد.');
+                renderStudentExerciseProgress([]);
                 renderStudentHistory([]);
             }
         }
@@ -2573,11 +2668,42 @@
             setText('studentDashboardName', student.name ? `تقرير ${student.name}` : 'تقرير مهارات الطباعة');
             setText('studentDashboardCourse', `${student.courseName || 'دون دورة'} · الرقم التدريبي ${student.traineeId || '-'}`);
             setText('studentSubmissionCount', summary.submissionCount || 0);
+            setText('studentCompletedExercises', summary.completedExercises || 0);
+            setText('studentRemainingExercises', summary.remainingExercises || 0);
             setText('studentBestSpeed', formatTypingSpeed(summary.bestTypingSpeed));
             setText('studentAverageSpeed', formatTypingSpeed(summary.averageTypingSpeed));
             setText('studentAverageAccuracy', formatTypingAccuracy(summary.averageTypingAccuracy));
             setText('studentDashboardUpdated', result.generatedAt ? `آخر تحديث: ${result.generatedAt}` : '');
+            renderStudentExerciseProgress(Array.isArray(result.exercises) ? result.exercises : []);
             renderStudentHistory(Array.isArray(result.records) ? result.records : []);
+        }
+
+        function renderStudentExerciseProgress(exercises) {
+            const container = document.getElementById('studentExerciseList');
+            const progressFill = document.getElementById('studentExerciseProgressFill');
+            const completed = exercises.filter(exercise => exercise.completed).length;
+            const total = exercises.length;
+            const percentage = total ? Math.round((completed / total) * 100) : 0;
+            setText('studentExerciseProgressText', `${completed} من ${total}`);
+            if (progressFill) progressFill.style.width = `${percentage}%`;
+            if (!container) return;
+            if (!total) {
+                container.innerHTML = '<div class="teacher-empty">لم تُضف أسماء التمارين إلى خيارات الحقل المخصص 3 بعد.</div>';
+                return;
+            }
+            container.innerHTML = exercises.map(exercise => {
+                const details = exercise.completed
+                    ? `${Number(exercise.submissionCount || 0)} محاولة · أفضل سرعة ${formatTypingSpeed(exercise.bestTypingSpeed)} · أفضل دقة ${formatTypingAccuracy(exercise.bestTypingAccuracy)}`
+                    : 'لم يُنجز بعد';
+                return `
+                    <div class="student-exercise-item ${exercise.completed ? 'completed' : ''}">
+                        <span class="student-exercise-check" aria-label="${exercise.completed ? 'منجز' : 'متبقي'}">✓</span>
+                        <div>
+                            <div class="student-exercise-name">${escapeHtml(exercise.name || 'تمرين دون اسم')}</div>
+                            <div class="student-exercise-meta">${escapeHtml(details)}</div>
+                        </div>
+                    </div>`;
+            }).join('');
         }
 
         function renderStudentHistory(records) {
@@ -2594,7 +2720,7 @@
                 return `
                     <article class="student-history-item">
                         <div><strong>${escapeHtml(record.date || '-')}</strong><span>${escapeHtml(record.time || '')}</span></div>
-                        <div><strong>${escapeHtml(record.meetingId || 'نتيجة طباعة')}</strong><span>${escapeHtml(record.program || '')}</span></div>
+                        <div><strong>${escapeHtml(record.exerciseName || 'تمرين دون اسم')}</strong><span>${escapeHtml(record.meetingId || record.program || '')}</span></div>
                         <div><strong>السرعة: ${escapeHtml(formatTypingSpeed(record.typingSpeed))}</strong><span>الدقة: ${escapeHtml(formatTypingAccuracy(record.typingAccuracy))}</span></div>
                         <div>${attachment}</div>
                     </article>`;
