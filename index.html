@@ -20,6 +20,8 @@
             --brand-success: #1f9d55;
             --brand-danger: #d64545;
             --brand-shadow: 0 18px 40px rgba(14, 49, 80, 0.16);
+            --verification-sync-duration: 10000ms;
+            --verification-sync-delay: 0ms;
         }
         * {
             margin: 0;
@@ -287,6 +289,68 @@
             overflow: hidden;
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
             border: 1px solid #ddd;
+        }
+        #step3.active-step {
+            isolation: isolate;
+            overflow: hidden;
+            background-color: #d8f2e2;
+            animation: verificationGreenSurface var(--verification-sync-duration) ease-in-out infinite;
+            animation-delay: var(--verification-sync-delay);
+        }
+        #step3.active-step::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background: linear-gradient(108deg, transparent 28%, rgba(255, 255, 255, 0.7) 48%, transparent 68%);
+            transform: translateX(-145%);
+            animation: verificationLightWave var(--verification-sync-duration) linear infinite;
+            animation-delay: var(--verification-sync-delay);
+        }
+        #step3.active-step > * {
+            position: relative;
+            z-index: 1;
+        }
+        #step3.active-step h2 {
+            color: #0b5132;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.72);
+        }
+        #step3.active-step .scanner-container {
+            background: #073f28;
+            border: 5px solid #137a48;
+            box-shadow: 0 14px 32px rgba(8, 86, 49, 0.28), 0 0 0 7px rgba(255, 255, 255, 0.68);
+            animation: verificationGreenFrame var(--verification-sync-duration) ease-in-out infinite;
+            animation-delay: var(--verification-sync-delay);
+        }
+        #step3.active-step .scan-overlay {
+            border-color: #9aefb9;
+            animation: verificationScanGuide var(--verification-sync-duration) ease-in-out infinite;
+            animation-delay: var(--verification-sync-delay);
+        }
+        @keyframes verificationGreenSurface {
+            0%, 100% { background-color: #c9ecd7; }
+            50% { background-color: #effbf4; }
+        }
+        @keyframes verificationGreenFrame {
+            0%, 100% {
+                background-color: #0b653b;
+                border-color: #0b653b;
+                box-shadow: 0 14px 32px rgba(8, 86, 49, 0.34), 0 0 0 7px rgba(18, 124, 72, 0.18);
+            }
+            50% {
+                background-color: #58c982;
+                border-color: #52c77d;
+                box-shadow: 0 18px 38px rgba(43, 164, 96, 0.28), 0 0 0 9px rgba(130, 224, 166, 0.32);
+            }
+        }
+        @keyframes verificationScanGuide {
+            0%, 100% { border-color: #69d995; }
+            50% { border-color: #d4ffe3; }
+        }
+        @keyframes verificationLightWave {
+            0% { transform: translateX(-145%); }
+            100% { transform: translateX(145%); }
         }
         #video-preview {
             width: 100%;
@@ -1157,6 +1221,32 @@
                 0 12px 28px rgba(16, 42, 67, 0.12),
                 inset 0 0 0 7px #edf5f8;
         }
+        .teacher-qr-code.verification-code.verification-live {
+            isolation: isolate;
+            overflow: hidden;
+            border-color: #0b653b;
+            background-color: #137a48;
+            animation: verificationGreenFrame var(--verification-sync-duration) ease-in-out infinite;
+            animation-delay: var(--verification-sync-delay);
+        }
+        .teacher-qr-code.verification-code.verification-live::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background: linear-gradient(108deg, transparent 28%, rgba(255, 255, 255, 0.62) 48%, transparent 68%);
+            transform: translateX(-145%);
+            animation: verificationLightWave var(--verification-sync-duration) linear infinite;
+            animation-delay: var(--verification-sync-delay);
+        }
+        .teacher-qr-code.verification-code.verification-live canvas {
+            position: relative;
+            z-index: 1;
+            border-radius: 10px;
+            background: #ffffff;
+            box-shadow: 0 4px 12px rgba(7, 63, 40, 0.18);
+        }
         .teacher-qr-empty {
             color: #7b8794;
             font-size: 14px;
@@ -1865,6 +1955,18 @@
                 width: 220px;
                 min-width: 220px;
                 height: 220px;
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #step3.active-step,
+            #step3.active-step .scanner-container,
+            #step3.active-step .scan-overlay,
+            .teacher-qr-code.verification-code.verification-live {
+                animation: none;
+            }
+            #step3.active-step::before,
+            .teacher-qr-code.verification-code.verification-live::before {
+                display: none;
             }
         }
         @media (min-width: 601px) and (max-width: 900px) {
@@ -3169,6 +3271,18 @@
             return true;
         }
 
+        function syncVerificationVisuals(referenceTime = new Date()) {
+            const suppliedTime = referenceTime instanceof Date
+                ? referenceTime.getTime()
+                : Number(referenceTime);
+            const timeMs = Number.isFinite(suppliedTime) ? suppliedTime : Date.now();
+            const cycleOffset = ((timeMs % TEACHER_QR_REFRESH_INTERVAL) + TEACHER_QR_REFRESH_INTERVAL)
+                % TEACHER_QR_REFRESH_INTERVAL;
+            const rootStyle = document.documentElement.style;
+            rootStyle.setProperty('--verification-sync-duration', `${TEACHER_QR_REFRESH_INTERVAL}ms`);
+            rootStyle.setProperty('--verification-sync-delay', `-${Math.round(cycleOffset)}ms`);
+        }
+
         function renderTeacherAztecCode(containerId, text, size = 212) {
             const container = document.getElementById(containerId);
             if (!container || !window.ZXing?.AztecCodeWriter) {
@@ -3222,6 +3336,7 @@
 
                 container.innerHTML = '';
                 container.appendChild(canvas);
+                container.classList.add('verification-live');
                 return true;
             } catch (error) {
                 console.error('Aztec rendering error:', error);
@@ -3239,6 +3354,7 @@
         function clearTeacherDynamicQr() {
             const container = document.getElementById('teacherDynamicQrCode');
             if (container) {
+                container.classList.remove('verification-live');
                 container.innerHTML = '<div class="teacher-qr-empty">ابدأ الجلسة لعرض رمز التحقق المتغير.</div>';
             }
         }
@@ -3283,6 +3399,7 @@
 
             try {
                 const accurateTime = await fetchTeacherQrTime();
+                syncVerificationVisuals(accurateTime);
                 const timestampWindow = Math.floor(accurateTime.getTime() / 10000);
                 const token = buildTeacherAztecToken(timestampWindow);
                 await loadZxingLibrary();
@@ -3347,6 +3464,7 @@
         }
 
         function initializeTeacherQrPanel() {
+            syncVerificationVisuals(getSaudiTime());
             renderTeacherStaticQr();
             refreshTeacherQrPanelState();
             updateTeacherQrSessionUi();
@@ -7224,6 +7342,8 @@
                 return;
             }
 
+            syncVerificationVisuals(getSaudiTime());
+
             const video = document.getElementById('video-preview');
             const controlBtn = document.getElementById('controlBtn');
             if (!video || !controlBtn) {
@@ -8106,6 +8226,7 @@
             document.getElementById(`step${stepNumber}`).classList.add('active-step');
 
             if (Number(stepNumber) === 3) {
+                syncVerificationVisuals(getSaudiTime());
                 setScanStatus('جاري تجهيز الكاميرا...', 'waiting');
             }
         }
