@@ -2119,7 +2119,7 @@
             <button onclick="retryLocationCheck()" id="retryButton" style="display:none">إعادة المحاولة</button>
         </div>
 
-        <!-- STEP 3: SCAN DATA MATRIX VERIFICATION CODE (ONLY IF ENABLED) -->
+        <!-- STEP 3: SCAN THE PRIVATE VERIFICATION MARKER (ONLY IF ENABLED) -->
         <div id="step3" class="step">
             <h2>امسح كود الحضور</h2>
             <div class="scanner-container">
@@ -2201,7 +2201,7 @@
                             <span class="teacher-toggle-switch"></span>
                         </label>
                         <label class="teacher-toggle">
-                            <span>رمز التحقق Data Matrix</span>
+                            <span>رمز التحقق الخاص</span>
                             <input type="checkbox" id="adminQrToggle" onchange="markAdminSettingsDirty()">
                             <span class="teacher-toggle-switch"></span>
                         </label>
@@ -2287,7 +2287,7 @@
                             <div class="teacher-settings-note">لمقررات مهارات الطباعة: سمِّ الحقل الأول "السرعة" أو Speed/WPM، والحقل الثاني "الدقة" أو Accuracy. عند تفعيل التقرير ستُستخدم هذه القيم في مقارنة الطلاب ولوحة الطالب. إذا تركت خيارات الحقل الثالث فارغة، يبقى مربع نص.</div>
                         </div>
                     </div>
-                    <div class="teacher-settings-note">إعدادات GPS ورمز التحقق Data Matrix وNFC والصيانة عامة. إعدادات النموذج والمرفق والملاحظة والحقول المخصصة تُضبط لكل دورة على حدة. الحقول المخصصة تظهر فقط إذا كتبت لها أسماء وفعلتها للدورة.</div>
+                    <div class="teacher-settings-note">إعدادات GPS ورمز التحقق الخاص وNFC والصيانة عامة. إعدادات النموذج والمرفق والملاحظة والحقول المخصصة تُضبط لكل دورة على حدة. الحقول المخصصة تظهر فقط إذا كتبت لها أسماء وفعلتها للدورة.</div>
                     <div id="teacherSettingsMessage" class="status-bar teacher-message waiting">جاري تحميل الإعدادات...</div>
                 </div>
 
@@ -2507,7 +2507,7 @@
 
                 <div class="teacher-block" data-teacher-block="qr">
                     <h3>رموز الدخول والتحقق</h3>
-                    <div class="teacher-block-note">اعرض QR الثابت لفتح الموقع، ثم رمز Data Matrix المتغير الذي لا يقبله إلا ماسح التحقق داخل نموذج الحضور.</div>
+                    <div class="teacher-block-note">اعرض QR الثابت لفتح الموقع، ثم رمز AprilTag المتغير المخصص لماسح التحقق داخل نموذج الحضور.</div>
                     <div class="teacher-qr-shell">
                         <div class="teacher-qr-toolbar">
                             <div class="teacher-qr-session-state">
@@ -2519,7 +2519,7 @@
                                 <button type="button" id="teacherQrRefreshButton" class="teacher-secondary-button" onclick="refreshTeacherQrSession()" disabled>تحديث الرمز الآن</button>
                             </div>
                         </div>
-                        <div id="teacherQrConfigBadge" class="teacher-qr-config-badge">التحقق بواسطة Data Matrix مفعّل حالياً</div>
+                        <div id="teacherQrConfigBadge" class="teacher-qr-config-badge">رمز التحقق الخاص مفعّل حالياً</div>
                         <div class="teacher-qr-stage">
                             <div class="teacher-qr-card">
                                 <h4>الخطوة الأولى</h4>
@@ -2534,13 +2534,13 @@
                             </div>
                             <div class="teacher-qr-card">
                                 <h4>الخطوة الثانية</h4>
-                                <p>بعد فتح النموذج، استخدم ماسح الحضور لقراءة رمز Data Matrix المتغير وإكمال التحقق.</p>
+                                <p>بعد فتح النموذج، استخدم ماسح الحضور لقراءة رمز AprilTag المتغير وإكمال التحقق.</p>
                                 <div id="teacherDynamicQrCode" class="teacher-qr-code verification-code">
                                     <div class="teacher-qr-empty">ابدأ الجلسة لعرض رمز التحقق المتغير.</div>
                                 </div>
                                 <div class="teacher-qr-meta">
                                     <span id="teacherQrSessionIdPill" class="teacher-qr-pill">لا توجد جلسة</span>
-                                    <span id="teacherQrRefreshPill" class="teacher-qr-pill">Data Matrix · يتحدث كل 10 ثوانٍ</span>
+                                    <span id="teacherQrRefreshPill" class="teacher-qr-pill">AprilTag · يتحدث كل 10 ثوانٍ</span>
                                 </div>
                                 <div id="teacherQrFooter" class="teacher-qr-footer">عند إيقاف الجلسة يختفي رمز التحقق مباشرة.</div>
                             </div>
@@ -2795,7 +2795,12 @@
         const TEACHER_QR_TIME_SYNC_INTERVAL = 5 * 60 * 1000;
         const TEACHER_QR_TIME_FETCH_TIMEOUT = 3500;
         const TEACHER_QR_TIME_API_URL = 'https://timeapi.io/api/Time/current/zone?timeZone=Asia/Riyadh';
-        const ZXING_LIBRARY_URL = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.23.0/umd/index.min.js';
+        const APRILTAG_ASSET_BASE = './assets/apriltag/';
+        const APRILTAG_RENDERER_URL = `${APRILTAG_ASSET_BASE}apriltag-renderer.js`;
+        const APRILTAG_FAMILY_URL = `${APRILTAG_ASSET_BASE}tag36h11.json`;
+        const APRILTAG_WORKER_URL = `${APRILTAG_ASSET_BASE}apriltag-worker.js`;
+        const APRILTAG_FAMILY_SIZE = 587;
+        const APRILTAG_CHALLENGE_NAMESPACE = 'ATTQ_APRILTAG_V1';
         const SESSION_DURATION = 12 * 60 * 60 * 1000;
         const MAX_ATTEMPTS = 5;
         const REDIRECT_URL = 'https://tvtc.gov.sa/ar/Pages/default1.aspx';
@@ -2813,14 +2818,17 @@
         let idVerificationInProgress = false;
         let scannerStartupInProgress = false;
         let scannerActivationToken = 0;
-        let verificationCodeReader = null;
-        let verificationDecodeHints = null;
+        let verificationTagWorker = null;
+        let verificationTagReadyPromise = null;
+        let verificationTagRequestSequence = 0;
+        const verificationTagPendingRequests = new Map();
+        let verificationTagFamilyPromise = null;
+        let aprilTagRendererPromise = null;
         let verificationScanCanvas = null;
         let verificationGrayscaleBuffer = null;
         let verificationLastScanAt = 0;
         let verificationLastRejectedData = '';
         let verificationLastRejectedAt = 0;
-        let zxingLibraryPromise = null;
         let nfcTapData = null;
         let nfcTapError = '';
         let nfcTapUsedForThisAttempt = false;
@@ -3311,49 +3319,194 @@
 
             if (ENABLE_QR_VALIDATION) {
                 badge.classList.remove('off');
-                badge.textContent = 'التحقق بواسطة Data Matrix مفعّل حالياً';
+                badge.textContent = 'رمز التحقق الخاص مفعّل حالياً';
             } else {
                 badge.classList.add('off');
-                badge.textContent = 'التحقق بواسطة Data Matrix متوقف - يمكن تجهيز الجلسة مسبقاً';
+                badge.textContent = 'رمز التحقق الخاص متوقف - يمكن تجهيز الجلسة مسبقاً';
             }
         }
 
-        function loadZxingLibrary() {
-            if (window.ZXing?.DataMatrixWriter && window.ZXing?.DataMatrixReader) {
-                return Promise.resolve(window.ZXing);
-            }
-            if (zxingLibraryPromise) {
-                return zxingLibraryPromise;
+        function loadAprilTagRenderer() {
+            if (verificationTagFamilyPromise) {
+                return verificationTagFamilyPromise;
             }
 
-            zxingLibraryPromise = new Promise((resolve, reject) => {
-                const script = document.createElement('script');
+            const rendererReady = window.AprilTagFamily
+                ? Promise.resolve()
+                : new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    let settled = false;
+                    const timeout = setTimeout(() => finish(false), 12000);
+
+                    function finish(success) {
+                        if (settled) return;
+                        settled = true;
+                        clearTimeout(timeout);
+                        if (success && window.AprilTagFamily) {
+                            resolve();
+                            return;
+                        }
+                        script.remove();
+                        reject(new Error('تعذر تحميل مولد رمز التحقق. أعد فتح الصفحة.'));
+                    }
+
+                    script.src = APRILTAG_RENDERER_URL;
+                    script.async = true;
+                    script.dataset.attendanceAprilTagRenderer = 'true';
+                    script.onload = () => finish(true);
+                    script.onerror = () => finish(false);
+                    document.head.appendChild(script);
+                });
+
+            aprilTagRendererPromise = aprilTagRendererPromise || rendererReady;
+            verificationTagFamilyPromise = Promise.all([
+                aprilTagRendererPromise,
+                fetch(APRILTAG_FAMILY_URL, { cache: 'force-cache' }).then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    return response.json();
+                })
+            ]).then(([, familyConfig]) => {
+                if (!Array.isArray(familyConfig?.codes) || familyConfig.codes.length !== APRILTAG_FAMILY_SIZE) {
+                    throw new Error('ملف عائلة رمز التحقق غير صالح.');
+                }
+                return new window.AprilTagFamily(familyConfig);
+            }).catch(error => {
+                verificationTagFamilyPromise = null;
+                if (!window.AprilTagFamily) {
+                    aprilTagRendererPromise = null;
+                }
+                throw error;
+            });
+
+            return verificationTagFamilyPromise;
+        }
+
+        function resetAprilTagDetector(error) {
+            verificationTagWorker?.terminate();
+            verificationTagWorker = null;
+            verificationTagReadyPromise = null;
+            verificationTagPendingRequests.forEach(pending => {
+                clearTimeout(pending.timeout);
+                pending.reject(error);
+            });
+            verificationTagPendingRequests.clear();
+        }
+
+        function loadAprilTagDetector() {
+            if (verificationTagReadyPromise) {
+                return verificationTagReadyPromise;
+            }
+
+            const startupPromise = new Promise((resolve, reject) => {
                 let settled = false;
-                const timeout = setTimeout(() => finish(false), 15000);
+                let worker;
+                const timeout = setTimeout(() => finish(false, 'انتهت مهلة تجهيز قارئ رمز التحقق.'), 15000);
 
-                function finish(success) {
+                function finish(success, message = '') {
                     if (settled) return;
                     settled = true;
                     clearTimeout(timeout);
-                    if (success && window.ZXing?.DataMatrixWriter && window.ZXing?.DataMatrixReader) {
-                        resolve(window.ZXing);
+                    if (success) {
+                        resolve(worker);
                         return;
                     }
-                    script.remove();
-                    zxingLibraryPromise = null;
-                    reject(new Error('تعذر تحميل قارئ رمز التحقق. تحقق من الاتصال ثم حاول مرة أخرى.'));
+                    reject(new Error(message || 'تعذر تجهيز قارئ رمز التحقق.'));
                 }
 
-                script.src = ZXING_LIBRARY_URL;
-                script.async = true;
-                script.crossOrigin = 'anonymous';
-                script.dataset.attendanceZxing = 'true';
-                script.onload = () => finish(true);
-                script.onerror = () => finish(false);
-                document.head.appendChild(script);
+                try {
+                    worker = new Worker(new URL(APRILTAG_WORKER_URL, document.baseURI));
+                    verificationTagWorker = worker;
+                } catch (error) {
+                    finish(false, error?.message);
+                    return;
+                }
+
+                worker.addEventListener('message', event => {
+                    if (event.data?.type === 'ready') {
+                        finish(!event.data.error, event.data.error);
+                        return;
+                    }
+                    if (event.data?.type !== 'result') {
+                        return;
+                    }
+
+                    const pending = verificationTagPendingRequests.get(event.data.requestId);
+                    if (!pending) {
+                        return;
+                    }
+                    verificationTagPendingRequests.delete(event.data.requestId);
+                    clearTimeout(pending.timeout);
+                    if (event.data.error) {
+                        pending.reject(new Error(event.data.error));
+                    } else {
+                        pending.resolve(Array.isArray(event.data.detections) ? event.data.detections : []);
+                    }
+                });
+
+                worker.addEventListener('error', event => {
+                    const error = new Error(event.message || 'تعطل قارئ رمز التحقق.');
+                    finish(false, error.message);
+                    if (settled) {
+                        resetAprilTagDetector(error);
+                    }
+                });
             });
 
-            return zxingLibraryPromise;
+            verificationTagReadyPromise = startupPromise.catch(error => {
+                resetAprilTagDetector(error);
+                throw error;
+            });
+            return verificationTagReadyPromise;
+        }
+
+        async function detectAprilTagsFromCanvas(canvas) {
+            const worker = await loadAprilTagDetector();
+            const context = canvas?.getContext('2d', { willReadFrequently: true });
+            if (!canvas || !context) {
+                return [];
+            }
+
+            const image = context.getImageData(0, 0, canvas.width, canvas.height);
+            const pixelCount = canvas.width * canvas.height;
+            if (!verificationGrayscaleBuffer || verificationGrayscaleBuffer.length !== pixelCount) {
+                verificationGrayscaleBuffer = new Uint8Array(pixelCount);
+            }
+
+            for (let sourceIndex = 0, targetIndex = 0; targetIndex < pixelCount; sourceIndex += 4, targetIndex += 1) {
+                verificationGrayscaleBuffer[targetIndex] = (
+                    image.data[sourceIndex] +
+                    image.data[sourceIndex + 1] * 2 +
+                    image.data[sourceIndex + 2]
+                ) >> 2;
+            }
+
+            const requestId = ++verificationTagRequestSequence;
+            const pixelBuffer = verificationGrayscaleBuffer.buffer;
+            verificationGrayscaleBuffer = null;
+
+            return new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    verificationTagPendingRequests.delete(requestId);
+                    reject(new Error('انتهت مهلة قراءة رمز التحقق.'));
+                }, 5000);
+                verificationTagPendingRequests.set(requestId, { resolve, reject, timeout });
+
+                try {
+                    worker.postMessage({
+                        type: 'detect',
+                        requestId,
+                        pixelBuffer,
+                        width: canvas.width,
+                        height: canvas.height
+                    }, [pixelBuffer]);
+                } catch (error) {
+                    clearTimeout(timeout);
+                    verificationTagPendingRequests.delete(requestId);
+                    reject(error);
+                }
+            });
         }
 
         function renderTeacherQrCode(containerId, text, size = 212) {
@@ -3391,30 +3544,20 @@
             rootStyle.setProperty('--verification-sync-delay', `-${Math.round(cycleOffset)}ms`);
         }
 
-        function renderTeacherDataMatrixCode(containerId, text, size = 212) {
+        async function renderTeacherAprilTagCode(containerId, tagId, size = 212) {
             const container = document.getElementById(containerId);
-            if (!container || !window.ZXing?.DataMatrixWriter) {
+            if (!container || !Number.isInteger(tagId) || tagId < 0 || tagId >= APRILTAG_FAMILY_SIZE) {
                 return false;
             }
 
             try {
-                const hints = new Map();
-                if (ZXing.DataMatrixSymbolShapeHint?.FORCE_SQUARE !== undefined) {
-                    hints.set(ZXing.EncodeHintType.DATA_MATRIX_SHAPE, ZXing.DataMatrixSymbolShapeHint.FORCE_SQUARE);
-                }
-                const matrix = new ZXing.DataMatrixWriter().encode(
-                    text,
-                    ZXing.BarcodeFormat.DATA_MATRIX,
-                    0,
-                    0,
-                    hints
-                );
-                const moduleWidth = matrix.getWidth();
-                const moduleHeight = matrix.getHeight();
-                const quietZone = 4;
-                const cellSize = Math.max(2, Math.floor(size / (Math.max(moduleWidth, moduleHeight) + quietZone * 2)));
-                const renderedWidth = cellSize * (moduleWidth + quietZone * 2);
-                const renderedHeight = cellSize * (moduleHeight + quietZone * 2);
+                const family = await loadAprilTagRenderer();
+                const matrix = family.render(tagId);
+                const moduleCount = matrix.length;
+                const quietZone = 2;
+                const cellSize = Math.max(4, Math.floor(size / (moduleCount + quietZone * 2)));
+                const renderedWidth = cellSize * (moduleCount + quietZone * 2);
+                const renderedHeight = renderedWidth;
                 const offsetX = Math.floor((size - renderedWidth) / 2);
                 const offsetY = Math.floor((size - renderedHeight) / 2);
                 const pixelRatio = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
@@ -3427,16 +3570,16 @@
                 canvas.style.width = `${size}px`;
                 canvas.style.height = `${size}px`;
                 canvas.setAttribute('role', 'img');
-                canvas.setAttribute('aria-label', 'رمز Data Matrix المتغير للتحقق');
+                canvas.setAttribute('aria-label', 'رمز التحقق المرئي المتغير');
                 context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
                 context.imageSmoothingEnabled = false;
                 context.fillStyle = '#ffffff';
                 context.fillRect(0, 0, size, size);
                 context.fillStyle = '#102a43';
 
-                for (let y = 0; y < moduleHeight; y += 1) {
-                    for (let x = 0; x < moduleWidth; x += 1) {
-                        if (matrix.get(x, y)) {
+                for (let y = 0; y < moduleCount; y += 1) {
+                    for (let x = 0; x < moduleCount; x += 1) {
+                        if (matrix[y][x] === 'b') {
                             context.fillRect(
                                 offsetX + (x + quietZone) * cellSize,
                                 offsetY + (y + quietZone) * cellSize,
@@ -3452,7 +3595,7 @@
                 container.classList.add('verification-live');
                 return true;
             } catch (error) {
-                console.error('Data Matrix rendering error:', error);
+                console.error('AprilTag rendering error:', error);
                 return false;
             }
         }
@@ -3516,17 +3659,11 @@
             return teacherQrTimeSyncPromise;
         }
 
-        function buildTeacherQrTokenPayload(timestampWindow) {
-            return {
-                t: timestampWindow,
-                s: teacherQrSessionId,
-                h: simpleHash(`${timestampWindow}${teacherQrSessionId}${SECRET_PHRASE}`)
-            };
-        }
-
-        function buildTeacherDataMatrixToken(timestampWindow) {
-            const signature = simpleHash(`${timestampWindow}${teacherQrSessionId}${SECRET_PHRASE}`);
-            return `D1.${timestampWindow.toString(36)}.${teacherQrSessionId}.${signature}`;
+        function buildVerificationTagId(timestampWindow) {
+            const digest = simpleHash(
+                `${APRILTAG_CHALLENGE_NAMESPACE}|${timestampWindow}|${SECRET_PHRASE}`
+            );
+            return parseInt(digest, 36) % APRILTAG_FAMILY_SIZE;
         }
 
         async function generateTeacherDynamicQr() {
@@ -3541,11 +3678,10 @@
                 const accurateTime = await fetchTeacherQrTime();
                 syncVerificationVisuals(accurateTime);
                 const timestampWindow = Math.floor(accurateTime.getTime() / 10000);
-                const token = buildTeacherDataMatrixToken(timestampWindow);
-                await loadZxingLibrary();
-                const rendered = renderTeacherDataMatrixCode('teacherDynamicQrCode', token, 212);
+                const tagId = buildVerificationTagId(timestampWindow);
+                const rendered = await renderTeacherAprilTagCode('teacherDynamicQrCode', tagId, 212);
                 if (!rendered) {
-                    throw new Error('تعذر رسم رمز Data Matrix للتحقق.');
+                    throw new Error('تعذر رسم رمز التحقق الخاص.');
                 }
 
                 const refreshPill = document.getElementById('teacherQrRefreshPill');
@@ -3559,13 +3695,13 @@
 
                 setTeacherQrMessage(
                     ENABLE_QR_VALIDATION
-                        ? 'رمز Data Matrix جاهز ويتحدث كل 10 ثوانٍ. ماسح الحضور وحده يقبله.'
-                        : 'تم توليد رمز Data Matrix، لكن خيار التحقق ما يزال متوقفاً في الإعدادات.',
+                        ? 'رمز التحقق الخاص جاهز ويتحدث كل 10 ثوانٍ. ماسح الحضور داخل الصفحة هو المخصص لقراءته.'
+                        : 'تم توليد رمز التحقق الخاص، لكن خيار التحقق ما يزال متوقفاً في الإعدادات.',
                     ENABLE_QR_VALIDATION ? 'valid' : 'waiting'
                 );
             } catch (error) {
-                console.error('Teacher dynamic QR generation error:', error);
-                setTeacherQrMessage(error.message || 'تعذر توليد رمز Data Matrix حالياً.', 'invalid');
+                console.error('Teacher verification marker generation error:', error);
+                setTeacherQrMessage(error.message || 'تعذر توليد رمز التحقق حالياً.', 'invalid');
             } finally {
                 teacherQrBusy = false;
                 updateTeacherQrSessionUi();
@@ -3601,7 +3737,7 @@
 
         function refreshTeacherQrSession() {
             if (!teacherQrSessionId) {
-                setTeacherQrMessage('ابدأ جلسة التحقق أولاً حتى يظهر رمز Data Matrix.', 'invalid');
+                setTeacherQrMessage('ابدأ جلسة التحقق أولاً حتى يظهر الرمز الخاص.', 'invalid');
                 return;
             }
             generateTeacherDynamicQr();
@@ -6071,7 +6207,7 @@
         function formatGateSummary(row) {
             return [
                 `GPS: ${formatGateStatus(row.gpsStatus)}`,
-                `Data Matrix: ${formatGateStatus(row.qrStatus)}`,
+                `رمز التحقق: ${formatGateStatus(row.qrStatus)}`,
                 `NFC: ${formatGateStatus(row.nfcStatus)}`
             ].join(' | ');
         }
@@ -6152,7 +6288,7 @@
                 return;
             }
 
-            const headers = ['التاريخ', 'الوقت', 'الحالة', 'احتساب الحضور', 'الرقم التدريبي', 'الاسم', 'البرنامج', 'اللقاء', 'GPS', 'Data Matrix', 'NFC', 'الجهاز', 'المرفق', 'الملاحظة', 'الحقول المخصصة'];
+            const headers = ['التاريخ', 'الوقت', 'الحالة', 'احتساب الحضور', 'الرقم التدريبي', 'الاسم', 'البرنامج', 'اللقاء', 'GPS', 'رمز التحقق', 'NFC', 'الجهاز', 'المرفق', 'الملاحظة', 'الحقول المخصصة'];
             const lines = [
                 headers,
                 ...teacherLastRows.map(row => [
@@ -7678,7 +7814,7 @@
                 .filter(meeting => meeting.meetingId && meeting.date && meeting.startClass && meeting.endClass);
         }
 
-        // ================== STEP 3: SCAN DATA MATRIX VERIFICATION CODE ================== //
+        // ================== STEP 3: SCAN THE PRIVATE VERIFICATION MARKER ================== //
         async function toggleScanner() {
             if (scannerStartupInProgress) {
                 return;
@@ -7699,45 +7835,6 @@
 
             scanStatus.className = `status-bar ${tone}`;
             scanStatus.textContent = message;
-        }
-
-        function initializeVerificationCodeReader() {
-            if (verificationCodeReader || !window.ZXing?.DataMatrixReader) {
-                return;
-            }
-            verificationDecodeHints = new Map();
-            verificationDecodeHints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-            verificationDecodeHints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.DATA_MATRIX]);
-            verificationCodeReader = new ZXing.DataMatrixReader();
-        }
-
-        function decodeDataMatrixFromCanvas(canvas) {
-            if (!verificationCodeReader || !canvas) {
-                return null;
-            }
-
-            const context = canvas.getContext('2d', { willReadFrequently: true });
-            const image = context.getImageData(0, 0, canvas.width, canvas.height);
-            const pixelCount = canvas.width * canvas.height;
-            if (!verificationGrayscaleBuffer || verificationGrayscaleBuffer.length !== pixelCount) {
-                verificationGrayscaleBuffer = new Uint8ClampedArray(pixelCount);
-            }
-
-            for (let sourceIndex = 0, targetIndex = 0; targetIndex < pixelCount; sourceIndex += 4, targetIndex += 1) {
-                verificationGrayscaleBuffer[targetIndex] = (
-                    image.data[sourceIndex] +
-                    image.data[sourceIndex + 1] * 2 +
-                    image.data[sourceIndex + 2]
-                ) >> 2;
-            }
-
-            const luminance = new ZXing.RGBLuminanceSource(
-                verificationGrayscaleBuffer,
-                canvas.width,
-                canvas.height
-            );
-            const bitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminance));
-            return verificationCodeReader.decode(bitmap, verificationDecodeHints);
         }
 
         async function startScanner(options = {}) {
@@ -7773,16 +7870,12 @@
                 scannerActive = true;
                 controlBtn.disabled = false;
                 controlBtn.textContent = 'إيقاف الماسح';
-                setScanStatus('وجّه الكاميرا نحو رمز Data Matrix المتغير الآن.', 'waiting');
+                setScanStatus('وجّه الكاميرا نحو رمز التحقق الخاص المتغير الآن.', 'waiting');
                 scanFrame();
             }
 
             try {
-                await loadZxingLibrary();
-                initializeVerificationCodeReader();
-                if (!verificationCodeReader) {
-                    throw new Error('تعذر تهيئة قارئ Data Matrix.');
-                }
+                await loadAprilTagDetector();
 
                 let stream = null;
                 try {
@@ -7839,7 +7932,7 @@
                 controlBtn.disabled = false;
                 controlBtn.textContent = 'بدء الماسح';
                 showError(
-                    /Data Matrix|قارئ رمز التحقق|ZXing/i.test(error?.message || '')
+                    /رمز التحقق|AprilTag|WebAssembly|Worker/i.test(error?.message || '')
                         ? (error.message || 'تعذر تجهيز قارئ رمز التحقق.')
                         : autoStart
                         ? 'اسمح للكاميرا ثم اضغط "بدء الماسح" للمتابعة.'
@@ -7890,6 +7983,7 @@
 
         async function scanFrame() {
             if (!scannerActive || qrCompletionInProgress) return;
+            const frameActivationToken = scannerActivationToken;
 
             const now = performance.now();
             if (now - verificationLastScanAt < 220) {
@@ -7918,16 +8012,24 @@
 
             let verificationData = '';
             try {
-                const result = decodeDataMatrixFromCanvas(canvas);
-                if (result?.getBarcodeFormat?.() === ZXing.BarcodeFormat.DATA_MATRIX) {
-                    verificationData = result.getText() || '';
+                const detections = await detectAprilTagsFromCanvas(canvas);
+                const result = detections.find(detection => {
+                    const id = Number(detection?.id);
+                    return Number.isInteger(id) && id >= 0 && id < APRILTAG_FAMILY_SIZE;
+                });
+                if (result) {
+                    verificationData = String(result.id);
                 }
             } catch (error) {
-                // A frame without a complete Data Matrix symbol is expected while aiming the camera.
+                // A frame without a complete verification marker is expected while aiming the camera.
+            }
+
+            if (!scannerActive || frameActivationToken !== scannerActivationToken || qrCompletionInProgress) {
+                return;
             }
 
             if (verificationData) {
-                const isValid = await validateQRData(verificationData);
+                const isValid = await validateVerificationTagId(verificationData);
                 if (isValid) {
                     qrCompletionInProgress = true;
                     qrValidationPassed = true;
@@ -7952,48 +8054,20 @@
             requestAnimationFrame(scanFrame);
         }
 
-        async function validateQRData(data) {
+        async function validateVerificationTagId(data) {
             try {
-                let payload;
-                if (/^(?:A1|D1)\./.test(String(data || ''))) {
-                    const parts = String(data).split('.');
-                    if (parts.length !== 4 || !/^[a-z0-9]+$/i.test(parts[1]) || !/^[a-z0-9]+$/i.test(parts[2])) {
-                        return false;
-                    }
-                    payload = {
-                        t: parseInt(parts[1], 36),
-                        s: parts[2],
-                        h: parts[3]
-                    };
-                } else {
-                    const decoded = atob(data);
-                    payload = JSON.parse(decoded);
-                }
-
-                if (!Number.isInteger(payload.t) || !payload.s || !payload.h) {
-                    console.error('Payload missing required fields:', payload);
+                const tagId = Number(data);
+                if (!Number.isInteger(tagId) || tagId < 0 || tagId >= APRILTAG_FAMILY_SIZE) {
                     return false;
                 }
 
                 const currentWindow = Math.floor(getSaudiTime().getTime() / 10000);
                 const validWindows = [currentWindow, currentWindow - 1];
-
-                if (!validWindows.includes(payload.t)) {
-                    console.warn('Timestamp window mismatch.');
-                    return false;
+                const isValid = validWindows.some(windowId => buildVerificationTagId(windowId) === tagId);
+                if (!isValid) {
+                    console.warn('Verification marker ID is outside the valid time window.');
                 }
-
-                const expectedHash = simpleHash(
-                    `${payload.t}${payload.s}${SECRET_PHRASE}`
-                );
-
-                if (payload.h !== expectedHash) {
-                    console.warn('Hash mismatch.');
-                    return false;
-                }
-
-                console.log('Data Matrix verification code is valid.');
-                return true;
+                return isValid;
             } catch (error) {
                 console.error('خطأ في التحقق:', error);
                 return false;
@@ -8542,7 +8616,7 @@
                 return 'لم يكتمل التحقق من الموقع. أعد المحاولة من البداية.';
             }
             if (ENABLE_QR_VALIDATION && !qrValidationPassed) {
-                return 'لم يكتمل التحقق من الرمز الخاص. امسح رمز Data Matrix المتغير مرة أخرى.';
+                return 'لم يكتمل التحقق من الرمز الخاص. امسح الرمز المتغير مرة أخرى.';
             }
             if (ENABLE_SUPPORTING_FORM && !supportingFormCompleted) {
                 return 'أكمل النموذج المطلوب قبل تسجيل الحضور.';
