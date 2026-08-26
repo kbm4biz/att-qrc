@@ -2119,7 +2119,7 @@
             <button onclick="retryLocationCheck()" id="retryButton" style="display:none">إعادة المحاولة</button>
         </div>
 
-        <!-- STEP 3: SCAN AZTEC VERIFICATION CODE (ONLY IF ENABLED) -->
+        <!-- STEP 3: SCAN DATA MATRIX VERIFICATION CODE (ONLY IF ENABLED) -->
         <div id="step3" class="step">
             <h2>امسح كود الحضور</h2>
             <div class="scanner-container">
@@ -2201,7 +2201,7 @@
                             <span class="teacher-toggle-switch"></span>
                         </label>
                         <label class="teacher-toggle">
-                            <span>رمز التحقق Aztec</span>
+                            <span>رمز التحقق Data Matrix</span>
                             <input type="checkbox" id="adminQrToggle" onchange="markAdminSettingsDirty()">
                             <span class="teacher-toggle-switch"></span>
                         </label>
@@ -2287,7 +2287,7 @@
                             <div class="teacher-settings-note">لمقررات مهارات الطباعة: سمِّ الحقل الأول "السرعة" أو Speed/WPM، والحقل الثاني "الدقة" أو Accuracy. عند تفعيل التقرير ستُستخدم هذه القيم في مقارنة الطلاب ولوحة الطالب. إذا تركت خيارات الحقل الثالث فارغة، يبقى مربع نص.</div>
                         </div>
                     </div>
-                    <div class="teacher-settings-note">إعدادات GPS ورمز التحقق Aztec وNFC والصيانة عامة. إعدادات النموذج والمرفق والملاحظة والحقول المخصصة تُضبط لكل دورة على حدة. الحقول المخصصة تظهر فقط إذا كتبت لها أسماء وفعلتها للدورة.</div>
+                    <div class="teacher-settings-note">إعدادات GPS ورمز التحقق Data Matrix وNFC والصيانة عامة. إعدادات النموذج والمرفق والملاحظة والحقول المخصصة تُضبط لكل دورة على حدة. الحقول المخصصة تظهر فقط إذا كتبت لها أسماء وفعلتها للدورة.</div>
                     <div id="teacherSettingsMessage" class="status-bar teacher-message waiting">جاري تحميل الإعدادات...</div>
                 </div>
 
@@ -2507,7 +2507,7 @@
 
                 <div class="teacher-block" data-teacher-block="qr">
                     <h3>رموز الدخول والتحقق</h3>
-                    <div class="teacher-block-note">اعرض QR الثابت لفتح الموقع، ثم رمز Aztec المتغير الذي لا يقبله إلا ماسح التحقق داخل نموذج الحضور.</div>
+                    <div class="teacher-block-note">اعرض QR الثابت لفتح الموقع، ثم رمز Data Matrix المتغير الذي لا يقبله إلا ماسح التحقق داخل نموذج الحضور.</div>
                     <div class="teacher-qr-shell">
                         <div class="teacher-qr-toolbar">
                             <div class="teacher-qr-session-state">
@@ -2519,7 +2519,7 @@
                                 <button type="button" id="teacherQrRefreshButton" class="teacher-secondary-button" onclick="refreshTeacherQrSession()" disabled>تحديث الرمز الآن</button>
                             </div>
                         </div>
-                        <div id="teacherQrConfigBadge" class="teacher-qr-config-badge">التحقق بواسطة Aztec مفعّل حالياً</div>
+                        <div id="teacherQrConfigBadge" class="teacher-qr-config-badge">التحقق بواسطة Data Matrix مفعّل حالياً</div>
                         <div class="teacher-qr-stage">
                             <div class="teacher-qr-card">
                                 <h4>الخطوة الأولى</h4>
@@ -2534,13 +2534,13 @@
                             </div>
                             <div class="teacher-qr-card">
                                 <h4>الخطوة الثانية</h4>
-                                <p>بعد فتح النموذج، استخدم ماسح الحضور لقراءة رمز Aztec المتغير وإكمال التحقق.</p>
+                                <p>بعد فتح النموذج، استخدم ماسح الحضور لقراءة رمز Data Matrix المتغير وإكمال التحقق.</p>
                                 <div id="teacherDynamicQrCode" class="teacher-qr-code verification-code">
                                     <div class="teacher-qr-empty">ابدأ الجلسة لعرض رمز التحقق المتغير.</div>
                                 </div>
                                 <div class="teacher-qr-meta">
                                     <span id="teacherQrSessionIdPill" class="teacher-qr-pill">لا توجد جلسة</span>
-                                    <span id="teacherQrRefreshPill" class="teacher-qr-pill">Aztec · يتحدث كل 10 ثوانٍ</span>
+                                    <span id="teacherQrRefreshPill" class="teacher-qr-pill">Data Matrix · يتحدث كل 10 ثوانٍ</span>
                                 </div>
                                 <div id="teacherQrFooter" class="teacher-qr-footer">عند إيقاف الجلسة يختفي رمز التحقق مباشرة.</div>
                             </div>
@@ -2792,6 +2792,8 @@
         const APPS_SCRIPT_LOG_URL = 'https://script.google.com/macros/s/AKfycbzQ_qHgTzYTZli-ChD_kU-pcpunvHn_PMv4uJ3C5Coj5DfQM0eswdBDYa_PsLrp4drr2Q/exec'; // Apps Script LOG endpoint
         const SECRET_PHRASE = 'SCHOOL_SECRET_2026';
         const TEACHER_QR_REFRESH_INTERVAL = 10000;
+        const TEACHER_QR_TIME_SYNC_INTERVAL = 5 * 60 * 1000;
+        const TEACHER_QR_TIME_FETCH_TIMEOUT = 3500;
         const TEACHER_QR_TIME_API_URL = 'https://timeapi.io/api/Time/current/zone?timeZone=Asia/Riyadh';
         const ZXING_LIBRARY_URL = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.23.0/umd/index.min.js';
         const SESSION_DURATION = 12 * 60 * 60 * 1000;
@@ -2806,6 +2808,7 @@
         let requiredLocation = '';
         let requiredLocationId = '';
         let locationData = null;
+        let legacyLocationLoadPromise = null;
         let attendanceRecorded = false; // Flag to prevent duplicate attendance logs
         let idVerificationInProgress = false;
         let scannerStartupInProgress = false;
@@ -2849,6 +2852,9 @@
         let teacherQrInterval = null;
         let teacherQrSessionId = '';
         let teacherQrBusy = false;
+        let teacherQrTimeOffsetMs = 0;
+        let teacherQrTimeSyncedAt = 0;
+        let teacherQrTimeSyncPromise = null;
         let teacherAnalyticsResult = { rows: [], summary: {} };
         let courseFormSettingsDrafts = {};
         let courseFormSettingsDirtyIds = new Set();
@@ -2895,8 +2901,11 @@
         async function refreshMeetingIndicator() {
             setMeetingIndicatorState(false, 'جاري التحقق من حالة الاجتماع', true);
 
-            if (bootstrapActiveMeetingNow === true) {
-                setMeetingIndicatorState(true, 'يوجد اجتماع نشط الآن');
+            if (typeof bootstrapActiveMeetingNow === 'boolean') {
+                setMeetingIndicatorState(
+                    bootstrapActiveMeetingNow,
+                    bootstrapActiveMeetingNow ? 'يوجد اجتماع نشط الآن' : 'لا يوجد اجتماع نشط الآن'
+                );
                 return;
             }
 
@@ -2977,12 +2986,9 @@
 
             // Preload location data only when GPS verification is enabled
             if (ENABLE_GPS_VALIDATION && (!Array.isArray(locationData) || !locationData.length)) {
-                try {
-                    locationData = await loadLegacyLocationData();
-                    console.log('Location data loaded from fallback CSV:', locationData);
-                } catch (error) {
-                    console.error('Error loading location data:', error);
-                }
+                ensureLegacyLocationDataLoaded().catch(error => {
+                    console.error('Error preloading location data:', error);
+                });
             }
 
             setPreflightStatus('جاهز', 'تم تجهيز شاشة الحضور. يمكنك المتابعة الآن.');
@@ -3305,15 +3311,15 @@
 
             if (ENABLE_QR_VALIDATION) {
                 badge.classList.remove('off');
-                badge.textContent = 'التحقق بواسطة Aztec مفعّل حالياً';
+                badge.textContent = 'التحقق بواسطة Data Matrix مفعّل حالياً';
             } else {
                 badge.classList.add('off');
-                badge.textContent = 'التحقق بواسطة Aztec متوقف - يمكن تجهيز الجلسة مسبقاً';
+                badge.textContent = 'التحقق بواسطة Data Matrix متوقف - يمكن تجهيز الجلسة مسبقاً';
             }
         }
 
         function loadZxingLibrary() {
-            if (window.ZXing?.AztecCodeWriter && window.ZXing?.AztecCodeReader) {
+            if (window.ZXing?.DataMatrixWriter && window.ZXing?.DataMatrixReader) {
                 return Promise.resolve(window.ZXing);
             }
             if (zxingLibraryPromise) {
@@ -3329,7 +3335,7 @@
                     if (settled) return;
                     settled = true;
                     clearTimeout(timeout);
-                    if (success && window.ZXing?.AztecCodeWriter && window.ZXing?.AztecCodeReader) {
+                    if (success && window.ZXing?.DataMatrixWriter && window.ZXing?.DataMatrixReader) {
                         resolve(window.ZXing);
                         return;
                     }
@@ -3385,27 +3391,32 @@
             rootStyle.setProperty('--verification-sync-delay', `-${Math.round(cycleOffset)}ms`);
         }
 
-        function renderTeacherAztecCode(containerId, text, size = 212) {
+        function renderTeacherDataMatrixCode(containerId, text, size = 212) {
             const container = document.getElementById(containerId);
-            if (!container || !window.ZXing?.AztecCodeWriter) {
+            if (!container || !window.ZXing?.DataMatrixWriter) {
                 return false;
             }
 
             try {
                 const hints = new Map();
-                hints.set(ZXing.EncodeHintType.ERROR_CORRECTION, 40);
-                const matrix = new ZXing.AztecCodeWriter().encodeWithHints(
+                if (ZXing.DataMatrixSymbolShapeHint?.FORCE_SQUARE !== undefined) {
+                    hints.set(ZXing.EncodeHintType.DATA_MATRIX_SHAPE, ZXing.DataMatrixSymbolShapeHint.FORCE_SQUARE);
+                }
+                const matrix = new ZXing.DataMatrixWriter().encode(
                     text,
-                    ZXing.BarcodeFormat.AZTEC,
+                    ZXing.BarcodeFormat.DATA_MATRIX,
                     0,
                     0,
                     hints
                 );
-                const moduleCount = matrix.getWidth();
-                const quietZone = 3;
-                const cellSize = Math.max(2, Math.floor(size / (moduleCount + quietZone * 2)));
-                const renderedSize = cellSize * (moduleCount + quietZone * 2);
-                const offset = Math.floor((size - renderedSize) / 2);
+                const moduleWidth = matrix.getWidth();
+                const moduleHeight = matrix.getHeight();
+                const quietZone = 4;
+                const cellSize = Math.max(2, Math.floor(size / (Math.max(moduleWidth, moduleHeight) + quietZone * 2)));
+                const renderedWidth = cellSize * (moduleWidth + quietZone * 2);
+                const renderedHeight = cellSize * (moduleHeight + quietZone * 2);
+                const offsetX = Math.floor((size - renderedWidth) / 2);
+                const offsetY = Math.floor((size - renderedHeight) / 2);
                 const pixelRatio = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
@@ -3416,19 +3427,19 @@
                 canvas.style.width = `${size}px`;
                 canvas.style.height = `${size}px`;
                 canvas.setAttribute('role', 'img');
-                canvas.setAttribute('aria-label', 'رمز Aztec المتغير للتحقق');
+                canvas.setAttribute('aria-label', 'رمز Data Matrix المتغير للتحقق');
                 context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
                 context.imageSmoothingEnabled = false;
                 context.fillStyle = '#ffffff';
                 context.fillRect(0, 0, size, size);
                 context.fillStyle = '#102a43';
 
-                for (let y = 0; y < moduleCount; y += 1) {
-                    for (let x = 0; x < moduleCount; x += 1) {
+                for (let y = 0; y < moduleHeight; y += 1) {
+                    for (let x = 0; x < moduleWidth; x += 1) {
                         if (matrix.get(x, y)) {
                             context.fillRect(
-                                offset + (x + quietZone) * cellSize,
-                                offset + (y + quietZone) * cellSize,
+                                offsetX + (x + quietZone) * cellSize,
+                                offsetY + (y + quietZone) * cellSize,
                                 cellSize,
                                 cellSize
                             );
@@ -3441,7 +3452,7 @@
                 container.classList.add('verification-live');
                 return true;
             } catch (error) {
-                console.error('Aztec rendering error:', error);
+                console.error('Data Matrix rendering error:', error);
                 return false;
             }
         }
@@ -3462,20 +3473,47 @@
         }
 
         async function fetchTeacherQrTime() {
-            try {
-                const response = await fetch(TEACHER_QR_TIME_API_URL, { cache: 'no-store' });
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                const payload = await response.json();
-                if (!payload?.dateTime) {
-                    throw new Error('Missing dateTime in API response');
-                }
-                return new Date(payload.dateTime);
-            } catch (error) {
-                console.warn('Teacher QR time API fallback to local Saudi time:', error);
-                return getSaudiTime();
+            const now = Date.now();
+            if (teacherQrTimeSyncedAt && now - teacherQrTimeSyncedAt < TEACHER_QR_TIME_SYNC_INTERVAL) {
+                return new Date(now + teacherQrTimeOffsetMs);
             }
+            if (teacherQrTimeSyncPromise) {
+                return teacherQrTimeSyncPromise;
+            }
+
+            teacherQrTimeSyncPromise = (async () => {
+                const controller = typeof AbortController === 'function' ? new AbortController() : null;
+                const timeoutId = setTimeout(() => controller?.abort(), TEACHER_QR_TIME_FETCH_TIMEOUT);
+                try {
+                    const response = await fetch(TEACHER_QR_TIME_API_URL, {
+                        cache: 'no-store',
+                        signal: controller?.signal
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    const payload = await response.json();
+                    const serverTime = new Date(payload?.dateTime || '');
+                    if (!Number.isFinite(serverTime.getTime())) {
+                        throw new Error('Missing dateTime in API response');
+                    }
+                    teacherQrTimeOffsetMs = serverTime.getTime() - Date.now();
+                    teacherQrTimeSyncedAt = Date.now();
+                    return new Date(Date.now() + teacherQrTimeOffsetMs);
+                } catch (error) {
+                    console.warn('Teacher verification time API fallback to local Saudi time:', error);
+                    if (!teacherQrTimeSyncedAt) {
+                        teacherQrTimeOffsetMs = getSaudiTime().getTime() - Date.now();
+                        teacherQrTimeSyncedAt = Date.now();
+                    }
+                    return new Date(Date.now() + teacherQrTimeOffsetMs);
+                } finally {
+                    clearTimeout(timeoutId);
+                    teacherQrTimeSyncPromise = null;
+                }
+            })();
+
+            return teacherQrTimeSyncPromise;
         }
 
         function buildTeacherQrTokenPayload(timestampWindow) {
@@ -3486,9 +3524,9 @@
             };
         }
 
-        function buildTeacherAztecToken(timestampWindow) {
+        function buildTeacherDataMatrixToken(timestampWindow) {
             const signature = simpleHash(`${timestampWindow}${teacherQrSessionId}${SECRET_PHRASE}`);
-            return `A1.${timestampWindow.toString(36)}.${teacherQrSessionId}.${signature}`;
+            return `D1.${timestampWindow.toString(36)}.${teacherQrSessionId}.${signature}`;
         }
 
         async function generateTeacherDynamicQr() {
@@ -3503,27 +3541,31 @@
                 const accurateTime = await fetchTeacherQrTime();
                 syncVerificationVisuals(accurateTime);
                 const timestampWindow = Math.floor(accurateTime.getTime() / 10000);
-                const token = buildTeacherAztecToken(timestampWindow);
+                const token = buildTeacherDataMatrixToken(timestampWindow);
                 await loadZxingLibrary();
-                const rendered = renderTeacherAztecCode('teacherDynamicQrCode', token, 212);
+                const rendered = renderTeacherDataMatrixCode('teacherDynamicQrCode', token, 212);
                 if (!rendered) {
-                    throw new Error('تعذر رسم رمز Aztec للتحقق.');
+                    throw new Error('تعذر رسم رمز Data Matrix للتحقق.');
                 }
 
                 const refreshPill = document.getElementById('teacherQrRefreshPill');
                 if (refreshPill) {
-                    refreshPill.textContent = `آخر تحديث ${formatTime(accurateTime)}`;
+                    refreshPill.textContent = `آخر تحديث ${accurateTime.toLocaleTimeString('ar-SA', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    })}`;
                 }
 
                 setTeacherQrMessage(
                     ENABLE_QR_VALIDATION
-                        ? 'رمز Aztec جاهز ويتحدث كل 10 ثوانٍ. ماسح الحضور وحده يقبله.'
-                        : 'تم توليد رمز Aztec، لكن خيار التحقق ما يزال متوقفاً في الإعدادات.',
+                        ? 'رمز Data Matrix جاهز ويتحدث كل 10 ثوانٍ. ماسح الحضور وحده يقبله.'
+                        : 'تم توليد رمز Data Matrix، لكن خيار التحقق ما يزال متوقفاً في الإعدادات.',
                     ENABLE_QR_VALIDATION ? 'valid' : 'waiting'
                 );
             } catch (error) {
                 console.error('Teacher dynamic QR generation error:', error);
-                setTeacherQrMessage(error.message || 'تعذر توليد رمز Aztec حالياً.', 'invalid');
+                setTeacherQrMessage(error.message || 'تعذر توليد رمز Data Matrix حالياً.', 'invalid');
             } finally {
                 teacherQrBusy = false;
                 updateTeacherQrSessionUi();
@@ -3559,7 +3601,7 @@
 
         function refreshTeacherQrSession() {
             if (!teacherQrSessionId) {
-                setTeacherQrMessage('ابدأ جلسة التحقق أولاً حتى يظهر رمز Aztec.', 'invalid');
+                setTeacherQrMessage('ابدأ جلسة التحقق أولاً حتى يظهر رمز Data Matrix.', 'invalid');
                 return;
             }
             generateTeacherDynamicQr();
@@ -5092,7 +5134,7 @@
 
             source.forEach(option => {
                 const normalized = String(option || '').trim().slice(0, 100);
-                const key = normalized.toLocaleLowerCase('ar');
+                const key = normalizeSupportingChoiceKey(normalized);
                 if (normalized && !seen.has(key) && unique.length < 30) {
                     seen.add(key);
                     unique.push(normalized);
@@ -5100,6 +5142,16 @@
             });
 
             return unique;
+        }
+
+        function normalizeSupportingChoiceKey(value) {
+            return String(value || '')
+                .normalize('NFKC')
+                .replace(/[\u200B-\u200D\uFEFF]/g, '')
+                .replace(/[\u0640\u064B-\u065F\u0670\u06D6-\u06ED]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLocaleLowerCase('ar');
         }
 
         function createDefaultCourseFormSettings() {
@@ -5675,13 +5727,21 @@
             }
         }
 
+        function isTeacherAnalyticsCourse(course) {
+            const settings = course?.formSettings;
+            return Boolean(settings && (
+                coerceBooleanSetting(settings.showStudentDashboard, false) ||
+                normalizeSupportingChoiceOptions(settings.choiceOptions).length
+            ));
+        }
+
         function populateTeacherAnalyticsCourseOptions() {
             const select = document.getElementById('analyticsCourse');
             if (!select) return;
             const selected = select.value;
             select.innerHTML = '<option value="">كل الدورات</option>';
             sortTeacherItems(
-                (teacherAdminData.courses || []).filter(course => course.formSettings?.showStudentDashboard),
+                (teacherAdminData.courses || []).filter(isTeacherAnalyticsCourse),
                 course => course.courseName || ''
             ).forEach(course => {
                 const option = document.createElement('option');
@@ -5710,10 +5770,15 @@
                     throw new Error(result?.error || 'تعذر تحميل المقارنة.');
                 }
                 renderTeacherAnalytics(result);
-                message.className = 'status-bar teacher-message valid';
-                message.textContent = result.rows?.length
-                    ? `تم تحديث المقارنة في ${result.generatedAt || ''}.`
-                    : 'لا توجد بيانات كافية في الفترة المختارة.';
+                const hasRows = Boolean(result.rows?.length);
+                message.className = `status-bar teacher-message ${hasRows ? 'valid' : 'waiting'}`;
+                if (hasRows) {
+                    message.textContent = `تم تحديث المقارنة في ${result.generatedAt || ''}.`;
+                } else if (Number(result.summary?.analyticsCourses || 0) === 0) {
+                    message.textContent = 'لا توجد دورة طباعة مهيأة بقائمة تمارين، ولا توجد نتائج طباعة صالحة في الفترة المختارة.';
+                } else {
+                    message.textContent = 'لا يوجد طلاب نشطون مطابقون للدورة والفترة المختارتين.';
+                }
             } catch (error) {
                 console.error('Teacher analytics error:', error);
                 message.className = 'status-bar teacher-message invalid';
@@ -6006,7 +6071,7 @@
         function formatGateSummary(row) {
             return [
                 `GPS: ${formatGateStatus(row.gpsStatus)}`,
-                `Aztec: ${formatGateStatus(row.qrStatus)}`,
+                `Data Matrix: ${formatGateStatus(row.qrStatus)}`,
                 `NFC: ${formatGateStatus(row.nfcStatus)}`
             ].join(' | ');
         }
@@ -6087,7 +6152,7 @@
                 return;
             }
 
-            const headers = ['التاريخ', 'الوقت', 'الحالة', 'احتساب الحضور', 'الرقم التدريبي', 'الاسم', 'البرنامج', 'اللقاء', 'GPS', 'Aztec', 'NFC', 'الجهاز', 'المرفق', 'الملاحظة', 'الحقول المخصصة'];
+            const headers = ['التاريخ', 'الوقت', 'الحالة', 'احتساب الحضور', 'الرقم التدريبي', 'الاسم', 'البرنامج', 'اللقاء', 'GPS', 'Data Matrix', 'NFC', 'الجهاز', 'المرفق', 'الملاحظة', 'الحقول المخصصة'];
             const lines = [
                 headers,
                 ...teacherLastRows.map(row => [
@@ -6644,7 +6709,7 @@
             }
 
             if (result?.code === 'NFC_CMAC_INVALID') {
-                return 'رابط البطاقة غير صحيح. المس بطاقة الحضور مرة أخرى.';
+                return 'بطاقة الحضور غير معتمدة. استخدم البطاقة الجديدة أو تواصل مع المدرب.';
             }
 
             if (result?.code === 'NFC_CMAC_KEY_MISSING') {
@@ -6717,6 +6782,23 @@
             }
             const csvText = await response.text();
             return processLocationCSV(csvText);
+        }
+
+        function ensureLegacyLocationDataLoaded() {
+            if (Array.isArray(locationData) && locationData.length) {
+                return Promise.resolve(locationData);
+            }
+            if (!legacyLocationLoadPromise) {
+                legacyLocationLoadPromise = loadLegacyLocationData()
+                    .then(data => {
+                        locationData = data;
+                        return data;
+                    })
+                    .finally(() => {
+                        legacyLocationLoadPromise = null;
+                    });
+            }
+            return legacyLocationLoadPromise;
         }
 
         async function lookupTraineeAttendanceContext(traineeId) {
@@ -7106,7 +7188,7 @@
                         
                         // If we don't have location data, try to reload it
                         if (!Array.isArray(locationData) || !locationData.length) {
-                            locationData = await loadLegacyLocationData();
+                            locationData = await ensureLegacyLocationDataLoaded();
                         }
 
                         const requiredLocationEntry = requiredLocationId ? findLocationById(requiredLocationId) : null;
@@ -7596,7 +7678,7 @@
                 .filter(meeting => meeting.meetingId && meeting.date && meeting.startClass && meeting.endClass);
         }
 
-        // ================== STEP 3: SCAN AZTEC VERIFICATION CODE ================== //
+        // ================== STEP 3: SCAN DATA MATRIX VERIFICATION CODE ================== //
         async function toggleScanner() {
             if (scannerStartupInProgress) {
                 return;
@@ -7620,15 +7702,16 @@
         }
 
         function initializeVerificationCodeReader() {
-            if (verificationCodeReader || !window.ZXing?.AztecCodeReader) {
+            if (verificationCodeReader || !window.ZXing?.DataMatrixReader) {
                 return;
             }
             verificationDecodeHints = new Map();
             verificationDecodeHints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-            verificationCodeReader = new ZXing.AztecCodeReader();
+            verificationDecodeHints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.DATA_MATRIX]);
+            verificationCodeReader = new ZXing.DataMatrixReader();
         }
 
-        function decodeAztecFromCanvas(canvas) {
+        function decodeDataMatrixFromCanvas(canvas) {
             if (!verificationCodeReader || !canvas) {
                 return null;
             }
@@ -7690,7 +7773,7 @@
                 scannerActive = true;
                 controlBtn.disabled = false;
                 controlBtn.textContent = 'إيقاف الماسح';
-                setScanStatus('وجّه الكاميرا نحو رمز Aztec المتغير الآن.', 'waiting');
+                setScanStatus('وجّه الكاميرا نحو رمز Data Matrix المتغير الآن.', 'waiting');
                 scanFrame();
             }
 
@@ -7698,7 +7781,7 @@
                 await loadZxingLibrary();
                 initializeVerificationCodeReader();
                 if (!verificationCodeReader) {
-                    throw new Error('تعذر تهيئة قارئ Aztec.');
+                    throw new Error('تعذر تهيئة قارئ Data Matrix.');
                 }
 
                 let stream = null;
@@ -7756,7 +7839,7 @@
                 controlBtn.disabled = false;
                 controlBtn.textContent = 'بدء الماسح';
                 showError(
-                    /Aztec|قارئ رمز التحقق|ZXing/i.test(error?.message || '')
+                    /Data Matrix|قارئ رمز التحقق|ZXing/i.test(error?.message || '')
                         ? (error.message || 'تعذر تجهيز قارئ رمز التحقق.')
                         : autoStart
                         ? 'اسمح للكاميرا ثم اضغط "بدء الماسح" للمتابعة.'
@@ -7809,7 +7892,7 @@
             if (!scannerActive || qrCompletionInProgress) return;
 
             const now = performance.now();
-            if (now - verificationLastScanAt < 160) {
+            if (now - verificationLastScanAt < 220) {
                 requestAnimationFrame(scanFrame);
                 return;
             }
@@ -7824,7 +7907,7 @@
             verificationScanCanvas = verificationScanCanvas || document.createElement('canvas');
             const canvas = verificationScanCanvas;
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            const scale = Math.min(1, 720 / Math.max(video.videoWidth, video.videoHeight));
+            const scale = Math.min(1, 600 / Math.max(video.videoWidth, video.videoHeight));
             const targetWidth = Math.max(1, Math.round(video.videoWidth * scale));
             const targetHeight = Math.max(1, Math.round(video.videoHeight * scale));
             if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
@@ -7835,12 +7918,12 @@
 
             let verificationData = '';
             try {
-                const result = decodeAztecFromCanvas(canvas);
-                if (result?.getBarcodeFormat?.() === ZXing.BarcodeFormat.AZTEC) {
+                const result = decodeDataMatrixFromCanvas(canvas);
+                if (result?.getBarcodeFormat?.() === ZXing.BarcodeFormat.DATA_MATRIX) {
                     verificationData = result.getText() || '';
                 }
             } catch (error) {
-                // A frame without a complete Aztec symbol is expected while aiming the camera.
+                // A frame without a complete Data Matrix symbol is expected while aiming the camera.
             }
 
             if (verificationData) {
@@ -7872,7 +7955,7 @@
         async function validateQRData(data) {
             try {
                 let payload;
-                if (String(data || '').startsWith('A1.')) {
+                if (/^(?:A1|D1)\./.test(String(data || ''))) {
                     const parts = String(data).split('.');
                     if (parts.length !== 4 || !/^[a-z0-9]+$/i.test(parts[1]) || !/^[a-z0-9]+$/i.test(parts[2])) {
                         return false;
@@ -7909,7 +7992,7 @@
                     return false;
                 }
 
-                console.log('Aztec verification code is valid.');
+                console.log('Data Matrix verification code is valid.');
                 return true;
             } catch (error) {
                 console.error('خطأ في التحقق:', error);
@@ -7992,11 +8075,13 @@
             container.style.flexDirection = 'column';
             container.style.gap = '12px';
             const trainee = readSessionJson('traineeDetails', {});
-            const submittedChoices = new Set(getPreviouslySubmittedChoices(trainee));
+            const submittedChoices = new Set(
+                getPreviouslySubmittedChoices(trainee).map(normalizeSupportingChoiceKey)
+            );
             container.innerHTML = fields.map(field => {
                 if (field.index === 2 && SUPPORTING_CHOICE_OPTIONS.length) {
                     const choices = SUPPORTING_CHOICE_OPTIONS.map((option, optionIndex) => {
-                        const wasSubmitted = submittedChoices.has(option);
+                        const wasSubmitted = submittedChoices.has(normalizeSupportingChoiceKey(option));
                         return `
                             <label class="support-choice-option ${wasSubmitted ? 'submitted' : ''}">
                                 <input type="radio" name="supportCustomField3" id="supportCustomField3Choice${optionIndex + 1}" value="${escapeAttribute(option)}" data-submitted="${wasSubmitted ? 'true' : 'false'}" ${wasSubmitted ? 'disabled' : ''}>
@@ -8457,7 +8542,7 @@
                 return 'لم يكتمل التحقق من الموقع. أعد المحاولة من البداية.';
             }
             if (ENABLE_QR_VALIDATION && !qrValidationPassed) {
-                return 'لم يكتمل التحقق من الرمز الخاص. امسح رمز Aztec المتغير مرة أخرى.';
+                return 'لم يكتمل التحقق من الرمز الخاص. امسح رمز Data Matrix المتغير مرة أخرى.';
             }
             if (ENABLE_SUPPORTING_FORM && !supportingFormCompleted) {
                 return 'أكمل النموذج المطلوب قبل تسجيل الحضور.';
