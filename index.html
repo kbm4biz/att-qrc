@@ -2864,6 +2864,7 @@
         let teacherQrTimeSyncedAt = 0;
         let teacherQrTimeSyncPromise = null;
         let teacherAnalyticsResult = { rows: [], summary: {} };
+        let appsScriptCapabilities = {};
         let courseFormSettingsDrafts = {};
         let courseFormSettingsDirtyIds = new Set();
         let adminSelectedSupportCourseId = '';
@@ -3757,6 +3758,7 @@
             try {
                 const result = await callAppsScriptJsonp('attendanceBootstrap', {});
                 if (result?.ok) {
+                    applyAppsScriptCapabilities(result.capabilities);
                     bootstrapActiveMeetingNow = typeof result.activeMeetingNow === 'boolean'
                         ? result.activeMeetingNow
                         : null;
@@ -3781,6 +3783,7 @@
             try {
                 const result = await callAppsScriptJsonp('appConfig', {});
                 if (result?.ok && result.settings) {
+                    applyAppsScriptCapabilities(result.capabilities);
                     applyRuntimeSettings(result.settings);
                 }
             } catch (error) {
@@ -3798,6 +3801,7 @@
                     throw new Error(result?.error || 'تعذر تحميل الإعدادات.');
                 }
 
+                applyAppsScriptCapabilities(result.capabilities);
                 applyRuntimeSettings(result.settings);
                 syncAdminSettingsControls(getCurrentAppSettings());
                 showAdminSettingsMessage('تم تحميل الإعدادات الحالية.', 'valid');
@@ -3821,17 +3825,38 @@
             showAdminSettingsMessage('جاري حفظ الإعدادات...', 'waiting');
 
             try {
-                const savedCourseCount = await saveCourseFormSettingsChanges();
-                const result = await callAppsScriptJsonp('updateAppConfig', {
-                    password: teacherDashboardPassword,
-                    settings
-                });
+                const courseSettingsUpdates = getPendingCourseFormSettingsUpdates();
+                let savedCourseCount = 0;
+                let result;
+                let savedCourseIds = [];
+                const useBackgroundSave = appsScriptCapabilities.adminSettingsPostV1 === true;
+
+                if (useBackgroundSave) {
+                    result = await saveAdminSettingsInBackground(settings, courseSettingsUpdates);
+                    savedCourseIds = Array.isArray(result?.savedCourseIds)
+                        ? result.savedCourseIds
+                        : courseSettingsUpdates.map(update => update.courseId);
+                } else {
+                    savedCourseCount = await saveCourseFormSettingsChanges();
+                    result = await callAppsScriptJsonp('updateAppConfig', {
+                        password: teacherDashboardPassword,
+                        settings
+                    });
+                }
 
                 if (!result?.ok || !result.settings) {
                     if (result?.code === 'TEACHER_AUTH') {
                         throw new Error('كلمة مرور المعلم غير صحيحة.');
                     }
+                    if (result?.code === 'SETTINGS_BUSY') {
+                        throw new Error('النظام يعالج حضور الطلاب الآن. انتظر لحظات ثم أعد الحفظ.');
+                    }
                     throw new Error(result?.error || 'تعذر حفظ الإعدادات.');
+                }
+
+                if (useBackgroundSave) {
+                    applySavedCourseFormSettingsUpdates(courseSettingsUpdates, savedCourseIds);
+                    savedCourseCount = Number(result.courseSettingsSaved || savedCourseIds.length || 0);
                 }
 
                 applyRuntimeSettings(result.settings);
@@ -3846,6 +3871,33 @@
             } finally {
                 setAdminSettingsDisabled(false);
             }
+        }
+
+        function applyAppsScriptCapabilities(capabilities) {
+            appsScriptCapabilities = capabilities && typeof capabilities === 'object'
+                ? { ...capabilities }
+                : {};
+        }
+
+        async function saveAdminSettingsInBackground(settings, courseSettingsUpdates) {
+            let result = null;
+
+            for (let attempt = 0; attempt < 2; attempt++) {
+                result = await postAppsScriptBackgroundTask('updateAppConfig', {
+                    password: teacherDashboardPassword,
+                    settings,
+                    courseSettingsUpdates
+                });
+
+                if (result?.code !== 'SETTINGS_BUSY' || attempt === 1) {
+                    return result;
+                }
+
+                showAdminSettingsMessage('النظام مشغول بتسجيل حضور الطلاب. ستتم إعادة محاولة الحفظ تلقائياً...', 'waiting');
+                await delay(1500);
+            }
+
+            return result;
         }
 
         async function runTeacherSetup() {
@@ -5479,6 +5531,38 @@
         function markCourseFormSettingsDirty() {
             captureAdminCourseFormSettings(true);
             showAdminSettingsMessage('لديك تغييرات غير محفوظة في إعدادات الدورة. اضغط حفظ الإعدادات.', 'waiting');
+        }
+
+        function getPendingCourseFormSettingsUpdates() {
+            return [...courseFormSettingsDirtyIds].map(courseId => {
+                const course = teacherAdminData.courses.find(item => item.courseId === courseId);
+                if (!course) {
+                    return null;
+                }
+
+                return {
+                    courseId,
+                    formSettings: normalizeCourseFormSettings(courseFormSettingsDrafts[courseId])
+                };
+            }).filter(Boolean);
+        }
+
+        function applySavedCourseFormSettingsUpdates(updates, savedCourseIds) {
+            const savedIds = new Set((savedCourseIds || []).map(value => String(value || '')));
+
+            updates.forEach(update => {
+                if (!savedIds.has(update.courseId)) {
+                    return;
+                }
+
+                const normalizedSettings = normalizeCourseFormSettings(update.formSettings);
+                const course = teacherAdminData.courses.find(item => item.courseId === update.courseId);
+                if (course) {
+                    course.formSettings = normalizedSettings;
+                }
+                courseFormSettingsDrafts[update.courseId] = normalizedSettings;
+                courseFormSettingsDirtyIds.delete(update.courseId);
+            });
         }
 
         async function saveCourseFormSettingsChanges() {
