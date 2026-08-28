@@ -7100,6 +7100,10 @@
                 return 'يوجد ضغط لحظي على تسجيل الحضور. انتظر ثوانٍ ثم أعد المحاولة بنفس الصفحة.';
             }
 
+            if (result?.code === 'COURSE_INACTIVE' || result?.code === 'NO_ACTIVE_MEETING') {
+                return 'لا توجد جلسة نشطة لهذه الدورة الآن.';
+            }
+
             if (result?.code === 'NFC_DUPLICATE') {
                 return 'انتهت صلاحية الرابط أو تم استخدامه. المس البطاقة مرة أخرى.';
             }
@@ -7287,6 +7291,9 @@
             }
             if (result?.code === 'TRAINEE_INACTIVE') {
                 return { ...result, error: 'هذا الرقم التدريبي موقوف حالياً.' };
+            }
+            if (result?.code === 'COURSE_INACTIVE') {
+                return { ...result, error: 'لا توجد جلسة نشطة لهذه الدورة الآن.' };
             }
             if (result?.code === 'DEVICE_DUPLICATE') {
                 return { ...result, error: 'هذا الجهاز مرتبط برقم تدريبي آخر في هذا اللقاء.' };
