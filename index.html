@@ -2805,6 +2805,22 @@
         const MAX_ATTEMPTS = 5;
         const REDIRECT_URL = 'https://tvtc.gov.sa/ar/Pages/default1.aspx';
         const REDIRECT_DELAY = 10000;
+        const APPS_SCRIPT_DEFAULT_TIMEOUT_MS = 30000;
+        const APPS_SCRIPT_ACTION_TIMEOUTS = {
+            attendanceBootstrap: 16000,
+            appConfig: 14000,
+            reserve: 16000,
+            start: 16000,
+            startAttendance: 20000,
+            lookupTrainee: 18000,
+            complete: 22000,
+            studentDashboard: 18000,
+            uploadStatus: 15000
+        };
+        const STUDENT_DASHBOARD_BROWSER_CACHE_PREFIX = 'attqStudentDashboardCacheV1';
+        const STUDENT_DASHBOARD_BROWSER_CACHE_TTL_MS = 60 * 1000;
+        const STUDENT_DASHBOARD_BROWSER_CACHE_MAX_STALE_MS = 12 * 60 * 60 * 1000;
+        const appsScriptPendingRequests = new Map();
         let traineeID = '';
         let scannerActive = false;
         let videoStream = null;
@@ -2839,6 +2855,7 @@
         let nfcReservePromise = null;
         let nfcStartPromise = null;
         let nfcTokenStarted = false;
+        let nfcBootstrapReservationHandled = false;
         let gpsValidationPassed = false;
         let qrValidationPassed = false;
         let qrCompletionInProgress = false;
@@ -2964,7 +2981,8 @@
             }
 
             setPreflightStatus('جاري تجهيز التحضير', 'نقوم الآن بتحميل الإعدادات والتحقق من حالة النظام.');
-            await loadRuntimeSettings();
+            nfcTapData = loadNfcTapData(true);
+            await loadRuntimeSettings(buildNfcRequestPayload());
             await refreshMeetingIndicator();
 
             if (MAINTENANCE_MODE) {
@@ -2978,8 +2996,7 @@
             }
 
             setPreflightStatus('جاري تجهيز وسيلة التحقق', 'نقوم الآن بقراءة إعدادات الحضور وتهيئة التحقق المناسب.');
-            nfcTapData = loadNfcTapData();
-            if (ENABLE_NFC_TAP_VALIDATION && nfcTapData) {
+            if (ENABLE_NFC_TAP_VALIDATION && nfcTapData && !nfcReservationAccepted && !nfcBootstrapReservationHandled) {
                 setPreflightStatus('جاري فتح النموذج', 'تم اكتشاف رابط البطاقة. نتحقق الآن من صلاحية الدخول قبل عرض النموذج.');
                 await reserveNfcTapToken();
             }
@@ -3020,22 +3037,89 @@
                 return;
             }
 
+            const cachedDashboard = readStudentDashboardBrowserCache(traineeId, token);
+            const hasCachedDashboard = Boolean(cachedDashboard?.result);
+            if (hasCachedDashboard) {
+                renderStudentDashboard(cachedDashboard.result);
+                const cacheAge = Date.now() - cachedDashboard.savedAt;
+                if (cacheAge <= STUDENT_DASHBOARD_BROWSER_CACHE_TTL_MS) {
+                    message.className = 'status-bar valid';
+                    message.textContent = 'تم عرض أحدث تقرير محفوظ.';
+                    return;
+                }
+                message.className = 'status-bar waiting';
+                message.textContent = 'يتم عرض آخر تقرير محفوظ، وجارٍ تحديثه...';
+            }
+
             try {
-                const result = await callAppsScriptJsonp('studentDashboard', { traineeId, token });
+                const result = await callAppsScriptJsonp('studentDashboard', { traineeId, token }, {
+                    timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.studentDashboard
+                });
                 if (!result?.ok) {
                     throw new Error(result?.error || 'تعذر تحميل تقرير مهارات الطباعة.');
                 }
                 renderStudentDashboard(result);
+                writeStudentDashboardBrowserCache(traineeId, token, result);
                 message.className = 'status-bar valid';
                 message.textContent = 'تم تحميل تقرير مهارات الطباعة بنجاح.';
             } catch (error) {
                 console.error('Student dashboard error:', error);
                 message.className = 'status-bar invalid';
-                message.textContent = /unable to load|failed to fetch|network/i.test(error?.message || '')
-                    ? 'تعذر الاتصال بالتقرير حالياً. حاول تحديث الصفحة بعد قليل.'
-                    : (error.message || 'تعذر فتح تقرير مهارات الطباعة. أرسل النموذج مرة أخرى للحصول على رابط جديد.');
-                renderStudentExerciseProgress([]);
-                renderStudentHistory([]);
+                if (hasCachedDashboard) {
+                    message.textContent = 'تعذر تحديث التقرير الآن. تم الإبقاء على آخر نسخة محفوظة.';
+                } else {
+                    message.textContent = /unable to load|failed to fetch|network|timed out/i.test(error?.message || '')
+                        ? 'تعذر الاتصال بالتقرير حالياً. حاول تحديث الصفحة بعد قليل.'
+                        : (error.message || 'تعذر فتح تقرير مهارات الطباعة. أرسل النموذج مرة أخرى للحصول على رابط جديد.');
+                    renderStudentExerciseProgress([]);
+                    renderStudentHistory([]);
+                }
+            }
+        }
+
+        function getStudentDashboardBrowserCacheKey(traineeId, token) {
+            const normalizedTraineeId = normalizeTraineeIdValue(traineeId);
+            return `${STUDENT_DASHBOARD_BROWSER_CACHE_PREFIX}:${normalizedTraineeId}:${simpleHash(String(token || ''))}`;
+        }
+
+        function readStudentDashboardBrowserCache(traineeId, token) {
+            const key = getStudentDashboardBrowserCacheKey(traineeId, token);
+            try {
+                const rawValue = localStorage.getItem(key);
+                const cached = rawValue ? JSON.parse(rawValue) : null;
+                const savedAt = Number(cached?.savedAt || 0);
+                if (!cached?.result || !savedAt || Date.now() - savedAt > STUDENT_DASHBOARD_BROWSER_CACHE_MAX_STALE_MS) {
+                    localStorage.removeItem(key);
+                    return null;
+                }
+                return { savedAt, result: cached.result };
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function writeStudentDashboardBrowserCache(traineeId, token, result) {
+            try {
+                localStorage.setItem(
+                    getStudentDashboardBrowserCacheKey(traineeId, token),
+                    JSON.stringify({ savedAt: Date.now(), result })
+                );
+            } catch (error) {
+                // A report must still work when private browsing blocks storage.
+            }
+        }
+
+        function clearStudentDashboardBrowserCache(traineeId) {
+            const prefix = `${STUDENT_DASHBOARD_BROWSER_CACHE_PREFIX}:${normalizeTraineeIdValue(traineeId)}:`;
+            try {
+                for (let index = localStorage.length - 1; index >= 0; index--) {
+                    const key = localStorage.key(index);
+                    if (key?.startsWith(prefix)) {
+                        localStorage.removeItem(key);
+                    }
+                }
+            } catch (error) {
+                // Storage cleanup is only a freshness optimization.
             }
         }
 
@@ -3754,11 +3838,19 @@
             }
         }
 
-        async function loadRuntimeSettings() {
+        async function loadRuntimeSettings(bootstrapPayload = {}) {
+            const bootstrapHasNfc = Boolean(bootstrapPayload?.nfc?.uid && bootstrapPayload?.nfc?.counter && bootstrapPayload?.nfc?.c);
+            if (bootstrapHasNfc) {
+                nfcReservationPending = true;
+            }
             try {
-                const result = await callAppsScriptJsonp('attendanceBootstrap', {});
+                const result = await callAppsScriptJsonpReliable('attendanceBootstrap', bootstrapPayload, {
+                    attempts: bootstrapHasNfc ? 2 : 1,
+                    timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.attendanceBootstrap
+                });
                 if (result?.ok) {
                     applyAppsScriptCapabilities(result.capabilities);
+                    applyBootstrapNfcReservation(result.nfcReservation);
                     bootstrapActiveMeetingNow = typeof result.activeMeetingNow === 'boolean'
                         ? result.activeMeetingNow
                         : null;
@@ -3778,10 +3870,14 @@
                 }
             } catch (error) {
                 console.warn('Using fallback runtime settings because attendanceBootstrap failed:', error);
+            } finally {
+                nfcReservationPending = false;
             }
 
             try {
-                const result = await callAppsScriptJsonp('appConfig', {});
+                const result = await callAppsScriptJsonp('appConfig', {}, {
+                    timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.appConfig
+                });
                 if (result?.ok && result.settings) {
                     applyAppsScriptCapabilities(result.capabilities);
                     applyRuntimeSettings(result.settings);
@@ -3789,6 +3885,16 @@
             } catch (error) {
                 console.warn('Using built-in attendance settings because appConfig failed:', error);
             }
+        }
+
+        function applyBootstrapNfcReservation(reservation) {
+            if (!nfcTapData || !reservation || typeof reservation !== 'object') {
+                return;
+            }
+
+            nfcReservationAccepted = Boolean(reservation.ok);
+            nfcTapError = nfcReservationAccepted ? '' : getNfcReserveErrorMessage(reservation);
+            nfcBootstrapReservationHandled = nfcReservationAccepted || reservation.code !== 'ATTENDANCE_BUSY';
         }
 
         async function loadAdminSettings() {
@@ -6500,10 +6606,10 @@
         }
 
         // ================== NFC TAP GATE ================== //
-        function loadNfcTapData() {
+        function loadNfcTapData(forceRead = false) {
             nfcTapError = '';
 
-            if (!ENABLE_NFC_TAP_VALIDATION) {
+            if (!ENABLE_NFC_TAP_VALIDATION && !forceRead) {
                 return null;
             }
 
@@ -6774,6 +6880,35 @@
             return remainingMs;
         }
 
+        function buildNfcRequestPayload(extraPayload = {}) {
+            const payload = {
+                pageUrl: window.location.href,
+                userAgent: navigator.userAgent,
+                deviceId: getOrCreateDeviceId(),
+                deviceLabel: getDeviceLabel(),
+                deviceFingerprint: getDeviceFingerprint(),
+                fingerprintSource: getDeviceFingerprintSource(),
+                clientTimestampIso: new Date().toISOString(),
+                clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false })
+            };
+
+            if (nfcTapData) {
+                ensureNfcReservationId(nfcTapData);
+                payload.nfc = {
+                    uid: nfcTapData.uid || '',
+                    counter: nfcTapData.counter || '',
+                    c: nfcTapData.cmac || '',
+                    reservationId: nfcReservationId || nfcTapData.reservationId || '',
+                    capturedAt: nfcTapData.capturedAt || '',
+                    capturedAtSaudi: nfcTapData.capturedAtSaudi || '',
+                    pageUrl: nfcTapData.pageUrl || '',
+                    rawQuery: nfcTapData.rawQuery || ''
+                };
+            }
+
+            return { ...payload, ...extraPayload };
+        }
+
         async function reserveNfcTapToken() {
             if (!ENABLE_NFC_TAP_VALIDATION || !nfcTapData) {
                 nfcReservationAccepted = true;
@@ -6799,28 +6934,12 @@
             applyNfcGateToForm();
 
             nfcReservePromise = (async () => {
-                const payload = {
-                    nfc: {
-                        uid: nfcTapData.uid || '',
-                        counter: nfcTapData.counter || '',
-                        c: nfcTapData.cmac || '',
-                        reservationId: nfcReservationId || nfcTapData.reservationId || '',
-                        capturedAt: nfcTapData.capturedAt || '',
-                        capturedAtSaudi: nfcTapData.capturedAtSaudi || '',
-                        pageUrl: nfcTapData.pageUrl || '',
-                        rawQuery: nfcTapData.rawQuery || ''
-                    },
-                    pageUrl: window.location.href,
-                    userAgent: navigator.userAgent,
-                    deviceId: getOrCreateDeviceId(),
-                    deviceLabel: getDeviceLabel(),
-                    deviceFingerprint: getDeviceFingerprint(),
-                    fingerprintSource: getDeviceFingerprintSource(),
-                    clientTimestampIso: new Date().toISOString(),
-                    clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false })
-                };
-                const result = await callAppsScriptJsonp('reserve', payload);
+                const result = await callAppsScriptJsonpReliable('reserve', buildNfcRequestPayload(), {
+                    attempts: 2,
+                    timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.reserve
+                });
                 nfcReservationAccepted = Boolean(result?.ok);
+                nfcBootstrapReservationHandled = nfcReservationAccepted || result?.code !== 'ATTENDANCE_BUSY';
                 nfcTapError = nfcReservationAccepted
                     ? ''
                     : getNfcReserveErrorMessage(result);
@@ -6872,27 +6991,10 @@
 
             ensureNfcReservationId(nfcTapData);
             nfcStartPromise = (async () => {
-                const payload = {
-                    nfc: {
-                        uid: nfcTapData.uid || '',
-                        counter: nfcTapData.counter || '',
-                        c: nfcTapData.cmac || '',
-                        reservationId: nfcReservationId || nfcTapData.reservationId || '',
-                        capturedAt: nfcTapData.capturedAt || '',
-                        capturedAtSaudi: nfcTapData.capturedAtSaudi || '',
-                        pageUrl: nfcTapData.pageUrl || '',
-                        rawQuery: nfcTapData.rawQuery || ''
-                    },
-                    pageUrl: window.location.href,
-                    userAgent: navigator.userAgent,
-                    deviceId: getOrCreateDeviceId(),
-                    deviceLabel: getDeviceLabel(),
-                    deviceFingerprint: getDeviceFingerprint(),
-                    fingerprintSource: getDeviceFingerprintSource(),
-                    clientTimestampIso: new Date().toISOString(),
-                    clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false })
-                };
-                const result = await callAppsScriptJsonp('start', payload);
+                const result = await callAppsScriptJsonpReliable('start', buildNfcRequestPayload(), {
+                    attempts: 2,
+                    timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.start
+                });
                 nfcTokenStarted = Boolean(result?.ok);
                 if (!nfcTokenStarted) {
                     nfcReservationAccepted = false;
@@ -6915,7 +7017,49 @@
             }
         }
 
+        async function startNfcAttendanceAndLookup(traineeId) {
+            if (!ENABLE_NFC_TAP_VALIDATION || appsScriptCapabilities.studentFastPathV1 !== true) {
+                return null;
+            }
+
+            if (!nfcTapData) {
+                return { ok: false, code: 'NFC_MISSING', error: 'المس بطاقة الحضور للبدء.' };
+            }
+
+            if (!nfcReservationAccepted) {
+                const reserved = await reserveNfcTapToken();
+                if (!reserved) {
+                    return { ok: false, code: 'NFC_NOT_RESERVED', error: nfcTapError };
+                }
+            }
+
+            const result = await callAppsScriptJsonpReliable(
+                'startAttendance',
+                buildNfcRequestPayload({ traineeId: normalizeTraineeIdValue(traineeId) }),
+                {
+                    attempts: 2,
+                    timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.startAttendance
+                }
+            );
+            nfcTokenStarted = Boolean(result?.nfcStarted || result?.nfcStart?.ok);
+            if (nfcTokenStarted) {
+                nfcTapError = '';
+                return result;
+            }
+
+            const terminalTokenCodes = ['NFC_DUPLICATE', 'NFC_EXPIRED', 'NFC_NOT_RESERVED', 'NFC_CMAC_INVALID', 'NFC_CMAC_MISMATCH'];
+            if (terminalTokenCodes.includes(result?.code)) {
+                nfcReservationAccepted = false;
+            }
+            nfcTapError = getNfcReserveErrorMessage(result);
+            return result;
+        }
+
         function getNfcReserveErrorMessage(result) {
+            if (result?.code === 'ATTENDANCE_BUSY') {
+                return 'يوجد ضغط لحظي على تسجيل الحضور. انتظر ثوانٍ ثم أعد المحاولة بنفس الصفحة.';
+            }
+
             if (result?.code === 'NFC_DUPLICATE') {
                 return 'انتهت صلاحية الرابط أو تم استخدامه. المس البطاقة مرة أخرى.';
             }
@@ -6951,14 +7095,26 @@
             return result?.error || 'تعذر فتح النموذج. المس البطاقة مرة أخرى.';
         }
 
-        function callAppsScriptJsonp(action, payload) {
-            return new Promise((resolve, reject) => {
+        function callAppsScriptJsonp(action, payload, options = {}) {
+            const requestPayload = payload && typeof payload === 'object' ? payload : {};
+            const timeoutMs = Math.max(
+                3000,
+                Number(options.timeoutMs || APPS_SCRIPT_ACTION_TIMEOUTS[action] || APPS_SCRIPT_DEFAULT_TIMEOUT_MS)
+            );
+            const requestKey = options.dedupe === false
+                ? ''
+                : `${action}:${JSON.stringify(requestPayload)}`;
+            if (requestKey && appsScriptPendingRequests.has(requestKey)) {
+                return appsScriptPendingRequests.get(requestKey);
+            }
+
+            const request = new Promise((resolve, reject) => {
                 const callbackName = `nfcCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
                 const script = document.createElement('script');
                 const timeoutId = setTimeout(() => {
                     cleanup();
                     reject(new Error('Apps Script request timed out'));
-                }, 45000);
+                }, timeoutMs);
 
                 function cleanup() {
                     clearTimeout(timeoutId);
@@ -6974,7 +7130,7 @@
                 const url = new URL(APPS_SCRIPT_LOG_URL);
                 url.searchParams.set('action', action);
                 url.searchParams.set('callback', callbackName);
-                url.searchParams.set('payload', JSON.stringify(payload));
+                url.searchParams.set('payload', JSON.stringify(requestPayload));
 
                 script.onerror = () => {
                     cleanup();
@@ -6983,6 +7139,45 @@
                 script.src = url.toString();
                 document.body.appendChild(script);
             });
+
+            if (!requestKey) {
+                return request;
+            }
+
+            const trackedRequest = request.finally(() => {
+                if (appsScriptPendingRequests.get(requestKey) === trackedRequest) {
+                    appsScriptPendingRequests.delete(requestKey);
+                }
+            });
+            appsScriptPendingRequests.set(requestKey, trackedRequest);
+            return trackedRequest;
+        }
+
+        async function callAppsScriptJsonpReliable(action, payload, options = {}) {
+            const attempts = Math.max(1, Number(options.attempts || 1));
+            let lastError = null;
+            let lastResult = null;
+
+            for (let attempt = 1; attempt <= attempts; attempt++) {
+                try {
+                    const result = await callAppsScriptJsonp(action, payload, options);
+                    lastResult = result;
+                    if (!['ATTENDANCE_BUSY', 'SETTINGS_BUSY'].includes(result?.code)) {
+                        return result;
+                    }
+                } catch (error) {
+                    lastError = error;
+                }
+
+                if (attempt < attempts) {
+                    await delay(250 * attempt + Math.floor(Math.random() * 180));
+                }
+            }
+
+            if (lastResult) {
+                return lastResult;
+            }
+            throw lastError || new Error('Apps Script request failed');
         }
 
         function readSessionJson(key, fallbackValue) {
@@ -7026,31 +7221,17 @@
             let lastAppsScriptError = null;
 
             try {
-                const result = await callAppsScriptJsonp('lookupTrainee', {
+                const result = await callAppsScriptJsonpReliable('lookupTrainee', {
                     traineeId: normalizedTraineeId,
                     deviceId: getOrCreateDeviceId(),
                     deviceFingerprint: getDeviceFingerprint()
+                }, {
+                    attempts: 2,
+                    timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.lookupTrainee
                 });
-                if (result?.ok && result.trainee) {
-                    return result;
-                }
-                if (result?.code === 'TRAINEE_INACTIVE') {
-                    return {
-                        ...result,
-                        error: 'هذا الرقم التدريبي موقوف حالياً.'
-                    };
-                }
-                if (result?.code === 'DEVICE_DUPLICATE') {
-                    return {
-                        ...result,
-                        error: 'هذا الجهاز مرتبط برقم تدريبي آخر في هذا اللقاء.'
-                    };
-                }
-                if (result?.code === 'NO_ACTIVE_MEETING' && result?.trainee) {
-                    return await attachLegacyMeetingToContext(result);
-                }
-                if (result?.code && !['DATA_NOT_READY', 'TRAINEE_NOT_FOUND'].includes(result.code)) {
-                    return result;
+                const interpretedResult = await interpretTraineeAttendanceContextResult(result);
+                if (interpretedResult) {
+                    return interpretedResult;
                 }
                 lastAppsScriptError = result;
             } catch (error) {
@@ -7058,6 +7239,25 @@
             }
 
             return lookupTraineeFromLegacySheets(normalizedTraineeId, lastAppsScriptError);
+        }
+
+        async function interpretTraineeAttendanceContextResult(result) {
+            if (result?.ok && result.trainee) {
+                return result;
+            }
+            if (result?.code === 'TRAINEE_INACTIVE') {
+                return { ...result, error: 'هذا الرقم التدريبي موقوف حالياً.' };
+            }
+            if (result?.code === 'DEVICE_DUPLICATE') {
+                return { ...result, error: 'هذا الجهاز مرتبط برقم تدريبي آخر في هذا اللقاء.' };
+            }
+            if (result?.code === 'NO_ACTIVE_MEETING' && result?.trainee) {
+                return attachLegacyMeetingToContext(result);
+            }
+            if (result?.code && !['DATA_NOT_READY', 'TRAINEE_NOT_FOUND'].includes(result.code)) {
+                return result;
+            }
+            return null;
         }
 
         async function attachLegacyMeetingToContext(baseContext) {
@@ -7263,16 +7463,29 @@
             setIdLoadingState(true, 'لا تغلق الصفحة. انتظر حتى تظهر صفحة تسجيل الحضور بنجاح.');
 
             try {
-                const nfcStarted = await startNfcAttendanceAttempt();
-                if (!nfcStarted) {
-                    showError(nfcTapError || 'انتهت مهلة البدء. المس البطاقة مرة أخرى.', idStatus);
-                    return;
+                let attendanceContext = null;
+                const fastLookupResult = await startNfcAttendanceAndLookup(normalizedInputID);
+                if (fastLookupResult !== null) {
+                    if (!nfcTokenStarted) {
+                        showError(nfcTapError || fastLookupResult?.error || 'تعذر بدء تسجيل الحضور. حاول مرة أخرى.', idStatus);
+                        return;
+                    }
+                    nfcTapUsedForThisAttempt = true;
+                    clearNfcCountdownTimer();
+                    attendanceContext = await interpretTraineeAttendanceContextResult(fastLookupResult);
+                    if (!attendanceContext) {
+                        attendanceContext = await lookupTraineeFromLegacySheets(normalizedInputID, fastLookupResult);
+                    }
+                } else {
+                    const nfcStarted = await startNfcAttendanceAttempt();
+                    if (!nfcStarted) {
+                        showError(nfcTapError || 'انتهت مهلة البدء. المس البطاقة مرة أخرى.', idStatus);
+                        return;
+                    }
+                    nfcTapUsedForThisAttempt = true;
+                    clearNfcCountdownTimer();
+                    attendanceContext = await lookupTraineeAttendanceContext(normalizedInputID);
                 }
-
-                nfcTapUsedForThisAttempt = true;
-                clearNfcCountdownTimer();
-
-                const attendanceContext = await lookupTraineeAttendanceContext(normalizedInputID);
 
                 if (attendanceContext?.ok && attendanceContext.trainee) {
                     traineeID = normalizedInputID;
@@ -7589,6 +7802,7 @@
                 return;
             }
             const attendanceCounted = logResult.attendanceCounted !== false;
+            clearStudentDashboardBrowserCache(trainee.id);
             rememberSubmittedSupportingChoice(trainee);
             setText(
                 'successStatus',
@@ -8729,7 +8943,10 @@
                     return { ok: false };
                 }
 
-                const result = await callAppsScriptJsonp('complete', payload);
+                const result = await callAppsScriptJsonpReliable('complete', payload, {
+                    attempts: appsScriptCapabilities.studentFastPathV1 === true ? 2 : 1,
+                    timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.complete
+                });
                 if (!result?.ok) {
                     nfcTapError = getNfcReserveErrorMessage(result);
                     throw new Error(result?.error || 'Attendance log was rejected.');
