@@ -2807,9 +2807,9 @@
         const REDIRECT_DELAY = 10000;
         const APPS_SCRIPT_DEFAULT_TIMEOUT_MS = 30000;
         const APPS_SCRIPT_ACTION_TIMEOUTS = {
-            attendanceBootstrap: 16000,
+            attendanceBootstrap: 12000,
             appConfig: 14000,
-            reserve: 16000,
+            reserve: 12000,
             start: 16000,
             startAttendance: 20000,
             lookupTrainee: 18000,
@@ -2982,6 +2982,11 @@
 
             setPreflightStatus('جاري تجهيز التحضير', 'نقوم الآن بتحميل الإعدادات والتحقق من حالة النظام.');
             nfcTapData = loadNfcTapData(true);
+            if (nfcTapData) {
+                nfcReservationPending = true;
+                showStep(1);
+                applyNfcGateToForm();
+            }
             await loadRuntimeSettings(buildNfcRequestPayload());
             await refreshMeetingIndicator();
 
@@ -3845,7 +3850,7 @@
             }
             try {
                 const result = await callAppsScriptJsonpReliable('attendanceBootstrap', bootstrapPayload, {
-                    attempts: bootstrapHasNfc ? 2 : 1,
+                    attempts: 1,
                     timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.attendanceBootstrap
                 });
                 if (result?.ok) {
@@ -3893,6 +3898,9 @@
             }
 
             nfcReservationAccepted = Boolean(reservation.ok);
+            if (nfcReservationAccepted && !reservation.skipped) {
+                applyNfcReservationTiming(reservation);
+            }
             nfcTapError = nfcReservationAccepted ? '' : getNfcReserveErrorMessage(reservation);
             nfcBootstrapReservationHandled = nfcReservationAccepted || reservation.code !== 'ATTENDANCE_BUSY';
         }
@@ -6652,6 +6660,8 @@
                 reservationId: matchingStoredTap?.reservationId || createNfcReservationId(),
                 capturedAt: matchingStoredTap?.capturedAt || Date.now(),
                 capturedAtSaudi: matchingStoredTap?.capturedAtSaudi || getSaudiTime().toLocaleString('ar-SA', { hour12: false }),
+                reservationAcceptedAtMs: matchingStoredTap?.reservationAcceptedAtMs || 0,
+                reservationExpiresAtMs: matchingStoredTap?.reservationExpiresAtMs || 0,
                 pageUrl: window.location.href,
                 rawQuery: window.location.search.replace(/^\?/, '')
             };
@@ -6770,8 +6780,31 @@
         }
 
         function isNfcTapFresh(tapData) {
+            const reservationExpiresAtMs = Number(tapData?.reservationExpiresAtMs);
+            if (Number.isFinite(reservationExpiresAtMs) && reservationExpiresAtMs > 0) {
+                return Date.now() <= reservationExpiresAtMs;
+            }
+
             const capturedAt = Number(tapData?.capturedAt);
             return capturedAt && (Date.now() - capturedAt) <= NFC_TAP_MAX_AGE_MS;
+        }
+
+        function applyNfcReservationTiming(reservation) {
+            if (!nfcTapData || !reservation?.ok) {
+                return;
+            }
+
+            const serverReservedAtMs = Number(reservation.reservedAtMs);
+            const serverExpiresAtMs = Number(reservation.expiresAtMs);
+            const hasServerTiming = Number.isFinite(serverReservedAtMs) && serverReservedAtMs > 0 &&
+                Number.isFinite(serverExpiresAtMs) && serverExpiresAtMs > serverReservedAtMs;
+            const fallbackReservedAtMs = Number(nfcTapData.capturedAt) || Date.now();
+
+            nfcTapData.reservationAcceptedAtMs = hasServerTiming ? serverReservedAtMs : fallbackReservedAtMs;
+            nfcTapData.reservationExpiresAtMs = hasServerTiming
+                ? serverExpiresAtMs
+                : fallbackReservedAtMs + NFC_TAP_MAX_AGE_MS;
+            sessionStorage.setItem('nfcTapData', JSON.stringify(nfcTapData));
         }
 
         function isNfcGateSatisfied() {
@@ -6799,9 +6832,9 @@
 
             if (nfcReservationPending) {
                 clearNfcCountdownTimer();
-                nfcStatus.className = 'status-bar';
-                nfcStatus.textContent = 'جاري فتح النموذج...';
-                idInput.disabled = true;
+                nfcStatus.className = 'status-bar waiting';
+                nfcStatus.textContent = 'جاري تجهيز التسجيل... يمكنك إدخال رقمك الآن.';
+                idInput.disabled = idVerificationInProgress;
                 idButton.disabled = true;
                 return;
             }
@@ -6863,8 +6896,12 @@
         function updateNfcCountdown() {
             const bar = document.getElementById('nfcCountdownBar');
             const text = document.getElementById('nfcCountdownText');
+            const reservationExpiresAtMs = Number(nfcTapData?.reservationExpiresAtMs);
             const capturedAt = Number(nfcTapData?.capturedAt) || Date.now();
-            const remainingMs = Math.max(0, NFC_TAP_MAX_AGE_MS - (Date.now() - capturedAt));
+            const expiresAtMs = Number.isFinite(reservationExpiresAtMs) && reservationExpiresAtMs > 0
+                ? reservationExpiresAtMs
+                : capturedAt + NFC_TAP_MAX_AGE_MS;
+            const remainingMs = Math.max(0, expiresAtMs - Date.now());
             const remainingSeconds = Math.ceil(remainingMs / 1000);
             const percent = Math.max(0, Math.min(100, (remainingMs / NFC_TAP_MAX_AGE_MS) * 100));
 
@@ -6935,10 +6972,13 @@
 
             nfcReservePromise = (async () => {
                 const result = await callAppsScriptJsonpReliable('reserve', buildNfcRequestPayload(), {
-                    attempts: 2,
+                    attempts: 3,
                     timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.reserve
                 });
                 nfcReservationAccepted = Boolean(result?.ok);
+                if (nfcReservationAccepted) {
+                    applyNfcReservationTiming(result);
+                }
                 nfcBootstrapReservationHandled = nfcReservationAccepted || result?.code !== 'ATTENDANCE_BUSY';
                 nfcTapError = nfcReservationAccepted
                     ? ''
