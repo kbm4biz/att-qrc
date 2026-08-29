@@ -1742,6 +1742,11 @@
             background: #edf9f1;
             color: #176b35;
         }
+        .analytics-task.pending {
+            border-color: #e3bd42;
+            background: #fff8df;
+            color: #684f00;
+        }
         .analytics-progress-metrics {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1870,6 +1875,15 @@
             background: #1f9d55;
             color: #fff;
         }
+        .student-exercise-item.pending {
+            border-color: #e2b93b;
+            background: #fff9e8;
+        }
+        .student-exercise-item.pending .student-exercise-check {
+            border-color: #d5a514;
+            background: #f5c94a;
+            color: #4f3b00;
+        }
         .student-exercise-name {
             color: #12324a;
             font-weight: bold;
@@ -1898,6 +1912,283 @@
             color: #607d8b;
             font-size: 12px;
             margin-top: 3px;
+        }
+        .student-review-badge,
+        .review-status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 28px;
+            padding: 4px 9px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .student-review-badge.pending,
+        .review-status-badge.pending {
+            color: #664d00;
+            background: #fff0b8;
+            border: 1px solid #e5bd38;
+        }
+        .student-review-badge.approved,
+        .review-status-badge.approved {
+            color: #176638;
+            background: #e6f6ec;
+            border: 1px solid #79c995;
+        }
+        .teacher-field-definition-grid {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .teacher-field-definition {
+            display: grid;
+            gap: 9px;
+            padding: 12px;
+            border: 1px solid #d7e3ec;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .teacher-field-definition h5 {
+            margin: 0;
+            color: #12324a;
+            font-size: 15px;
+        }
+        .teacher-field-constraints {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 7px;
+        }
+        .teacher-field-constraints.is-disabled {
+            opacity: 0.48;
+        }
+        .review-toolbar {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(130px, 1fr)) auto;
+            gap: 10px;
+            align-items: end;
+            margin-bottom: 12px;
+        }
+        .review-toolbar button {
+            width: auto;
+            max-width: none;
+            min-height: 44px;
+            margin: 0;
+        }
+        .review-summary {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin: 12px 0;
+        }
+        .review-summary-item {
+            padding: 12px;
+            border: 1px solid #dce6ed;
+            border-radius: 8px;
+            background: #f8fbfd;
+        }
+        .review-summary-item strong,
+        .review-summary-item span {
+            display: block;
+        }
+        .review-summary-item strong {
+            color: #12324a;
+            font-size: 24px;
+        }
+        .review-summary-item span {
+            color: #607d8b;
+            font-size: 12px;
+        }
+        .review-submissions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .review-card {
+            min-width: 0;
+            padding: 14px;
+            border: 1px solid #d7e3ec;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .review-card.pending {
+            border-color: #e4c45b;
+        }
+        .review-card.approved {
+            border-color: #8bc99f;
+        }
+        .review-card.is-saving {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        .review-card-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .review-card-head h4 {
+            margin: 0 0 4px;
+            color: #12324a;
+            font-size: 17px;
+        }
+        .review-card-head p {
+            margin: 0;
+            color: #607d8b;
+            font-size: 12px;
+        }
+        .review-field-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 9px;
+            margin: 10px 0;
+        }
+        .review-field-grid .teacher-field:last-child:nth-child(odd) {
+            grid-column: 1 / -1;
+        }
+        .review-card-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            padding-top: 10px;
+            border-top: 1px solid #edf1f4;
+            color: #607d8b;
+            font-size: 12px;
+        }
+        .review-card-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .review-card-actions button {
+            width: auto;
+            max-width: none;
+            min-height: 40px;
+            margin: 0;
+            padding: 8px 13px;
+        }
+        .review-approve-button {
+            background: #1f7a48;
+        }
+        .student-report-fab {
+            position: fixed;
+            inset-inline-start: max(14px, env(safe-area-inset-left));
+            bottom: max(14px, env(safe-area-inset-bottom));
+            z-index: 60;
+            display: none;
+            align-items: center;
+            gap: 7px;
+            width: auto;
+            max-width: none;
+            min-height: 44px;
+            margin: 0;
+            padding: 9px 13px;
+            border-radius: 8px;
+            border: 1px solid #0e5a8a;
+            background: #fff;
+            color: #0e5a8a;
+            box-shadow: 0 6px 18px rgba(16, 42, 67, 0.2);
+            font-size: 14px;
+        }
+        .student-report-fab.visible {
+            display: inline-flex;
+        }
+        .student-report-fab-icon {
+            width: 18px;
+            height: 16px;
+            display: inline-grid;
+            grid-template-columns: repeat(3, 4px);
+            align-items: end;
+            gap: 2px;
+        }
+        .student-report-fab-icon i {
+            display: block;
+            width: 4px;
+            background: currentColor;
+            border-radius: 1px;
+        }
+        .student-report-fab-icon i:nth-child(1) { height: 7px; }
+        .student-report-fab-icon i:nth-child(2) { height: 14px; }
+        .student-report-fab-icon i:nth-child(3) { height: 10px; }
+        .report-access-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background: rgba(16, 42, 67, 0.58);
+        }
+        .report-access-overlay.open {
+            display: flex;
+        }
+        .report-access-dialog {
+            width: min(430px, 100%);
+            padding: 18px;
+            border-radius: 8px;
+            background: #fff;
+            text-align: right;
+            box-shadow: 0 16px 42px rgba(0, 0, 0, 0.24);
+        }
+        .report-access-dialog h3 {
+            margin: 0 0 7px;
+            color: #12324a;
+        }
+        .report-access-dialog p {
+            margin: 0 0 12px;
+            color: #607d8b;
+            font-size: 13px;
+        }
+        .report-access-dialog input {
+            width: 100%;
+            margin: 0 0 10px;
+            font-size: 22px;
+            text-align: center;
+        }
+        .report-access-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .report-access-actions button {
+            min-height: 44px;
+            margin: 0;
+        }
+        body.admin-view .student-report-fab,
+        body.student-dashboard-view .student-report-fab {
+            display: none !important;
+        }
+        @media (max-width: 820px) {
+            .teacher-field-definition-grid,
+            .review-submissions {
+                grid-template-columns: 1fr;
+            }
+            .review-toolbar {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .review-toolbar button {
+                width: 100%;
+            }
+        }
+        @media (max-width: 600px) {
+            .teacher-field-constraints,
+            .review-toolbar,
+            .review-summary,
+            .review-field-grid {
+                grid-template-columns: 1fr;
+            }
+            .review-field-grid .teacher-field:last-child:nth-child(odd) {
+                grid-column: auto;
+            }
+            .student-report-fab {
+                min-height: 42px;
+                padding: 8px 11px;
+                font-size: 13px;
+            }
         }
         @media (max-width: 600px) {
             .analytics-toolbar,
@@ -2215,15 +2506,15 @@
                             <input type="number" id="adminRadiusKm" min="0.02" max="5" step="0.01" onchange="markAdminSettingsDirty()">
                         </label>
                         <label class="teacher-field teacher-form-wide">
-                            اسم الحقل المخصص 1
+                            الاسم الافتراضي للحقل المخصص 1
                             <input type="text" id="adminSupportField1" maxlength="60" placeholder="اتركه فارغاً لإخفائه" oninput="markAdminSettingsDirty()">
                         </label>
                         <label class="teacher-field teacher-form-wide">
-                            اسم الحقل المخصص 2
+                            الاسم الافتراضي للحقل المخصص 2
                             <input type="text" id="adminSupportField2" maxlength="60" placeholder="اتركه فارغاً لإخفائه" oninput="markAdminSettingsDirty()">
                         </label>
                         <label class="teacher-field teacher-form-wide">
-                            اسم الحقل المخصص 3
+                            الاسم الافتراضي للحقل المخصص 3
                             <input type="text" id="adminSupportField3" maxlength="60" placeholder="اتركه فارغاً لإخفائه" oninput="markAdminSettingsDirty()">
                         </label>
                         <label class="teacher-toggle">
@@ -2279,12 +2570,65 @@
                                     <input type="checkbox" id="adminSupportFieldVisible3" onchange="markCourseFormSettingsDirty()">
                                     <span class="teacher-toggle-switch"></span>
                                 </label>
+                                <div class="teacher-field-definition-grid">
+                                    <section class="teacher-field-definition">
+                                        <h5>الحقل الأول</h5>
+                                        <label class="teacher-field">اسم الحقل
+                                            <input type="text" id="adminCourseFieldLabel1" maxlength="60" oninput="markCourseFormSettingsDirty()">
+                                        </label>
+                                        <label class="teacher-field">نوع الإدخال
+                                            <select id="adminCourseFieldType1" onchange="handleAdminFieldTypeChange(0)">
+                                                <option value="text">نص</option>
+                                                <option value="number">رقم</option>
+                                            </select>
+                                        </label>
+                                        <div id="adminCourseFieldConstraints1" class="teacher-field-constraints">
+                                            <label class="teacher-field">عدد الأرقام بالضبط<input type="number" id="adminCourseFieldDigits1" min="1" max="12" step="1" placeholder="مثال: 2" oninput="markCourseFormSettingsDirty()"></label>
+                                            <label class="teacher-field">أقل قيمة<input type="number" id="adminCourseFieldMin1" step="any" placeholder="اختياري" oninput="markCourseFormSettingsDirty()"></label>
+                                            <label class="teacher-field">أعلى قيمة<input type="number" id="adminCourseFieldMax1" step="any" placeholder="اختياري" oninput="markCourseFormSettingsDirty()"></label>
+                                        </div>
+                                    </section>
+                                    <section class="teacher-field-definition">
+                                        <h5>الحقل الثاني</h5>
+                                        <label class="teacher-field">اسم الحقل
+                                            <input type="text" id="adminCourseFieldLabel2" maxlength="60" oninput="markCourseFormSettingsDirty()">
+                                        </label>
+                                        <label class="teacher-field">نوع الإدخال
+                                            <select id="adminCourseFieldType2" onchange="handleAdminFieldTypeChange(1)">
+                                                <option value="text">نص</option>
+                                                <option value="number">رقم</option>
+                                            </select>
+                                        </label>
+                                        <div id="adminCourseFieldConstraints2" class="teacher-field-constraints">
+                                            <label class="teacher-field">عدد الأرقام بالضبط<input type="number" id="adminCourseFieldDigits2" min="1" max="12" step="1" placeholder="مثال: 2" oninput="markCourseFormSettingsDirty()"></label>
+                                            <label class="teacher-field">أقل قيمة<input type="number" id="adminCourseFieldMin2" step="any" placeholder="اختياري" oninput="markCourseFormSettingsDirty()"></label>
+                                            <label class="teacher-field">أعلى قيمة<input type="number" id="adminCourseFieldMax2" step="any" placeholder="اختياري" oninput="markCourseFormSettingsDirty()"></label>
+                                        </div>
+                                    </section>
+                                    <section class="teacher-field-definition">
+                                        <h5>الحقل الثالث</h5>
+                                        <label class="teacher-field">اسم الحقل
+                                            <input type="text" id="adminCourseFieldLabel3" maxlength="60" oninput="markCourseFormSettingsDirty()">
+                                        </label>
+                                        <label class="teacher-field">نوع الإدخال
+                                            <select id="adminCourseFieldType3" onchange="handleAdminFieldTypeChange(2)">
+                                                <option value="text">نص</option>
+                                                <option value="number">رقم</option>
+                                            </select>
+                                        </label>
+                                        <div id="adminCourseFieldConstraints3" class="teacher-field-constraints">
+                                            <label class="teacher-field">عدد الأرقام بالضبط<input type="number" id="adminCourseFieldDigits3" min="1" max="12" step="1" placeholder="مثال: 2" oninput="markCourseFormSettingsDirty()"></label>
+                                            <label class="teacher-field">أقل قيمة<input type="number" id="adminCourseFieldMin3" step="any" placeholder="اختياري" oninput="markCourseFormSettingsDirty()"></label>
+                                            <label class="teacher-field">أعلى قيمة<input type="number" id="adminCourseFieldMax3" step="any" placeholder="اختياري" oninput="markCourseFormSettingsDirty()"></label>
+                                        </div>
+                                    </section>
+                                </div>
                                 <label class="teacher-field teacher-form-wide">
                                     خيارات الحقل المخصص 3 (خيار واحد في كل سطر)
                                     <textarea id="adminSupportChoiceOptions" maxlength="3000" placeholder="مثال:&#10;الخيار الأول&#10;الخيار الثاني&#10;الخيار الثالث" oninput="markCourseFormSettingsDirty()"></textarea>
                                 </label>
                             </div>
-                            <div class="teacher-settings-note">لمقررات مهارات الطباعة: سمِّ الحقل الأول "السرعة" أو Speed/WPM، والحقل الثاني "الدقة" أو Accuracy. عند تفعيل التقرير ستُستخدم هذه القيم في مقارنة الطلاب ولوحة الطالب. إذا تركت خيارات الحقل الثالث فارغة، يبقى مربع نص.</div>
+                            <div class="teacher-settings-note">اختر "رقم" لإظهار لوحة الأرقام للطالب، ويمكنك تحديد عدد الأرقام بالضبط أو أقل وأعلى قيمة. لمقررات مهارات الطباعة: سمِّ الحقل الأول "السرعة" والحقل الثاني "الدقة". إذا أضفت خيارات للحقل الثالث فستظهر كاختيار واحد بدلاً من مربع الإدخال.</div>
                         </div>
                     </div>
                     <div class="teacher-settings-note">إعدادات GPS ورمز التحقق الخاص وNFC والصيانة عامة. إعدادات النموذج والمرفق والملاحظة والحقول المخصصة تُضبط لكل دورة على حدة. الحقول المخصصة تظهر فقط إذا كتبت لها أسماء وفعلتها للدورة.</div>
@@ -2549,6 +2893,41 @@
                     </div>
                 </div>
 
+                <div class="teacher-block" data-teacher-block="reviews">
+                    <h3>مراجعة تسليمات الطلاب</h3>
+                    <div class="teacher-block-note">تظهر التسليمات الجديدة باللون الأصفر. راجع القيم وصححها عند الحاجة، ثم احفظ واعتمد النتيجة لتتحول إلى اللون الأخضر في تقرير الطالب.</div>
+                    <div class="review-toolbar">
+                        <label class="teacher-field">الفترة
+                            <select id="reviewDays" onchange="loadTeacherSubmissions()">
+                                <option value="7">آخر 7 أيام</option>
+                                <option value="30" selected>آخر 30 يوماً</option>
+                                <option value="90">آخر 90 يوماً</option>
+                            </select>
+                        </label>
+                        <label class="teacher-field">الدورة
+                            <select id="reviewCourse" onchange="loadTeacherSubmissions()"><option value="">كل الدورات</option></select>
+                        </label>
+                        <label class="teacher-field">حالة المراجعة
+                            <select id="reviewStatusFilter" onchange="loadTeacherSubmissions()">
+                                <option value="PENDING_REVIEW" selected>قيد المراجعة</option>
+                                <option value="APPROVED">معتمد</option>
+                                <option value="ALL">كل الحالات</option>
+                            </select>
+                        </label>
+                        <label class="teacher-field">الطالب أو التمرين
+                            <input type="search" id="reviewSearch" placeholder="اسم، رقم تدريبي، تمرين" oninput="scheduleTeacherSubmissionsLoad()">
+                        </label>
+                        <button type="button" onclick="loadTeacherSubmissions()">تحديث التسليمات</button>
+                    </div>
+                    <div id="reviewMessage" class="status-bar teacher-message waiting">افتح التبويب لتحميل التسليمات التي تنتظر المراجعة.</div>
+                    <div class="review-summary">
+                        <div class="review-summary-item"><strong id="reviewPendingCount">0</strong><span>قيد المراجعة</span></div>
+                        <div class="review-summary-item"><strong id="reviewApprovedCount">0</strong><span>تم اعتمادها</span></div>
+                        <div class="review-summary-item"><strong id="reviewTotalCount">0</strong><span>إجمالي التسليمات</span></div>
+                    </div>
+                    <div id="reviewSubmissions" class="review-submissions"></div>
+                </div>
+
                 <div class="teacher-block" data-teacher-block="analytics">
                     <h3>متابعة تقدم الطلاب</h3>
                     <div class="teacher-block-note">تابع إنجاز تمارين مهارات الطباعة وقارن السرعة والدقة للدورات التي فُعّل لها تقرير الطالب. أسماء التمارين تُقرأ من خيارات الحقل المخصص 3.</div>
@@ -2714,6 +3093,7 @@
                 <div id="studentDashboardMessage" class="status-bar waiting">جاري تحميل تقرير السرعة والدقة...</div>
                 <div class="student-summary">
                     <div class="student-stat"><strong id="studentSubmissionCount">0</strong><span>عدد النتائج</span></div>
+                    <div class="student-stat"><strong id="studentPendingReviewCount">0</strong><span>قيد المراجعة</span></div>
                     <div class="student-stat"><strong id="studentCompletedExercises">0</strong><span>تمارين منجزة</span></div>
                     <div class="student-stat"><strong id="studentRemainingExercises">0</strong><span>تمارين متبقية</span></div>
                     <div class="student-stat"><strong id="studentBestSpeed">-</strong><span>أفضل سرعة</span></div>
@@ -2743,6 +3123,23 @@
         </div>
     </div>
 
+    <button type="button" id="studentReportButton" class="student-report-fab" onclick="openStudentReportAccess()" aria-label="فتح تقرير التقدم">
+        <span class="student-report-fab-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>تقريري</span>
+    </button>
+    <div id="studentReportAccessModal" class="report-access-overlay" role="dialog" aria-modal="true" aria-labelledby="studentReportAccessTitle" onclick="handleStudentReportOverlayClick(event)">
+        <div class="report-access-dialog">
+            <h3 id="studentReportAccessTitle">فتح تقرير التقدم</h3>
+            <p>أدخل رقمك التدريبي لعرض التمارين المعتمدة والمهام التي ما زالت قيد المراجعة.</p>
+            <input type="text" id="studentReportAccessId" inputmode="numeric" autocomplete="off" placeholder="الرقم التدريبي" aria-label="الرقم التدريبي" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); submitStudentReportAccess(); }">
+            <div id="studentReportAccessStatus" class="status-bar"></div>
+            <div class="report-access-actions">
+                <button type="button" id="studentReportAccessSubmit" onclick="submitStudentReportAccess()">فتح التقرير</button>
+                <button type="button" class="teacher-secondary-button" onclick="closeStudentReportAccess()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
     <audio id="successSound" src="https://raw.githubusercontent.com/kbm4biz/att-qrc/main/assets/notification.wav" preload="auto"></audio>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
 
@@ -2767,6 +3164,13 @@
         let REQUIRE_SUPPORTING_ATTACHMENT = DEFAULT_APP_SETTINGS.requireSupportingAttachment;
         let REQUIRE_SUPPORTING_NOTE = DEFAULT_APP_SETTINGS.requireSupportingNote;
         let SUPPORTING_CUSTOM_FIELDS = [...DEFAULT_APP_SETTINGS.supportingCustomFields];
+        let SUPPORTING_FIELD_DEFINITIONS = DEFAULT_APP_SETTINGS.supportingCustomFields.map(label => ({
+            label,
+            type: 'text',
+            exactDigits: null,
+            min: null,
+            max: null
+        }));
         let SUPPORTING_CUSTOM_FIELD_VISIBILITY = [true, true, true];
         let SUPPORTING_CHOICE_OPTIONS = [];
         let ACTIVE_SUPPORTING_COURSE_ID = '';
@@ -2815,11 +3219,15 @@
             lookupTrainee: 18000,
             complete: 22000,
             studentDashboard: 18000,
+            studentReportAccess: 18000,
+            teacherSubmissions: 22000,
+            reviewSubmission: 22000,
             uploadStatus: 15000
         };
         const STUDENT_DASHBOARD_BROWSER_CACHE_PREFIX = 'attqStudentDashboardCacheV1';
         const STUDENT_DASHBOARD_BROWSER_CACHE_TTL_MS = 60 * 1000;
         const STUDENT_DASHBOARD_BROWSER_CACHE_MAX_STALE_MS = 12 * 60 * 60 * 1000;
+        const STUDENT_REPORT_ACCESS_STORAGE_KEY = 'attqStudentReportAccessV1';
         const appsScriptPendingRequests = new Map();
         let traineeID = '';
         let scannerActive = false;
@@ -2869,6 +3277,11 @@
         let teacherLastResponse = null;
         let teacherAttendanceRows = [];
         let teacherAttendanceResponse = null;
+        let teacherSubmissionRows = [];
+        let teacherSubmissionSummary = { total: 0, pending: 0, approved: 0 };
+        let teacherSubmissionSearchTimer = null;
+        let teacherSubmissionSaveLocks = {};
+        let studentReportAccessInProgress = false;
         let teacherInlineSaveLocks = {};
         let teacherActionLocks = {};
         let teacherLayoutReady = false;
@@ -3041,6 +3454,7 @@
                 renderStudentHistory([]);
                 return;
             }
+            rememberStudentReportAccess(traineeId, token, '');
 
             const cachedDashboard = readStudentDashboardBrowserCache(traineeId, token);
             const hasCachedDashboard = Boolean(cachedDashboard?.result);
@@ -3134,6 +3548,7 @@
             setText('studentDashboardName', student.name ? `تقرير ${student.name}` : 'تقرير مهارات الطباعة');
             setText('studentDashboardCourse', `${student.courseName || 'دون دورة'} · الرقم التدريبي ${student.traineeId || '-'}`);
             setText('studentSubmissionCount', summary.submissionCount || 0);
+            setText('studentPendingReviewCount', summary.pendingReviewCount || 0);
             setText('studentCompletedExercises', summary.completedExercises || 0);
             setText('studentRemainingExercises', summary.remainingExercises || 0);
             setText('studentBestSpeed', formatTypingSpeed(summary.bestTypingSpeed));
@@ -3148,9 +3563,10 @@
             const container = document.getElementById('studentExerciseList');
             const progressFill = document.getElementById('studentExerciseProgressFill');
             const completed = exercises.filter(exercise => exercise.completed).length;
+            const pending = exercises.filter(exercise => !exercise.completed && exercise.pending).length;
             const total = exercises.length;
             const percentage = total ? Math.round((completed / total) * 100) : 0;
-            setText('studentExerciseProgressText', `${completed} من ${total}`);
+            setText('studentExerciseProgressText', `${completed} معتمد · ${pending} قيد المراجعة · ${Math.max(0, total - completed - pending)} متبقي`);
             if (progressFill) progressFill.style.width = `${percentage}%`;
             if (!container) return;
             if (!total) {
@@ -3159,11 +3575,14 @@
             }
             container.innerHTML = exercises.map(exercise => {
                 const details = exercise.completed
-                    ? `${Number(exercise.submissionCount || 0)} محاولة · أفضل سرعة ${formatTypingSpeed(exercise.bestTypingSpeed)} · أفضل دقة ${formatTypingAccuracy(exercise.bestTypingAccuracy)}`
-                    : 'لم يُنجز بعد';
+                    ? `معتمد · ${Number(exercise.approvedSubmissionCount || exercise.submissionCount || 0)} نتيجة · أفضل سرعة ${formatTypingSpeed(exercise.bestTypingSpeed)} · أفضل دقة ${formatTypingAccuracy(exercise.bestTypingAccuracy)}`
+                    : (exercise.pending ? 'تم الإرسال وهو الآن قيد مراجعة المعلم' : 'لم يُنجز بعد');
+                const state = exercise.completed ? 'completed' : (exercise.pending ? 'pending' : '');
+                const symbol = exercise.completed ? '✓' : (exercise.pending ? '…' : '');
+                const ariaLabel = exercise.completed ? 'معتمد' : (exercise.pending ? 'قيد المراجعة' : 'متبقي');
                 return `
-                    <div class="student-exercise-item ${exercise.completed ? 'completed' : ''}">
-                        <span class="student-exercise-check" aria-label="${exercise.completed ? 'منجز' : 'متبقي'}">✓</span>
+                    <div class="student-exercise-item ${state}">
+                        <span class="student-exercise-check" aria-label="${ariaLabel}">${symbol}</span>
                         <div>
                             <div class="student-exercise-name">${escapeHtml(exercise.name || 'تمرين دون اسم')}</div>
                             <div class="student-exercise-meta">${escapeHtml(details)}</div>
@@ -3180,6 +3599,7 @@
                 return;
             }
             container.innerHTML = records.map(record => {
+                const isPending = record.reviewStatus === 'PENDING_REVIEW';
                 const attachment = record.attachmentUrl
                     ? `<a class="teacher-attachment-link" href="${escapeUrlAttribute(record.attachmentUrl)}" target="_blank" rel="noopener">فتح المرفق</a>`
                     : '<span>دون مرفق</span>';
@@ -3187,7 +3607,7 @@
                     <article class="student-history-item">
                         <div><strong>${escapeHtml(record.date || '-')}</strong><span>${escapeHtml(record.time || '')}</span></div>
                         <div><strong>${escapeHtml(record.exerciseName || 'تمرين دون اسم')}</strong><span>${escapeHtml(record.meetingId || record.program || '')}</span></div>
-                        <div><strong>السرعة: ${escapeHtml(formatTypingSpeed(record.typingSpeed))}</strong><span>الدقة: ${escapeHtml(formatTypingAccuracy(record.typingAccuracy))}</span></div>
+                        <div><strong>السرعة: ${escapeHtml(formatTypingSpeed(record.typingSpeed))}</strong><span>الدقة: ${escapeHtml(formatTypingAccuracy(record.typingAccuracy))}</span><span class="student-review-badge ${isPending ? 'pending' : 'approved'}">${isPending ? 'قيد المراجعة' : 'معتمد'}</span></div>
                         <div>${attachment}</div>
                     </article>`;
             }).join('');
@@ -3201,6 +3621,120 @@
             url.searchParams.set('student', traineeId);
             url.searchParams.set('token', token);
             return url.toString();
+        }
+
+        function rememberStudentReportAccess(traineeId, token, expiresAt) {
+            const normalizedId = normalizeTraineeIdValue(traineeId);
+            if (!normalizedId || !token) return;
+            try {
+                localStorage.setItem(STUDENT_REPORT_ACCESS_STORAGE_KEY, JSON.stringify({
+                    traineeId: normalizedId,
+                    token: String(token),
+                    expiresAt: expiresAt || '',
+                    savedAt: Date.now()
+                }));
+            } catch (error) {
+                console.warn('Unable to remember student report access:', error);
+            }
+        }
+
+        function readStudentReportAccess() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(STUDENT_REPORT_ACCESS_STORAGE_KEY) || 'null');
+                if (!saved?.traineeId || !saved?.token) return null;
+                const expiresAtMs = saved.expiresAt ? Date.parse(saved.expiresAt) : 0;
+                if (expiresAtMs && expiresAtMs <= Date.now()) {
+                    localStorage.removeItem(STUDENT_REPORT_ACCESS_STORAGE_KEY);
+                    return null;
+                }
+                return saved;
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function openStudentReportAccess() {
+            const saved = readStudentReportAccess();
+            if (saved) {
+                window.location.href = buildStudentDashboardUrl(saved.traineeId, saved.token);
+                return;
+            }
+            const modal = document.getElementById('studentReportAccessModal');
+            const input = document.getElementById('studentReportAccessId');
+            const activeSession = getActiveTraineeSession();
+            const trainee = readSessionJson('traineeDetails', null);
+            if (input) input.value = activeSession?.id || trainee?.id || '';
+            const status = document.getElementById('studentReportAccessStatus');
+            if (status) {
+                status.className = 'status-bar';
+                status.textContent = '';
+            }
+            modal?.classList.add('open');
+            setTimeout(() => input?.focus(), 80);
+        }
+
+        function closeStudentReportAccess() {
+            if (studentReportAccessInProgress) return;
+            document.getElementById('studentReportAccessModal')?.classList.remove('open');
+        }
+
+        function handleStudentReportOverlayClick(event) {
+            if (event.target?.id === 'studentReportAccessModal') closeStudentReportAccess();
+        }
+
+        async function submitStudentReportAccess() {
+            if (studentReportAccessInProgress) return;
+            const input = document.getElementById('studentReportAccessId');
+            const button = document.getElementById('studentReportAccessSubmit');
+            const status = document.getElementById('studentReportAccessStatus');
+            const traineeId = normalizeTraineeIdValue(input?.value || '');
+            if (!traineeId) {
+                if (status) {
+                    status.className = 'status-bar invalid';
+                    status.textContent = 'أدخل رقمك التدريبي الصحيح.';
+                }
+                input?.focus();
+                return;
+            }
+
+            studentReportAccessInProgress = true;
+            if (button) {
+                button.disabled = true;
+                button.textContent = 'جاري الفتح...';
+            }
+            if (input) input.disabled = true;
+            if (status) {
+                status.className = 'status-bar waiting';
+                status.textContent = 'جاري التحقق من التقرير على هذا الجهاز...';
+            }
+            try {
+                const result = await callAppsScriptJsonpReliable('studentReportAccess', {
+                    traineeId,
+                    deviceId: getOrCreateDeviceId(),
+                    deviceFingerprint: getDeviceFingerprint()
+                }, { attempts: 2, timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.studentReportAccess });
+                if (!result?.ok || !result.dashboardToken) {
+                    const error = new Error(result?.error || 'تعذر فتح التقرير.');
+                    error.code = result?.code || '';
+                    throw error;
+                }
+                rememberStudentReportAccess(traineeId, result.dashboardToken, result.dashboardExpiresAt);
+                window.location.href = buildStudentDashboardUrl(traineeId, result.dashboardToken);
+            } catch (error) {
+                console.error('Student report access error:', error);
+                if (status) {
+                    status.className = 'status-bar invalid';
+                    status.textContent = error.code === 'REPORT_DEVICE_NOT_RECOGNIZED'
+                        ? 'لم يتم العثور على إرسال سابق لهذا الرقم من هذا الجهاز.'
+                        : (error.message || 'تعذر فتح التقرير الآن. حاول مرة أخرى.');
+                }
+                studentReportAccessInProgress = false;
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = 'فتح التقرير';
+                }
+                if (input) input.disabled = false;
+            }
         }
 
         // ================== TEACHER DASHBOARD ================== //
@@ -3236,6 +3770,7 @@
             const tabDefinitions = [
                 { id: 'dashboard', label: 'السجل الكامل', title: 'جميع الإرسالات والمحاولات', nodes: [filters, message, summary, listTools, rows] },
                 { id: 'attendance', label: 'الحضور فقط', title: 'كشف الحضور الفعلي', nodes: [attendanceView] },
+                { id: 'reviews', label: 'مراجعة التسليمات', title: 'مراجعة تسليمات الطلاب', nodes: [getTeacherBlock('reviews')] },
                 { id: 'analytics', label: 'تقدم الطلاب', title: 'متابعة تقدم الطلاب', nodes: [getTeacherBlock('analytics')] },
                 { id: 'settings', label: 'الإعدادات', title: 'إعدادات النموذج', nodes: [settingsBlock] },
                 { id: 'setup', label: 'التهيئة', title: 'تهيئة البيانات', nodes: [getTeacherBlock('setup')] },
@@ -3301,10 +3836,15 @@
             }
             if (activeTeacherTab === 'analytics') {
                 populateTeacherAnalyticsCourseOptions();
+                populateTeacherReviewCourseOptions();
                 loadTeacherAnalytics();
             }
             if (activeTeacherTab === 'attendance') {
                 loadTeacherAttendance();
+            }
+            if (activeTeacherTab === 'reviews') {
+                populateTeacherReviewCourseOptions();
+                loadTeacherSubmissions();
             }
         }
 
@@ -4068,6 +4608,7 @@
             renderTeacherSchedulesList();
             populateTeacherReferenceSelects();
             populateTeacherAnalyticsCourseOptions();
+            populateTeacherReviewCourseOptions();
             initializeCourseFormSettingsEditor();
         }
 
@@ -5456,6 +5997,54 @@
                 .toLocaleLowerCase('ar');
         }
 
+        function createDefaultSupportingFieldDefinitions(labels = SUPPORTING_CUSTOM_FIELDS) {
+            return normalizeSupportingCustomFieldLabels(labels).map(label => ({
+                label,
+                type: 'text',
+                exactDigits: null,
+                min: null,
+                max: null
+            }));
+        }
+
+        function normalizeOptionalConstraint(value) {
+            if (value === '' || value === null || value === undefined) return null;
+            const number = Number(normalizeLocalizedNumberValue(value));
+            return Number.isFinite(number) && Math.abs(number) <= 1000000000 ? number : null;
+        }
+
+        function normalizeSupportingFieldDefinitions(definitions, fallbackDefinitions) {
+            const source = Array.isArray(definitions) ? definitions : [];
+            const fallback = Array.isArray(fallbackDefinitions)
+                ? fallbackDefinitions
+                : createDefaultSupportingFieldDefinitions();
+            return [0, 1, 2].map(index => {
+                const item = source[index] && typeof source[index] === 'object' ? source[index] : {};
+                const fallbackItem = fallback[index] || { label: '', type: 'text', exactDigits: null, min: null, max: null };
+                const typeSource = item.type ?? item.t ?? fallbackItem.type;
+                const type = String(typeSource || '').toLowerCase() === 'number' ? 'number' : 'text';
+                const exactSource = item.exactDigits ?? item.d ?? fallbackItem.exactDigits;
+                const exactNumber = Number(exactSource);
+                let min = normalizeOptionalConstraint(item.min ?? item.i ?? fallbackItem.min);
+                let max = normalizeOptionalConstraint(item.max ?? item.x ?? fallbackItem.max);
+                if (type !== 'number') {
+                    min = null;
+                    max = null;
+                } else if (min !== null && max !== null && min > max) {
+                    [min, max] = [max, min];
+                }
+                return {
+                    label: String(item.label ?? item.l ?? fallbackItem.label ?? '').trim().slice(0, 60),
+                    type,
+                    exactDigits: type === 'number' && Number.isInteger(exactNumber) && exactNumber >= 1 && exactNumber <= 12
+                        ? exactNumber
+                        : null,
+                    min,
+                    max
+                };
+            });
+        }
+
         function createDefaultCourseFormSettings() {
             const labels = normalizeSupportingCustomFieldLabels(SUPPORTING_CUSTOM_FIELDS);
             return {
@@ -5464,7 +6053,8 @@
                 requireNote: Boolean(GLOBAL_SUPPORTING_FORM_SETTINGS.requireNote),
                 visibleFields: labels.map(Boolean),
                 choiceOptions: [],
-                showStudentDashboard: false
+                showStudentDashboard: false,
+                fieldDefinitions: createDefaultSupportingFieldDefinitions(labels)
             };
         }
 
@@ -5480,7 +6070,11 @@
                 requireNote: coerceBooleanSetting(settings?.requireNote ?? settings?.n, fallback.requireNote),
                 visibleFields: normalizeSupportingFieldVisibility(compactVisibility, fallback.visibleFields),
                 choiceOptions: normalizeSupportingChoiceOptions(settings?.choiceOptions ?? settings?.o ?? fallback.choiceOptions),
-                showStudentDashboard: coerceBooleanSetting(settings?.showStudentDashboard ?? settings?.r, fallback.showStudentDashboard)
+                showStudentDashboard: coerceBooleanSetting(settings?.showStudentDashboard ?? settings?.r, fallback.showStudentDashboard),
+                fieldDefinitions: normalizeSupportingFieldDefinitions(
+                    settings?.fieldDefinitions ?? settings?.f,
+                    fallback.fieldDefinitions || createDefaultSupportingFieldDefinitions()
+                )
             };
         }
 
@@ -5509,7 +6103,14 @@
                 n: normalized.requireNote ? 1 : 0,
                 v: normalized.visibleFields.map(value => value ? '1' : '0').join(''),
                 o: normalized.choiceOptions,
-                r: normalized.showStudentDashboard ? 1 : 0
+                r: normalized.showStudentDashboard ? 1 : 0,
+                f: normalized.fieldDefinitions.map(field => ({
+                    l: field.label,
+                    t: field.type,
+                    d: field.exactDigits,
+                    i: field.min,
+                    x: field.max
+                }))
             }));
         }
 
@@ -5599,6 +6200,15 @@
             setChecked('adminSupportFieldVisible2', settings.visibleFields[1]);
             setChecked('adminSupportFieldVisible3', settings.visibleFields[2]);
             setValue('adminSupportChoiceOptions', settings.choiceOptions.join('\n'));
+            settings.fieldDefinitions.forEach((field, index) => {
+                const suffix = index + 1;
+                setValue(`adminCourseFieldLabel${suffix}`, field.label || '');
+                setValue(`adminCourseFieldType${suffix}`, field.type || 'text');
+                setValue(`adminCourseFieldDigits${suffix}`, field.exactDigits ?? '');
+                setValue(`adminCourseFieldMin${suffix}`, field.min ?? '');
+                setValue(`adminCourseFieldMax${suffix}`, field.max ?? '');
+                updateAdminCourseFieldConstraintState(index);
+            });
             updateAdminSupportFieldLabels();
         }
 
@@ -5613,7 +6223,17 @@
                     getChecked('adminSupportFieldVisible2'),
                     getChecked('adminSupportFieldVisible3')
                 ],
-                choiceOptions: document.getElementById('adminSupportChoiceOptions')?.value || ''
+                choiceOptions: document.getElementById('adminSupportChoiceOptions')?.value || '',
+                fieldDefinitions: [0, 1, 2].map(index => {
+                    const suffix = index + 1;
+                    return {
+                        label: document.getElementById(`adminCourseFieldLabel${suffix}`)?.value || '',
+                        type: document.getElementById(`adminCourseFieldType${suffix}`)?.value || 'text',
+                        exactDigits: document.getElementById(`adminCourseFieldDigits${suffix}`)?.value || null,
+                        min: document.getElementById(`adminCourseFieldMin${suffix}`)?.value || null,
+                        max: document.getElementById(`adminCourseFieldMax${suffix}`)?.value || null
+                    };
+                })
             });
         }
 
@@ -5636,14 +6256,35 @@
 
         function updateAdminSupportFieldLabels() {
             [0, 1, 2].forEach(index => {
-                const configuredLabel = (document.getElementById(`adminSupportField${index + 1}`)?.value || '').trim();
+                const configuredLabel = (
+                    document.getElementById(`adminCourseFieldLabel${index + 1}`)?.value ||
+                    document.getElementById(`adminSupportField${index + 1}`)?.value ||
+                    ''
+                ).trim();
                 const label = configuredLabel || `الحقل المخصص ${index + 1}`;
                 setText(`adminSupportField${index + 1}ChoiceLabel`, `إظهار: ${label}`);
             });
         }
 
+        function handleAdminFieldTypeChange(index) {
+            updateAdminCourseFieldConstraintState(index);
+            markCourseFormSettingsDirty();
+        }
+
+        function updateAdminCourseFieldConstraintState(index) {
+            const suffix = Number(index) + 1;
+            const isNumber = document.getElementById(`adminCourseFieldType${suffix}`)?.value === 'number';
+            const container = document.getElementById(`adminCourseFieldConstraints${suffix}`);
+            container?.classList.toggle('is-disabled', !isNumber);
+            [`adminCourseFieldDigits${suffix}`, `adminCourseFieldMin${suffix}`, `adminCourseFieldMax${suffix}`].forEach(id => {
+                const input = document.getElementById(id);
+                if (input) input.disabled = !isNumber;
+            });
+        }
+
         function markCourseFormSettingsDirty() {
             captureAdminCourseFormSettings(true);
+            updateAdminSupportFieldLabels();
             showAdminSettingsMessage('لديك تغييرات غير محفوظة في إعدادات الدورة. اضغط حفظ الإعدادات.', 'waiting');
         }
 
@@ -5724,6 +6365,7 @@
                 requireNote: REQUIRE_SUPPORTING_NOTE
             };
             SUPPORTING_CUSTOM_FIELDS = normalizeSupportingCustomFieldLabels(settings?.supportingCustomFields ?? DEFAULT_APP_SETTINGS.supportingCustomFields);
+            SUPPORTING_FIELD_DEFINITIONS = createDefaultSupportingFieldDefinitions(SUPPORTING_CUSTOM_FIELDS);
             SUPPORTING_CUSTOM_FIELD_VISIBILITY = [true, true, true];
             SUPPORTING_CHOICE_OPTIONS = [];
             ACTIVE_SUPPORTING_COURSE_ID = '';
@@ -5873,6 +6515,10 @@
                 loadTeacherAnalytics();
                 return;
             }
+            if (activeTeacherTab === 'reviews') {
+                loadTeacherSubmissions();
+                return;
+            }
             if (activeTeacherTab === 'qr') {
                 initializeTeacherQrPanel();
                 return;
@@ -5887,6 +6533,10 @@
         function downloadActiveTeacherCsv() {
             if (activeTeacherTab === 'attendance') {
                 downloadTeacherAttendanceCsv();
+                return;
+            }
+            if (activeTeacherTab === 'reviews') {
+                downloadTeacherSubmissionsCsv();
                 return;
             }
             downloadTeacherCsv();
@@ -6059,6 +6709,231 @@
                 console.error('Teacher log error:', error);
                 showTeacherMessage(error.message || 'تعذر تحميل السجل.', 'invalid');
             }
+        }
+
+        function populateTeacherReviewCourseOptions() {
+            const select = document.getElementById('reviewCourse');
+            if (!select) return;
+            const selected = select.value;
+            select.innerHTML = '<option value="">كل الدورات</option>';
+            sortTeacherItems(teacherAdminData.courses || [], course => course.courseName || '').forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.courseId || '';
+                option.textContent = course.courseName || course.courseId || 'دورة دون اسم';
+                select.appendChild(option);
+            });
+            if ([...select.options].some(option => option.value === selected)) select.value = selected;
+        }
+
+        function scheduleTeacherSubmissionsLoad() {
+            clearTimeout(teacherSubmissionSearchTimer);
+            teacherSubmissionSearchTimer = setTimeout(loadTeacherSubmissions, 450);
+        }
+
+        async function loadTeacherSubmissions() {
+            const message = document.getElementById('reviewMessage');
+            if (!message || activeTeacherTab !== 'reviews') return;
+            const password = teacherDashboardPassword || sessionStorage.getItem('teacherDashboardPassword') || '';
+            if (!password) {
+                message.className = 'status-bar teacher-message invalid';
+                message.textContent = 'كلمة مرور المعلم مطلوبة.';
+                return;
+            }
+
+            message.className = 'status-bar teacher-message waiting';
+            message.textContent = 'جاري تحميل التسليمات...';
+            try {
+                const result = await callAppsScriptJsonp('teacherSubmissions', {
+                    password,
+                    days: Number(document.getElementById('reviewDays')?.value || 30),
+                    courseId: document.getElementById('reviewCourse')?.value || '',
+                    reviewStatus: document.getElementById('reviewStatusFilter')?.value || 'PENDING_REVIEW',
+                    query: (document.getElementById('reviewSearch')?.value || '').trim()
+                }, { timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.teacherSubmissions });
+                if (!result?.ok) throw new Error(result?.error || 'تعذر تحميل التسليمات.');
+                teacherSubmissionRows = Array.isArray(result.rows) ? result.rows : [];
+                teacherSubmissionSummary = result.summary || { total: 0, pending: 0, approved: 0 };
+                renderTeacherSubmissionSummary();
+                renderTeacherSubmissions();
+                message.className = `status-bar teacher-message ${teacherSubmissionRows.length ? 'valid' : 'waiting'}`;
+                const limitedText = result.limited ? ' تم عرض أحدث النتائج فقط.' : '';
+                message.textContent = teacherSubmissionRows.length
+                    ? `تم تحميل ${teacherSubmissionRows.length} تسليم.${limitedText}`
+                    : 'لا توجد تسليمات مطابقة للفلاتر الحالية.';
+            } catch (error) {
+                console.error('Teacher submissions error:', error);
+                message.className = 'status-bar teacher-message invalid';
+                message.textContent = error.message || 'تعذر تحميل التسليمات.';
+            }
+        }
+
+        function renderTeacherSubmissionSummary() {
+            setText('reviewPendingCount', Number(teacherSubmissionSummary.pending || 0));
+            setText('reviewApprovedCount', Number(teacherSubmissionSummary.approved || 0));
+            setText('reviewTotalCount', Number(teacherSubmissionSummary.total || 0));
+        }
+
+        function renderTeacherSubmissions() {
+            const container = document.getElementById('reviewSubmissions');
+            if (!container) return;
+            if (!teacherSubmissionRows.length) {
+                container.innerHTML = '<div class="teacher-empty">لا توجد تسليمات للعرض.</div>';
+                return;
+            }
+
+            container.innerHTML = teacherSubmissionRows.map(row => {
+                const isPending = row.reviewStatus === 'PENDING_REVIEW';
+                const fields = Array.isArray(row.customFields) ? row.customFields : [];
+                const fieldsHtml = fields.length
+                    ? fields.map(field => {
+                        const isNumber = field.type === 'number';
+                        const min = field.min !== null && field.min !== undefined ? ` min="${escapeAttribute(field.min)}"` : '';
+                        const max = field.max !== null && field.max !== undefined ? ` max="${escapeAttribute(field.max)}"` : '';
+                        return `
+                            <label class="teacher-field">
+                                ${escapeHtml(field.label || `الحقل ${Number(field.index || 0) + 1}`)}
+                                <input type="${isNumber ? 'number' : 'text'}" ${isNumber ? `inputmode="${field.exactDigits ? 'numeric' : 'decimal'}" step="${field.exactDigits ? '1' : 'any'}"${min}${max}` : 'maxlength="160"'} value="${escapeAttribute(field.value || '')}" data-review-field="${Number(field.index || 0)}">
+                                ${getSupportingFieldConstraintText(field) ? `<small class="support-form-hint">${escapeHtml(getSupportingFieldConstraintText(field))}</small>` : ''}
+                            </label>`;
+                    }).join('')
+                    : '<div class="teacher-empty">لا توجد حقول مخصصة في هذا التسليم.</div>';
+                const attachment = row.attachmentUrl
+                    ? `<a class="teacher-attachment-link" href="${escapeUrlAttribute(row.attachmentUrl)}" target="_blank" rel="noopener">فتح المرفق</a>`
+                    : 'دون مرفق';
+                return `
+                    <article class="review-card ${isPending ? 'pending' : 'approved'}" data-review-id="${escapeAttribute(row.attendanceId || '')}">
+                        <div class="review-card-head">
+                            <div><h4>${escapeHtml(row.name || 'طالب دون اسم')}</h4><p>${escapeHtml(row.traineeId || '')} · ${escapeHtml(row.courseName || '-')}</p></div>
+                            <span class="review-status-badge ${isPending ? 'pending' : 'approved'}">${isPending ? 'قيد المراجعة' : 'معتمد'}</span>
+                        </div>
+                        <div class="review-field-grid">${fieldsHtml}</div>
+                        ${row.supportNote ? `<div class="teacher-block-note">ملاحظة الطالب: ${escapeHtml(row.supportNote)}</div>` : ''}
+                        <div class="review-card-meta">
+                            <span>${escapeHtml(`${row.date || ''} ${row.time || ''}`.trim())}</span>
+                            <span>${escapeHtml(row.typingExercise || 'دون اسم تمرين')}</span>
+                            <span>${attachment}</span>
+                            ${row.reviewedAt ? `<span>آخر اعتماد: ${escapeHtml(row.reviewedAt)}</span>` : ''}
+                        </div>
+                        <div class="review-card-actions">
+                            ${isPending
+                                ? `<button type="button" class="teacher-secondary-button" onclick="saveTeacherSubmissionReview('${escapeJsString(row.attendanceId || '')}', 'PENDING_REVIEW')">حفظ التصحيح</button><button type="button" class="review-approve-button" onclick="saveTeacherSubmissionReview('${escapeJsString(row.attendanceId || '')}', 'APPROVED')">حفظ واعتماد</button>`
+                                : `<button type="button" onclick="saveTeacherSubmissionReview('${escapeJsString(row.attendanceId || '')}', 'APPROVED')">حفظ التعديلات</button><button type="button" class="teacher-secondary-button" onclick="saveTeacherSubmissionReview('${escapeJsString(row.attendanceId || '')}', 'PENDING_REVIEW')">إعادة للمراجعة</button>`}
+                        </div>
+                    </article>`;
+            }).join('');
+        }
+
+        async function saveTeacherSubmissionReview(attendanceId, reviewStatus) {
+            if (!attendanceId || teacherSubmissionSaveLocks[attendanceId]) return;
+            const row = teacherSubmissionRows.find(item => item.attendanceId === attendanceId);
+            const card = [...document.querySelectorAll('.review-card')].find(item => item.dataset.reviewId === attendanceId);
+            if (!row || !card) return;
+
+            const existingFieldMap = new Map((row.customFields || []).map(field => [Number(field.index), field]));
+            let customFields = [];
+            try {
+                customFields = [...card.querySelectorAll('[data-review-field]')].map(input => {
+                    const index = Number(input.dataset.reviewField);
+                    const definition = existingFieldMap.get(index) || { index, label: `الحقل ${index + 1}`, type: input.type === 'number' ? 'number' : 'text' };
+                    const validation = validateSupportingFieldValue(definition, input.value);
+                    if (!validation.ok) {
+                        input.focus();
+                        throw new Error(validation.message);
+                    }
+                    return { ...definition, index, value: validation.value };
+                });
+            } catch (validationError) {
+                const message = document.getElementById('reviewMessage');
+                if (message) {
+                    message.className = 'status-bar teacher-message invalid';
+                    message.textContent = validationError.message;
+                }
+                return;
+            }
+
+            const previousStatus = row.reviewStatus;
+            const requestId = window.crypto?.randomUUID
+                ? window.crypto.randomUUID()
+                : `review-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            teacherSubmissionSaveLocks[attendanceId] = true;
+            card.classList.add('is-saving');
+            const message = document.getElementById('reviewMessage');
+            if (message) {
+                message.className = 'status-bar teacher-message waiting';
+                message.textContent = reviewStatus === 'APPROVED' ? 'جاري حفظ التصحيح واعتماد النتيجة...' : 'جاري حفظ التعديلات...';
+            }
+
+            try {
+                const result = await callAppsScriptJsonpReliable('reviewSubmission', {
+                    password: teacherDashboardPassword || sessionStorage.getItem('teacherDashboardPassword') || '',
+                    attendanceId,
+                    requestId,
+                    expectedRevision: Number(row.reviewRevision || 0),
+                    reviewStatus,
+                    customFields
+                }, { attempts: 2, timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.reviewSubmission });
+                if (!result?.ok || !result.record) {
+                    const error = new Error(result?.error || 'تعذر حفظ المراجعة.');
+                    error.code = result?.code || '';
+                    throw error;
+                }
+
+                if (previousStatus !== result.record.reviewStatus) {
+                    if (previousStatus === 'PENDING_REVIEW') teacherSubmissionSummary.pending = Math.max(0, Number(teacherSubmissionSummary.pending || 0) - 1);
+                    if (previousStatus === 'APPROVED') teacherSubmissionSummary.approved = Math.max(0, Number(teacherSubmissionSummary.approved || 0) - 1);
+                    if (result.record.reviewStatus === 'PENDING_REVIEW') teacherSubmissionSummary.pending = Number(teacherSubmissionSummary.pending || 0) + 1;
+                    if (result.record.reviewStatus === 'APPROVED') teacherSubmissionSummary.approved = Number(teacherSubmissionSummary.approved || 0) + 1;
+                }
+                teacherSubmissionRows = teacherSubmissionRows.map(item => item.attendanceId === attendanceId ? result.record : item);
+                const activeFilter = document.getElementById('reviewStatusFilter')?.value || 'PENDING_REVIEW';
+                if (activeFilter !== 'ALL') teacherSubmissionRows = teacherSubmissionRows.filter(item => item.reviewStatus === activeFilter);
+                renderTeacherSubmissionSummary();
+                renderTeacherSubmissions();
+                if (message) {
+                    message.className = 'status-bar teacher-message valid';
+                    message.textContent = result.record.reviewStatus === 'APPROVED'
+                        ? 'تم اعتماد النتيجة وتحديث تقرير الطالب.'
+                        : 'تم حفظ التصحيح وإبقاء التسليم قيد المراجعة.';
+                }
+            } catch (error) {
+                console.error('Review save error:', error);
+                if (message) {
+                    message.className = 'status-bar teacher-message invalid';
+                    message.textContent = error.code === 'REVIEW_CONFLICT'
+                        ? 'تم تعديل هذا التسليم من شاشة أخرى. جاري تحديث القائمة.'
+                        : (error.message || 'تعذر حفظ المراجعة. حاول مرة أخرى.');
+                }
+                if (error.code === 'REVIEW_CONFLICT') setTimeout(loadTeacherSubmissions, 500);
+            } finally {
+                delete teacherSubmissionSaveLocks[attendanceId];
+                card.classList.remove('is-saving');
+            }
+        }
+
+        function downloadTeacherSubmissionsCsv() {
+            if (!teacherSubmissionRows.length) {
+                const message = document.getElementById('reviewMessage');
+                if (message) message.textContent = 'لا توجد تسليمات لتنزيلها.';
+                return;
+            }
+            const headers = ['التاريخ', 'الوقت', 'حالة المراجعة', 'الرقم التدريبي', 'الاسم', 'الدورة', 'التمرين', 'الحقل 1', 'الحقل 2', 'الحقل 3', 'المرفق'];
+            const lines = [headers, ...teacherSubmissionRows.map(row => {
+                const values = {};
+                (row.customFields || []).forEach(field => { values[Number(field.index)] = field.value || ''; });
+                return [row.date || '', row.time || '', row.reviewStatus === 'APPROVED' ? 'معتمد' : 'قيد المراجعة', row.traineeId || '', row.name || '', row.courseName || '', row.typingExercise || '', values[0] || '', values[1] || '', values[2] || '', row.attachmentUrl || ''];
+            })].map(csvLine).join('\n');
+            const blob = new Blob(['\ufeff' + lines], { type: 'text/csv;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `submissions-review-${getDateInputValue(getSaudiTime())}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(link.href);
+        }
+
+        function escapeJsString(value) {
+            return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/[\r\n]/g, ' ');
         }
 
         function isTeacherAnalyticsCourse(course) {
@@ -6258,12 +7133,12 @@
                 const percent = total ? Math.max(0, Math.min(100, Math.round(completed / total * 100))) : 0;
                 const tasks = exercises.length
                     ? exercises.map(exercise => {
-                        const state = exercise.completed ? 'completed' : '';
-                        const symbol = exercise.completed ? '✓' : '○';
+                        const state = exercise.completed ? 'completed' : (exercise.pending ? 'pending' : '');
+                        const symbol = exercise.completed ? '✓' : (exercise.pending ? '…' : '○');
                         const attempts = Number(exercise.submissionCount || 0);
                         const title = exercise.completed
                             ? `${attempts} محاولة، أفضل سرعة ${formatTypingSpeed(exercise.bestTypingSpeed)}، أفضل دقة ${formatTypingAccuracy(exercise.bestTypingAccuracy)}`
-                            : 'متبقٍ';
+                            : (exercise.pending ? 'تم الإرسال وينتظر مراجعة المعلم' : 'متبقٍ');
                         return `<span class="analytics-task ${state}" title="${escapeHtml(title)}"><b>${symbol}</b>${escapeHtml(exercise.name || 'تمرين دون اسم')}</span>`;
                     }).join('')
                     : '<span class="analytics-task">لم تُضف تمارين لهذه الدورة</span>';
@@ -7132,6 +8007,17 @@
                 return 'تم استخدام هذا الجهاز لتسجيل متدرب آخر في هذه المحاضرة.';
             }
 
+            if (result?.code === 'SUPPORT_FIELD_DIGITS' || result?.code === 'SUPPORT_FIELD_NUMBER' ||
+                result?.code === 'SUPPORT_FIELD_MIN' || result?.code === 'SUPPORT_FIELD_MAX') {
+                return 'إحدى القيم المدخلة لا تطابق شروط المعلم. راجع الأرقام ثم أرسل النموذج مرة أخرى.';
+            }
+
+            if (result?.code === 'SUPPORT_FORM_REQUIRED' || result?.code === 'SUPPORT_FIELD_REQUIRED' ||
+                result?.code === 'SUPPORT_NOTE_REQUIRED' || result?.code === 'SUPPORT_ATTACHMENT_REQUIRED' ||
+                result?.code === 'SUPPORT_CHOICE_INVALID') {
+                return 'تم تحديث متطلبات النموذج. أعد فتح الصفحة وأكمل الحقول المطلوبة.';
+            }
+
             if (result?.code === 'NFC_MISSING') {
                 return 'تعذر فتح النموذج. المس البطاقة مرة أخرى.';
             }
@@ -7206,7 +8092,7 @@
                 try {
                     const result = await callAppsScriptJsonp(action, payload, options);
                     lastResult = result;
-                    if (!['ATTENDANCE_BUSY', 'SETTINGS_BUSY'].includes(result?.code)) {
+                    if (!['ATTENDANCE_BUSY', 'SETTINGS_BUSY', 'REVIEW_BUSY'].includes(result?.code)) {
                         return result;
                     }
                 } catch (error) {
@@ -7393,7 +8279,8 @@
                 requireAttachment: GLOBAL_SUPPORTING_FORM_SETTINGS.requireAttachment,
                 requireNote: GLOBAL_SUPPORTING_FORM_SETTINGS.requireNote,
                 visibleFields: [true, true, true],
-                choiceOptions: []
+                choiceOptions: [],
+                fieldDefinitions: createDefaultSupportingFieldDefinitions()
             });
             ACTIVE_SUPPORTING_COURSE_ID = String(courseId || '');
             ENABLE_SUPPORTING_FORM = normalized.enabled;
@@ -7401,6 +8288,7 @@
             REQUIRE_SUPPORTING_NOTE = normalized.requireNote;
             SUPPORTING_CUSTOM_FIELD_VISIBILITY = normalized.visibleFields;
             SUPPORTING_CHOICE_OPTIONS = normalized.choiceOptions;
+            SUPPORTING_FIELD_DEFINITIONS = normalized.fieldDefinitions;
             renderSupportingCustomFields();
         }
 
@@ -7412,7 +8300,8 @@
                 requireAttachment: GLOBAL_SUPPORTING_FORM_SETTINGS.requireAttachment,
                 requireNote: GLOBAL_SUPPORTING_FORM_SETTINGS.requireNote,
                 visibleFields: [true, true, true],
-                choiceOptions: []
+                choiceOptions: [],
+                fieldDefinitions: createDefaultSupportingFieldDefinitions()
             });
 
             if (backendSettings && typeof backendSettings === 'object') {
@@ -7849,13 +8738,18 @@
                 return;
             }
             const attendanceCounted = logResult.attendanceCounted !== false;
+            const awaitingReview = logResult.reviewStatus === 'PENDING_REVIEW';
             clearStudentDashboardBrowserCache(trainee.id);
             rememberSubmittedSupportingChoice(trainee);
             setText(
                 'successStatus',
-                attendanceCounted
-                    ? 'تم تسجيل الحضور وحفظ المهمة بنجاح!'
-                    : 'تم حفظ المهمة بنجاح، وحضورك مسجل لهذا اللقاء.'
+                awaitingReview
+                    ? (attendanceCounted
+                        ? 'تم تسجيل الحضور وإرسال المهمة للمراجعة.'
+                        : 'تم إرسال المهمة للمراجعة، وحضورك مسجل لهذا اللقاء.')
+                    : (attendanceCounted
+                        ? 'تم تسجيل الحضور وحفظ المهمة بنجاح!'
+                        : 'تم حفظ المهمة بنجاح، وحضورك مسجل لهذا اللقاء.')
             );
             
             // Display trainee details
@@ -7888,6 +8782,9 @@
             const dashboardUrl = logResult.dashboardToken
                 ? buildStudentDashboardUrl(trainee.id, logResult.dashboardToken)
                 : REDIRECT_URL;
+            if (logResult.dashboardToken) {
+                rememberStudentReportAccess(trainee.id, logResult.dashboardToken, logResult.dashboardExpiresAt || '');
+            }
             setText(
                 'successNextMessage',
                 logResult.dashboardToken
@@ -8429,9 +9326,53 @@
         }
 
         function getConfiguredSupportingCustomFields() {
-            return normalizeSupportingCustomFieldLabels(SUPPORTING_CUSTOM_FIELDS)
-                .map((label, index) => ({ index, label }))
+            return normalizeSupportingFieldDefinitions(
+                SUPPORTING_FIELD_DEFINITIONS,
+                createDefaultSupportingFieldDefinitions(SUPPORTING_CUSTOM_FIELDS)
+            )
+                .map((field, index) => ({ index, ...field }))
                 .filter(field => field.label && SUPPORTING_CUSTOM_FIELD_VISIBILITY[field.index]);
+        }
+
+        function normalizeLocalizedNumberValue(value) {
+            return String(value ?? '')
+                .trim()
+                .replace(/[٠-٩]/g, character => String(character.charCodeAt(0) - 1632))
+                .replace(/[۰-۹]/g, character => String(character.charCodeAt(0) - 1776))
+                .replace(/٫/g, '.')
+                .replace(/,/g, '.');
+        }
+
+        function getSupportingFieldConstraintText(field) {
+            if (field.type !== 'number') return '';
+            const parts = [];
+            if (field.exactDigits) parts.push(`${field.exactDigits} أرقام بالضبط`);
+            if (field.min !== null) parts.push(`الحد الأدنى ${field.min}`);
+            if (field.max !== null) parts.push(`الحد الأعلى ${field.max}`);
+            return parts.join(' · ');
+        }
+
+        function validateSupportingFieldValue(field, value) {
+            const normalized = field.type === 'number'
+                ? normalizeLocalizedNumberValue(value)
+                : String(value ?? '').trim();
+            if (!normalized) return { ok: false, value: '', message: `يرجى تعبئة الحقل: ${field.label}` };
+            if (field.type !== 'number') return { ok: true, value: normalized.slice(0, 160) };
+
+            if (field.exactDigits) {
+                const pattern = new RegExp(`^\\d{${field.exactDigits}}$`);
+                if (!pattern.test(normalized)) {
+                    return { ok: false, value: normalized, message: `يجب أن يحتوي حقل ${field.label} على ${field.exactDigits} أرقام بالضبط.` };
+                }
+            } else if (!/^-?\d+(?:\.\d+)?$/.test(normalized)) {
+                return { ok: false, value: normalized, message: `أدخل رقماً صحيحاً في حقل ${field.label}.` };
+            }
+
+            const number = Number(normalized);
+            if (!Number.isFinite(number)) return { ok: false, value: normalized, message: `أدخل رقماً صحيحاً في حقل ${field.label}.` };
+            if (field.min !== null && number < field.min) return { ok: false, value: normalized, message: `قيمة ${field.label} يجب ألا تقل عن ${field.min}.` };
+            if (field.max !== null && number > field.max) return { ok: false, value: normalized, message: `قيمة ${field.label} يجب ألا تزيد عن ${field.max}.` };
+            return { ok: true, value: normalized };
         }
 
         function readSubmittedChoiceHistory() {
@@ -8518,10 +9459,15 @@
                     `;
                 }
 
+                const isNumber = field.type === 'number';
+                const constraintText = getSupportingFieldConstraintText(field);
+                const minAttribute = field.min !== null ? ` min="${escapeAttribute(field.min)}"` : '';
+                const maxAttribute = field.max !== null ? ` max="${escapeAttribute(field.max)}"` : '';
                 return `
                     <label class="support-custom-field">
                         <span>${escapeHtml(field.label)}</span>
-                        <input type="text" id="supportCustomField${field.index + 1}" maxlength="160" placeholder="اكتب ${escapeAttribute(field.label)}" aria-label="${escapeAttribute(field.label)}">
+                        <input type="${isNumber ? 'number' : 'text'}" id="supportCustomField${field.index + 1}" ${isNumber ? `inputmode="${field.exactDigits ? 'numeric' : 'decimal'}" step="${field.exactDigits ? '1' : 'any'}"${minAttribute}${maxAttribute}` : 'maxlength="160"'} placeholder="${isNumber ? 'أدخل' : 'اكتب'} ${escapeAttribute(field.label)}" aria-label="${escapeAttribute(field.label)}">
+                        ${constraintText ? `<small class="support-form-hint">${escapeHtml(constraintText)}</small>` : ''}
                     </label>
                 `;
             }).join('');
@@ -8535,7 +9481,11 @@
                 return {
                     index: field.index,
                     label: field.label,
-                    value: String(value).trim()
+                    value: field.type === 'number' ? normalizeLocalizedNumberValue(value) : String(value).trim(),
+                    type: field.index === 2 && SUPPORTING_CHOICE_OPTIONS.length ? 'choice' : field.type,
+                    exactDigits: field.exactDigits,
+                    min: field.min,
+                    max: field.max
                 };
             });
         }
@@ -8617,6 +9567,21 @@
                 }
                 showError(`يرجى تعبئة الحقل: ${missingCustomField.label}`, status);
                 return;
+            }
+
+            const configuredFieldMap = new Map(getConfiguredSupportingCustomFields().map(field => [field.index, field]));
+            for (const customField of customFields) {
+                const configuredDefinition = configuredFieldMap.get(customField.index) || customField;
+                const definition = customField.index === 2 && SUPPORTING_CHOICE_OPTIONS.length
+                    ? { ...configuredDefinition, type: 'text' }
+                    : configuredDefinition;
+                const validation = validateSupportingFieldValue(definition, customField.value);
+                if (!validation.ok) {
+                    showError(validation.message, status);
+                    document.getElementById(`supportCustomField${customField.index + 1}`)?.focus();
+                    return;
+                }
+                customField.value = validation.value;
             }
 
             if (note.length > SUPPORTING_NOTE_MAX_LENGTH) {
@@ -9092,6 +10057,11 @@
             });
 
             document.getElementById(`step${stepNumber}`).classList.add('active-step');
+            const reportButton = document.getElementById('studentReportButton');
+            reportButton?.classList.toggle('visible', Number(stepNumber) === 1 && !adminMode);
+            if (Number(stepNumber) !== 1 && !studentReportAccessInProgress) {
+                document.getElementById('studentReportAccessModal')?.classList.remove('open');
+            }
 
             if (Number(stepNumber) === 3) {
                 syncVerificationVisuals(getSaudiTime());
