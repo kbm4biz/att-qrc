@@ -2583,7 +2583,6 @@
                                             </select>
                                         </label>
                                         <div id="adminCourseFieldConstraints1" class="teacher-field-constraints">
-                                            <label class="teacher-field">عدد الأرقام بالضبط<input type="number" id="adminCourseFieldDigits1" min="1" max="12" step="1" placeholder="مثال: 2" oninput="markCourseFormSettingsDirty()"></label>
                                             <label class="teacher-field">أقل قيمة<input type="number" id="adminCourseFieldMin1" step="any" placeholder="اختياري" oninput="markCourseFormSettingsDirty()"></label>
                                             <label class="teacher-field">أعلى قيمة<input type="number" id="adminCourseFieldMax1" step="any" placeholder="اختياري" oninput="markCourseFormSettingsDirty()"></label>
                                         </div>
@@ -2600,7 +2599,6 @@
                                             </select>
                                         </label>
                                         <div id="adminCourseFieldConstraints2" class="teacher-field-constraints">
-                                            <label class="teacher-field">عدد الأرقام بالضبط<input type="number" id="adminCourseFieldDigits2" min="1" max="12" step="1" placeholder="مثال: 2" oninput="markCourseFormSettingsDirty()"></label>
                                             <label class="teacher-field">أقل قيمة<input type="number" id="adminCourseFieldMin2" step="any" placeholder="اختياري" oninput="markCourseFormSettingsDirty()"></label>
                                             <label class="teacher-field">أعلى قيمة<input type="number" id="adminCourseFieldMax2" step="any" placeholder="اختياري" oninput="markCourseFormSettingsDirty()"></label>
                                         </div>
@@ -2617,7 +2615,6 @@
                                             </select>
                                         </label>
                                         <div id="adminCourseFieldConstraints3" class="teacher-field-constraints">
-                                            <label class="teacher-field">عدد الأرقام بالضبط<input type="number" id="adminCourseFieldDigits3" min="1" max="12" step="1" placeholder="مثال: 2" oninput="markCourseFormSettingsDirty()"></label>
                                             <label class="teacher-field">أقل قيمة<input type="number" id="adminCourseFieldMin3" step="any" placeholder="اختياري" oninput="markCourseFormSettingsDirty()"></label>
                                             <label class="teacher-field">أعلى قيمة<input type="number" id="adminCourseFieldMax3" step="any" placeholder="اختياري" oninput="markCourseFormSettingsDirty()"></label>
                                         </div>
@@ -2628,7 +2625,7 @@
                                     <textarea id="adminSupportChoiceOptions" maxlength="3000" placeholder="مثال:&#10;الخيار الأول&#10;الخيار الثاني&#10;الخيار الثالث" oninput="markCourseFormSettingsDirty()"></textarea>
                                 </label>
                             </div>
-                            <div class="teacher-settings-note">اختر "رقم" لإظهار لوحة الأرقام للطالب، ويمكنك تحديد عدد الأرقام بالضبط أو أقل وأعلى قيمة. لمقررات مهارات الطباعة: سمِّ الحقل الأول "السرعة" والحقل الثاني "الدقة". إذا أضفت خيارات للحقل الثالث فستظهر كاختيار واحد بدلاً من مربع الإدخال.</div>
+                            <div class="teacher-settings-note">اختر "رقم" لإظهار لوحة الأرقام للطالب، ويمكنك تحديد أقل وأعلى قيمة. لمقررات مهارات الطباعة: سمِّ الحقل الأول "السرعة" والحقل الثاني "الدقة". إذا أضفت خيارات للحقل الثالث فستظهر كاختيار واحد بدلاً من مربع الإدخال.</div>
                         </div>
                     </div>
                     <div class="teacher-settings-note">إعدادات GPS ورمز التحقق الخاص وNFC والصيانة عامة. إعدادات النموذج والمرفق والملاحظة والحقول المخصصة تُضبط لكل دورة على حدة. الحقول المخصصة تظهر فقط إذا كتبت لها أسماء وفعلتها للدورة.</div>
@@ -3167,7 +3164,6 @@
         let SUPPORTING_FIELD_DEFINITIONS = DEFAULT_APP_SETTINGS.supportingCustomFields.map(label => ({
             label,
             type: 'text',
-            exactDigits: null,
             min: null,
             max: null
         }));
@@ -6001,7 +5997,6 @@
             return normalizeSupportingCustomFieldLabels(labels).map(label => ({
                 label,
                 type: 'text',
-                exactDigits: null,
                 min: null,
                 max: null
             }));
@@ -6020,11 +6015,9 @@
                 : createDefaultSupportingFieldDefinitions();
             return [0, 1, 2].map(index => {
                 const item = source[index] && typeof source[index] === 'object' ? source[index] : {};
-                const fallbackItem = fallback[index] || { label: '', type: 'text', exactDigits: null, min: null, max: null };
+                const fallbackItem = fallback[index] || { label: '', type: 'text', min: null, max: null };
                 const typeSource = item.type ?? item.t ?? fallbackItem.type;
                 const type = String(typeSource || '').toLowerCase() === 'number' ? 'number' : 'text';
-                const exactSource = item.exactDigits ?? item.d ?? fallbackItem.exactDigits;
-                const exactNumber = Number(exactSource);
                 let min = normalizeOptionalConstraint(item.min ?? item.i ?? fallbackItem.min);
                 let max = normalizeOptionalConstraint(item.max ?? item.x ?? fallbackItem.max);
                 if (type !== 'number') {
@@ -6036,9 +6029,6 @@
                 return {
                     label: String(item.label ?? item.l ?? fallbackItem.label ?? '').trim().slice(0, 60),
                     type,
-                    exactDigits: type === 'number' && Number.isInteger(exactNumber) && exactNumber >= 1 && exactNumber <= 12
-                        ? exactNumber
-                        : null,
                     min,
                     max
                 };
@@ -6107,7 +6097,6 @@
                 f: normalized.fieldDefinitions.map(field => ({
                     l: field.label,
                     t: field.type,
-                    d: field.exactDigits,
                     i: field.min,
                     x: field.max
                 }))
@@ -6204,7 +6193,6 @@
                 const suffix = index + 1;
                 setValue(`adminCourseFieldLabel${suffix}`, field.label || '');
                 setValue(`adminCourseFieldType${suffix}`, field.type || 'text');
-                setValue(`adminCourseFieldDigits${suffix}`, field.exactDigits ?? '');
                 setValue(`adminCourseFieldMin${suffix}`, field.min ?? '');
                 setValue(`adminCourseFieldMax${suffix}`, field.max ?? '');
                 updateAdminCourseFieldConstraintState(index);
@@ -6229,7 +6217,6 @@
                     return {
                         label: document.getElementById(`adminCourseFieldLabel${suffix}`)?.value || '',
                         type: document.getElementById(`adminCourseFieldType${suffix}`)?.value || 'text',
-                        exactDigits: document.getElementById(`adminCourseFieldDigits${suffix}`)?.value || null,
                         min: document.getElementById(`adminCourseFieldMin${suffix}`)?.value || null,
                         max: document.getElementById(`adminCourseFieldMax${suffix}`)?.value || null
                     };
@@ -6276,7 +6263,7 @@
             const isNumber = document.getElementById(`adminCourseFieldType${suffix}`)?.value === 'number';
             const container = document.getElementById(`adminCourseFieldConstraints${suffix}`);
             container?.classList.toggle('is-disabled', !isNumber);
-            [`adminCourseFieldDigits${suffix}`, `adminCourseFieldMin${suffix}`, `adminCourseFieldMax${suffix}`].forEach(id => {
+            [`adminCourseFieldMin${suffix}`, `adminCourseFieldMax${suffix}`].forEach(id => {
                 const input = document.getElementById(id);
                 if (input) input.disabled = !isNumber;
             });
@@ -6792,7 +6779,7 @@
                         return `
                             <label class="teacher-field">
                                 ${escapeHtml(field.label || `الحقل ${Number(field.index || 0) + 1}`)}
-                                <input type="${isNumber ? 'number' : 'text'}" ${isNumber ? `inputmode="${field.exactDigits ? 'numeric' : 'decimal'}" step="${field.exactDigits ? '1' : 'any'}"${min}${max}` : 'maxlength="160"'} value="${escapeAttribute(field.value || '')}" data-review-field="${Number(field.index || 0)}">
+                                <input type="${isNumber ? 'number' : 'text'}" ${isNumber ? `inputmode="decimal" step="any"${min}${max}` : 'maxlength="160"'} value="${escapeAttribute(field.value || '')}" data-review-field="${Number(field.index || 0)}">
                                 ${getSupportingFieldConstraintText(field) ? `<small class="support-form-hint">${escapeHtml(getSupportingFieldConstraintText(field))}</small>` : ''}
                             </label>`;
                     }).join('')
@@ -9346,7 +9333,6 @@
         function getSupportingFieldConstraintText(field) {
             if (field.type !== 'number') return '';
             const parts = [];
-            if (field.exactDigits) parts.push(`${field.exactDigits} أرقام بالضبط`);
             if (field.min !== null) parts.push(`الحد الأدنى ${field.min}`);
             if (field.max !== null) parts.push(`الحد الأعلى ${field.max}`);
             return parts.join(' · ');
@@ -9359,12 +9345,7 @@
             if (!normalized) return { ok: false, value: '', message: `يرجى تعبئة الحقل: ${field.label}` };
             if (field.type !== 'number') return { ok: true, value: normalized.slice(0, 160) };
 
-            if (field.exactDigits) {
-                const pattern = new RegExp(`^\\d{${field.exactDigits}}$`);
-                if (!pattern.test(normalized)) {
-                    return { ok: false, value: normalized, message: `يجب أن يحتوي حقل ${field.label} على ${field.exactDigits} أرقام بالضبط.` };
-                }
-            } else if (!/^-?\d+(?:\.\d+)?$/.test(normalized)) {
+            if (!/^-?\d+(?:\.\d+)?$/.test(normalized)) {
                 return { ok: false, value: normalized, message: `أدخل رقماً صحيحاً في حقل ${field.label}.` };
             }
 
@@ -9466,7 +9447,7 @@
                 return `
                     <label class="support-custom-field">
                         <span>${escapeHtml(field.label)}</span>
-                        <input type="${isNumber ? 'number' : 'text'}" id="supportCustomField${field.index + 1}" ${isNumber ? `inputmode="${field.exactDigits ? 'numeric' : 'decimal'}" step="${field.exactDigits ? '1' : 'any'}"${minAttribute}${maxAttribute}` : 'maxlength="160"'} placeholder="${isNumber ? 'أدخل' : 'اكتب'} ${escapeAttribute(field.label)}" aria-label="${escapeAttribute(field.label)}">
+                        <input type="${isNumber ? 'number' : 'text'}" id="supportCustomField${field.index + 1}" ${isNumber ? `inputmode="decimal" step="any"${minAttribute}${maxAttribute}` : 'maxlength="160"'} placeholder="${isNumber ? 'أدخل' : 'اكتب'} ${escapeAttribute(field.label)}" aria-label="${escapeAttribute(field.label)}">
                         ${constraintText ? `<small class="support-form-hint">${escapeHtml(constraintText)}</small>` : ''}
                     </label>
                 `;
@@ -9483,7 +9464,6 @@
                     label: field.label,
                     value: field.type === 'number' ? normalizeLocalizedNumberValue(value) : String(value).trim(),
                     type: field.index === 2 && SUPPORTING_CHOICE_OPTIONS.length ? 'choice' : field.type,
-                    exactDigits: field.exactDigits,
                     min: field.min,
                     max: field.max
                 };
