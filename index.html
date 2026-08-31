@@ -643,6 +643,10 @@
             line-height: 1.8;
             font-size: 15px;
         }
+        .preflight-retry {
+            display: none;
+            margin: 18px auto 0;
+        }
         .preflight-stream {
             margin-top: 20px;
             display: flex;
@@ -2383,6 +2387,7 @@
                     <div class="preflight-line"></div>
                     <div class="preflight-line"></div>
                 </div>
+                <button type="button" id="preflightRetryButton" class="preflight-retry" onclick="retryRuntimeInitialization()">إعادة المحاولة</button>
             </div>
         </div>
         
@@ -3283,6 +3288,7 @@
         let teacherLayoutReady = false;
         let activeTeacherTab = 'dashboard';
         let bootstrapActiveMeetingNow = null;
+        let runtimeSettingsReady = false;
         let teacherQrInterval = null;
         let teacherQrSessionId = '';
         let teacherQrBusy = false;
@@ -3295,6 +3301,7 @@
         let courseFormSettingsDirtyIds = new Set();
         let adminSelectedSupportCourseId = '';
         let backendSubmittedSupportingChoices = [];
+        let backendSubmittedChoicesAuthoritative = false;
         const COURSE_FORM_CONFIG_MARKER = 'ATTQ_FORM_V1';
         const SUBMITTED_CHOICE_HISTORY_KEY = 'attqSubmittedChoiceHistoryV1';
         let teacherAdminData = {
@@ -3304,16 +3311,40 @@
             schedules: []
         };
 
-        function setPreflightStatus(title, message) {
+        function setPreflightStatus(title, message, options = {}) {
             const titleElement = document.getElementById('preflightTitle');
             const messageElement = document.getElementById('preflightMessage');
+            const spinner = document.getElementById('preflightSpinner');
+            const stream = document.querySelector('#step0 .preflight-stream');
+            const retryButton = document.getElementById('preflightRetryButton');
+            const isError = options.error === true;
             if (titleElement) {
                 titleElement.textContent = title || 'جاري تجهيز التحضير';
             }
             if (messageElement) {
                 messageElement.textContent = message || 'يرجى الانتظار قليلاً أثناء تجهيز نموذج الحضور.';
             }
+            if (spinner) spinner.style.display = isError ? 'none' : 'block';
+            if (stream) stream.style.display = isError ? 'none' : 'flex';
+            if (retryButton) retryButton.style.display = isError ? 'block' : 'none';
             showStep(0);
+        }
+
+        function showRuntimeSettingsLoadError() {
+            runtimeSettingsReady = false;
+            setMeetingIndicatorState(false, 'تعذر تحميل إعدادات الحضور');
+            setPreflightStatus(
+                'تعذر تجهيز التحضير',
+                nfcTapData
+                    ? 'تحقق من اتصال الإنترنت ثم المس البطاقة مرة أخرى.'
+                    : 'تحقق من اتصال الإنترنت ثم اضغط إعادة المحاولة.',
+                { error: true }
+            );
+        }
+
+        function retryRuntimeInitialization() {
+            setPreflightStatus('جاري إعادة المحاولة', 'نقوم بإعادة الاتصال بإعدادات الحضور الآن.');
+            window.location.reload();
         }
 
         function setMeetingIndicatorState(isActive, message, isPending = false) {
@@ -3393,10 +3424,12 @@
             nfcTapData = loadNfcTapData(true);
             if (nfcTapData) {
                 nfcReservationPending = true;
-                showStep(1);
-                applyNfcGateToForm();
             }
-            await loadRuntimeSettings(buildNfcRequestPayload());
+            const settingsLoaded = await loadRuntimeSettings(buildNfcRequestPayload());
+            if (!settingsLoaded) {
+                showRuntimeSettingsLoadError();
+                return;
+            }
             await refreshMeetingIndicator();
 
             if (MAINTENANCE_MODE) {
@@ -4379,7 +4412,15 @@
             }
         }
 
+        function hasAuthoritativeRuntimeSettings(settings) {
+            return Boolean(settings && typeof settings === 'object' &&
+                Object.prototype.hasOwnProperty.call(settings, 'enableGpsValidation') &&
+                Object.prototype.hasOwnProperty.call(settings, 'enableQrValidation') &&
+                Object.prototype.hasOwnProperty.call(settings, 'enableNfcTapValidation'));
+        }
+
         async function loadRuntimeSettings(bootstrapPayload = {}) {
+            runtimeSettingsReady = false;
             const bootstrapHasNfc = Boolean(bootstrapPayload?.nfc?.uid && bootstrapPayload?.nfc?.counter && bootstrapPayload?.nfc?.c);
             if (bootstrapHasNfc) {
                 nfcReservationPending = true;
@@ -4395,8 +4436,9 @@
                     bootstrapActiveMeetingNow = typeof result.activeMeetingNow === 'boolean'
                         ? result.activeMeetingNow
                         : null;
-                    if (result.settings) {
+                    if (hasAuthoritativeRuntimeSettings(result.settings)) {
                         applyRuntimeSettings(result.settings);
+                        runtimeSettingsReady = true;
                     }
                     if (Array.isArray(result.locations) && result.locations.length) {
                         locationData = result.locations.map(location => ({
@@ -4407,25 +4449,31 @@
                             radiusKm: Number(location.radiusKm || RADIUS_KM)
                         })).filter(location => Number.isFinite(location.lat) && Number.isFinite(location.lon));
                     }
-                    return;
+                    if (runtimeSettingsReady) {
+                        return true;
+                    }
                 }
             } catch (error) {
-                console.warn('Using fallback runtime settings because attendanceBootstrap failed:', error);
+                console.warn('attendanceBootstrap failed before authoritative settings were loaded:', error);
             } finally {
                 nfcReservationPending = false;
             }
 
             try {
-                const result = await callAppsScriptJsonp('appConfig', {}, {
+                const result = await callAppsScriptJsonpReliable('appConfig', {}, {
+                    attempts: 2,
                     timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.appConfig
                 });
-                if (result?.ok && result.settings) {
+                if (result?.ok && hasAuthoritativeRuntimeSettings(result.settings)) {
                     applyAppsScriptCapabilities(result.capabilities);
                     applyRuntimeSettings(result.settings);
+                    runtimeSettingsReady = true;
+                    return true;
                 }
             } catch (error) {
-                console.warn('Using built-in attendance settings because appConfig failed:', error);
+                console.warn('appConfig failed before authoritative settings were loaded:', error);
             }
+            return false;
         }
 
         function applyBootstrapNfcReservation(reservation) {
@@ -6357,6 +6405,7 @@
             SUPPORTING_CHOICE_OPTIONS = [];
             ACTIVE_SUPPORTING_COURSE_ID = '';
             backendSubmittedSupportingChoices = [];
+            backendSubmittedChoicesAuthoritative = false;
             MAINTENANCE_MODE = coerceBooleanSetting(settings?.maintenanceMode, DEFAULT_APP_SETTINGS.maintenanceMode);
             MAINTENANCE_MESSAGE = String(settings?.maintenanceMessage || '').trim() || DEFAULT_APP_SETTINGS.maintenanceMessage;
             const radiusKm = Number(settings?.radiusKm);
@@ -8279,9 +8328,10 @@
             renderSupportingCustomFields();
         }
 
-        function configureSupportingFormForTrainee(trainee, backendSettings, previousSubmittedChoices) {
+        function configureSupportingFormForTrainee(trainee, backendSettings, previousSubmittedChoices, choicesAreAuthoritative = false) {
             const courseId = String(trainee?.courseId || trainee?.course?.courseId || '').trim();
             backendSubmittedSupportingChoices = normalizeSupportingChoiceOptions(previousSubmittedChoices || []);
+            backendSubmittedChoicesAuthoritative = choicesAreAuthoritative === true;
             applyCourseSupportingFormSettings(courseId, {
                 enabled: GLOBAL_SUPPORTING_FORM_SETTINGS.enabled,
                 requireAttachment: GLOBAL_SUPPORTING_FORM_SETTINGS.requireAttachment,
@@ -8344,6 +8394,11 @@
         // ================== STEP 1: VERIFY ID ================== //
         async function verifyID() {
             if (idVerificationInProgress || attendanceRecorded) {
+                return;
+            }
+
+            if (!runtimeSettingsReady) {
+                showRuntimeSettingsLoadError();
                 return;
             }
 
@@ -8427,7 +8482,9 @@
                     configureSupportingFormForTrainee(
                         attendanceContext.trainee,
                         attendanceContext.courseFormSettings,
-                        attendanceContext.previousSubmittedChoices
+                        attendanceContext.previousSubmittedChoices,
+                        Object.prototype.hasOwnProperty.call(attendanceContext, 'previousSubmittedChoices') &&
+                            Array.isArray(attendanceContext.previousSubmittedChoices)
                     );
 
                     idStatus.className = 'status-bar waiting';
@@ -9372,14 +9429,34 @@
             return traineeId && courseId ? `${traineeId}::${courseId}` : '';
         }
 
+        function replaceSubmittedChoiceHistory(trainee, canonicalChoices) {
+            const key = getSubmittedChoiceHistoryKey(trainee);
+            if (!key) return;
+
+            try {
+                const history = readSubmittedChoiceHistory();
+                const normalizedChoices = normalizeSupportingChoiceOptions(canonicalChoices || []);
+                if (normalizedChoices.length) {
+                    history[key] = normalizedChoices;
+                } else {
+                    delete history[key];
+                }
+                localStorage.setItem(SUBMITTED_CHOICE_HISTORY_KEY, JSON.stringify(history));
+            } catch (error) {
+                console.warn('Unable to synchronize submitted choice history:', error);
+            }
+        }
+
         function getPreviouslySubmittedChoices(trainee) {
             const key = getSubmittedChoiceHistoryKey(trainee);
             const history = readSubmittedChoiceHistory();
             const localChoices = key && Array.isArray(history[key]) ? history[key] : [];
-            return normalizeSupportingChoiceOptions([
-                ...backendSubmittedSupportingChoices,
-                ...localChoices
-            ]);
+            if (backendSubmittedChoicesAuthoritative) {
+                const canonicalChoices = normalizeSupportingChoiceOptions(backendSubmittedSupportingChoices);
+                replaceSubmittedChoiceHistory(trainee, canonicalChoices);
+                return canonicalChoices;
+            }
+            return normalizeSupportingChoiceOptions(localChoices);
         }
 
         function rememberSubmittedSupportingChoice(trainee) {
@@ -9390,6 +9467,12 @@
             }
 
             try {
+                if (backendSubmittedChoicesAuthoritative) {
+                    backendSubmittedSupportingChoices = normalizeSupportingChoiceOptions([
+                        ...backendSubmittedSupportingChoices,
+                        selectedChoice
+                    ]);
+                }
                 const history = readSubmittedChoiceHistory();
                 const previous = Array.isArray(history[key]) ? history[key] : [];
                 history[key] = [...new Set([...previous, selectedChoice])].slice(-100);
