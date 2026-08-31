@@ -3050,6 +3050,12 @@
                             <input type="date" id="teacherAttendanceDate" onchange="loadTeacherAttendance()">
                         </label>
                         <label class="teacher-field">
+                            الدورة
+                            <select id="teacherAttendanceCourseFilter" onchange="loadTeacherAttendance()">
+                                <option value="">كل الدورات</option>
+                            </select>
+                        </label>
+                        <label class="teacher-field">
                             اللقاء
                             <select id="teacherAttendanceMeetingFilter" onchange="loadTeacherAttendance()">
                                 <option value="">كل اللقاءات</option>
@@ -3061,6 +3067,7 @@
                         </label>
                         <button type="button" onclick="loadTeacherAttendance()">عرض الحضور</button>
                         <button type="button" class="teacher-secondary-button" onclick="downloadTeacherAttendanceCsv()">تنزيل كشف الحضور</button>
+                        <button type="button" id="teacherAttendanceCopyIds" class="teacher-secondary-button" onclick="copyTeacherAttendanceIds()">نسخ أرقام الحاضرين</button>
                     </div>
                     <div id="teacherAttendanceMessage" class="status-bar teacher-message waiting">اختر اليوم لعرض الحضور المحتسب.</div>
                     <div class="teacher-summary" aria-label="ملخص الحضور المحتسب">
@@ -6581,6 +6588,7 @@
         async function loadTeacherAttendance() {
             const message = document.getElementById('teacherAttendanceMessage');
             const dateInput = document.getElementById('teacherAttendanceDate');
+            const courseInput = document.getElementById('teacherAttendanceCourseFilter');
             const meetingInput = document.getElementById('teacherAttendanceMeetingFilter');
             const searchInput = document.getElementById('teacherAttendanceSearch');
             if (!message) {
@@ -6603,6 +6611,7 @@
                 const result = await callAppsScriptJsonp('teacherAttendance', {
                     password: teacherDashboardPassword,
                     date: dateInput?.value || getDateInputValue(getSaudiTime()),
+                    courseName: courseInput?.value || '',
                     meetingId: meetingInput?.value || '',
                     query: (searchInput?.value || '').trim()
                 });
@@ -6616,6 +6625,7 @@
 
                 teacherAttendanceResponse = result;
                 teacherAttendanceRows = Array.isArray(result.rows) ? result.rows : [];
+                updateTeacherAttendanceCourseOptions(result.courses || []);
                 updateTeacherAttendanceMeetingOptions(result.meetings || []);
                 renderTeacherAttendanceSummary(result.summary || {});
                 renderTeacherAttendanceRows(teacherAttendanceRows);
@@ -6650,6 +6660,25 @@
                 select.appendChild(option);
             });
             if ((meetings || []).includes(selectedValue)) {
+                select.value = selectedValue;
+            }
+        }
+
+        function updateTeacherAttendanceCourseOptions(courses) {
+            const select = document.getElementById('teacherAttendanceCourseFilter');
+            if (!select) {
+                return;
+            }
+            const selectedValue = select.value;
+            const normalizedCourses = [...new Set((courses || []).map(course => String(course || '').trim()).filter(Boolean))];
+            select.innerHTML = '<option value="">كل الدورات</option>';
+            normalizedCourses.forEach(courseName => {
+                const option = document.createElement('option');
+                option.value = courseName;
+                option.textContent = courseName;
+                select.appendChild(option);
+            });
+            if (normalizedCourses.includes(selectedValue)) {
                 select.value = selectedValue;
             }
         }
@@ -7464,6 +7493,70 @@
             link.click();
             link.remove();
             URL.revokeObjectURL(link.href);
+        }
+
+        async function copyPlainTextToClipboard(text) {
+            if (navigator.clipboard?.writeText) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    return;
+                } catch (error) {
+                    console.warn('Modern clipboard write failed; using browser fallback:', error);
+                }
+            }
+
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.readOnly = true;
+            textarea.style.position = 'fixed';
+            textarea.style.inset = '0 auto auto 0';
+            textarea.style.opacity = '0';
+            textarea.style.pointerEvents = 'none';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            textarea.setSelectionRange(0, textarea.value.length);
+            const copied = document.execCommand('copy');
+            textarea.remove();
+            if (!copied) {
+                throw new Error('Clipboard copy was rejected by the browser.');
+            }
+        }
+
+        async function copyTeacherAttendanceIds() {
+            const message = document.getElementById('teacherAttendanceMessage');
+            const button = document.getElementById('teacherAttendanceCopyIds');
+            const responseIds = Array.isArray(teacherAttendanceResponse?.traineeIds)
+                ? teacherAttendanceResponse.traineeIds
+                : teacherAttendanceRows.map(row => row.traineeId);
+            const traineeIds = [...new Set(
+                responseIds.map(value => String(value || '').trim()).filter(Boolean)
+            )];
+
+            if (!traineeIds.length) {
+                if (message) {
+                    message.className = 'status-bar teacher-message waiting';
+                    message.textContent = 'لا توجد أرقام حاضرين مطابقة للفلاتر الحالية لنسخها.';
+                }
+                return;
+            }
+
+            if (button) button.disabled = true;
+            try {
+                await copyPlainTextToClipboard(traineeIds.join(','));
+                if (message) {
+                    message.className = 'status-bar teacher-message valid';
+                    message.textContent = `تم نسخ ${traineeIds.length} رقم تدريبي مفصولاً بفواصل.`;
+                }
+            } catch (error) {
+                console.error('Attendance ID clipboard error:', error);
+                if (message) {
+                    message.className = 'status-bar teacher-message invalid';
+                    message.textContent = 'تعذر النسخ تلقائياً في هذا المتصفح.';
+                }
+            } finally {
+                if (button) button.disabled = false;
+            }
         }
 
         function csvLine(values) {
