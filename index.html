@@ -7,6 +7,8 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>التحضير الذاتي</title>
+    <link rel="preconnect" href="https://script.google.com">
+    <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
         :root {
@@ -3252,8 +3254,13 @@
             complete: 22000,
             studentDashboard: 18000,
             studentReportAccess: 18000,
-            teacherSubmissions: 22000,
+            teacherAdminData: 18000,
+            teacherLog: 18000,
+            teacherAttendance: 18000,
+            teacherSubmissions: 18000,
+            teacherAnalytics: 22000,
             reviewSubmission: 22000,
+            taskStatus: 8000,
             uploadStatus: 15000
         };
         const STUDENT_DASHBOARD_BROWSER_CACHE_PREFIX = 'attqStudentDashboardCacheV1';
@@ -3327,6 +3334,7 @@
         let teacherQrTimeSyncedAt = 0;
         let teacherQrTimeSyncPromise = null;
         let teacherAnalyticsResult = { rows: [], summary: {} };
+        const teacherReadSequences = Object.create(null);
         let appsScriptCapabilities = {};
         let courseFormSettingsDrafts = {};
         let courseFormSettingsDirtyIds = new Set();
@@ -3531,7 +3539,8 @@
             }
 
             try {
-                const result = await callAppsScriptJsonp('studentDashboard', { traineeId, token }, {
+                const result = await callAppsScriptJsonpReliable('studentDashboard', { traineeId, token }, {
+                    attempts: 2,
                     timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.studentDashboard
                 });
                 if (!result?.ok) {
@@ -3922,6 +3931,16 @@
             }
         }
 
+        function beginTeacherRead(viewName) {
+            const nextSequence = Number(teacherReadSequences[viewName] || 0) + 1;
+            teacherReadSequences[viewName] = nextSequence;
+            return nextSequence;
+        }
+
+        function isCurrentTeacherRead(viewName, sequence) {
+            return Number(teacherReadSequences[viewName] || 0) === Number(sequence);
+        }
+
         function activateTeacherEditTab(tabId, statusId, message, focusId) {
             switchTeacherTab(tabId);
             if (statusId && message) {
@@ -3957,7 +3976,6 @@
             }
 
             syncAdminSettingsControls(getCurrentAppSettings());
-            loadAdminSettings();
             loadTeacherAdminData();
             loadTeacherLog();
         }
@@ -4539,7 +4557,10 @@
             showAdminSettingsMessage('جاري تحميل الإعدادات...', 'waiting');
 
             try {
-                const result = await callAppsScriptJsonp('appConfig', {});
+                const result = await callAppsScriptJsonpReliable('appConfig', {}, {
+                    attempts: 2,
+                    timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.appConfig
+                });
                 if (!result?.ok || !result.settings) {
                     throw new Error(result?.error || 'تعذر تحميل الإعدادات.');
                 }
@@ -4664,15 +4685,32 @@
         }
 
         async function loadTeacherAdminData() {
+            const requestSequence = beginTeacherRead('adminData');
             setTeacherStatus('teacherSetupMessage', 'جاري تحميل بيانات الدورات والمواقع والطلاب والجداول...', 'waiting');
 
             try {
-                const result = await callAppsScriptJsonp('teacherAdminData', {
+                const result = await callAppsScriptJsonpReliable('teacherAdminData', {
                     password: teacherDashboardPassword
+                }, {
+                    attempts: 2,
+                    timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.teacherAdminData
                 });
+
+                if (!isCurrentTeacherRead('adminData', requestSequence)) {
+                    return;
+                }
 
                 if (!result?.ok) {
                     throw new Error(result?.error || 'تعذر تحميل بيانات الإدارة.');
+                }
+
+                if (result.settings && hasAuthoritativeRuntimeSettings(result.settings)) {
+                    applyAppsScriptCapabilities(result.capabilities);
+                    applyRuntimeSettings(result.settings);
+                    syncAdminSettingsControls(getCurrentAppSettings());
+                    showAdminSettingsMessage('تم تحميل الإعدادات الحالية.', 'valid');
+                } else {
+                    loadAdminSettings();
                 }
 
                 teacherAdminData = {
@@ -4685,6 +4723,9 @@
                 renderTeacherAdminData();
                 setTeacherStatus('teacherSetupMessage', 'تم تحميل بيانات الإدارة.', 'valid');
             } catch (error) {
+                if (!isCurrentTeacherRead('adminData', requestSequence)) {
+                    return;
+                }
                 console.error('Teacher admin data error:', error);
                 setTeacherStatus('teacherSetupMessage', error.message || 'تعذر تحميل بيانات الإدارة.', 'invalid');
             }
@@ -5973,10 +6014,20 @@
 
         async function waitForBackgroundTask(taskId) {
             const timeoutAt = Date.now() + 90000;
+            let lastError = null;
 
             while (Date.now() < timeoutAt) {
                 await delay(1200);
-                const result = await callAppsScriptJsonp('taskStatus', { taskId });
+                let result;
+                try {
+                    result = await callAppsScriptJsonpReliable('taskStatus', { taskId }, {
+                        attempts: 2,
+                        timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.taskStatus
+                    });
+                } catch (error) {
+                    lastError = error;
+                    continue;
+                }
 
                 if (result?.state === 'SUCCESS') {
                     return result;
@@ -5987,7 +6038,7 @@
                 }
             }
 
-            throw new Error('انتهت مهلة العملية. حاول مرة أخرى.');
+            throw lastError || new Error('انتهت مهلة العملية. حاول مرة أخرى.');
         }
 
         function resetScheduleForm() {
@@ -6632,6 +6683,7 @@
             if (!message) {
                 return;
             }
+            const requestSequence = beginTeacherRead('attendance');
 
             if (!teacherDashboardPassword) {
                 teacherDashboardPassword = sessionStorage.getItem('teacherDashboardPassword') || '';
@@ -6646,13 +6698,19 @@
             message.textContent = 'جاري إعداد كشف الحضور الفعلي...';
 
             try {
-                const result = await callAppsScriptJsonp('teacherAttendance', {
+                const result = await callAppsScriptJsonpReliable('teacherAttendance', {
                     password: teacherDashboardPassword,
                     date: dateInput?.value || getDateInputValue(getSaudiTime()),
                     courseName: courseInput?.value || '',
                     meetingId: meetingInput?.value || '',
                     query: (searchInput?.value || '').trim()
+                }, {
+                    attempts: 2,
+                    timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.teacherAttendance
                 });
+                if (!isCurrentTeacherRead('attendance', requestSequence)) {
+                    return;
+                }
                 if (!result?.ok) {
                     if (result?.code === 'TEACHER_AUTH') {
                         sessionStorage.removeItem('teacherDashboardPassword');
@@ -6673,6 +6731,9 @@
                     ? 'تم تحميل كشف الحضور. كل طالب محسوب مرة واحدة فقط في اللقاء.'
                     : 'لا يوجد حضور محتسب مطابق لهذه الفلاتر.';
             } catch (error) {
+                if (!isCurrentTeacherRead('attendance', requestSequence)) {
+                    return;
+                }
                 console.error('Teacher attendance error:', error);
                 message.className = 'status-bar teacher-message invalid';
                 message.textContent = error.message || 'تعذر تحميل كشف الحضور.';
@@ -6768,6 +6829,7 @@
             const statusInput = document.getElementById('teacherStatusFilter');
             const meetingInput = document.getElementById('teacherMeetingFilter');
             const searchInput = document.getElementById('teacherSearch');
+            const requestSequence = beginTeacherRead('log');
 
             if (!teacherDashboardPassword) {
                 teacherDashboardPassword = sessionStorage.getItem('teacherDashboardPassword') || '';
@@ -6782,13 +6844,20 @@
             message.textContent = 'جاري تحميل السجل...';
 
             try {
-                const result = await callAppsScriptJsonp('teacherLog', {
+                const result = await callAppsScriptJsonpReliable('teacherLog', {
                     password: teacherDashboardPassword,
                     date: dateInput?.value || getDateInputValue(getSaudiTime()),
                     status: statusInput?.value || 'SUCCESS',
                     meetingId: meetingInput?.value || '',
                     query: (searchInput?.value || '').trim()
+                }, {
+                    attempts: 2,
+                    timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.teacherLog
                 });
+
+                if (!isCurrentTeacherRead('log', requestSequence)) {
+                    return;
+                }
 
                 if (!result?.ok) {
                     if (result?.code === 'TEACHER_AUTH') {
@@ -6809,6 +6878,9 @@
                 renderTeacherMeta(result);
                 showTeacherMessage(teacherLastRows.length ? 'تم تحميل السجل بنجاح.' : 'لا توجد سجلات مطابقة لهذا الفلتر.', teacherLastRows.length ? 'valid' : 'waiting');
             } catch (error) {
+                if (!isCurrentTeacherRead('log', requestSequence)) {
+                    return;
+                }
                 console.error('Teacher log error:', error);
                 showTeacherMessage(error.message || 'تعذر تحميل السجل.', 'invalid');
             }
@@ -6836,6 +6908,7 @@
         async function loadTeacherSubmissions() {
             const message = document.getElementById('reviewMessage');
             if (!message || activeTeacherTab !== 'reviews') return;
+            const requestSequence = beginTeacherRead('submissions');
             const password = teacherDashboardPassword || sessionStorage.getItem('teacherDashboardPassword') || '';
             if (!password) {
                 message.className = 'status-bar teacher-message invalid';
@@ -6846,13 +6919,17 @@
             message.className = 'status-bar teacher-message waiting';
             message.textContent = 'جاري تحميل التسليمات...';
             try {
-                const result = await callAppsScriptJsonp('teacherSubmissions', {
+                const result = await callAppsScriptJsonpReliable('teacherSubmissions', {
                     password,
                     days: Number(document.getElementById('reviewDays')?.value || 30),
                     courseId: document.getElementById('reviewCourse')?.value || '',
                     reviewStatus: document.getElementById('reviewStatusFilter')?.value || 'PENDING_REVIEW',
                     query: (document.getElementById('reviewSearch')?.value || '').trim()
-                }, { timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.teacherSubmissions });
+                }, {
+                    attempts: 2,
+                    timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.teacherSubmissions
+                });
+                if (!isCurrentTeacherRead('submissions', requestSequence)) return;
                 if (!result?.ok) throw new Error(result?.error || 'تعذر تحميل التسليمات.');
                 teacherSubmissionRows = Array.isArray(result.rows) ? result.rows : [];
                 teacherSubmissionSummary = result.summary || { total: 0, pending: 0, approved: 0, rejected: 0 };
@@ -6864,6 +6941,7 @@
                     ? `تم تحميل ${teacherSubmissionRows.length} تسليم.${limitedText}`
                     : 'لا توجد تسليمات مطابقة للفلاتر الحالية.';
             } catch (error) {
+                if (!isCurrentTeacherRead('submissions', requestSequence)) return;
                 console.error('Teacher submissions error:', error);
                 message.className = 'status-bar teacher-message invalid';
                 message.textContent = error.message || 'تعذر تحميل التسليمات.';
@@ -7086,15 +7164,20 @@
         async function loadTeacherAnalytics() {
             const message = document.getElementById('analyticsMessage');
             if (!message || activeTeacherTab !== 'analytics') return;
+            const requestSequence = beginTeacherRead('analytics');
             message.className = 'status-bar teacher-message waiting';
             message.textContent = 'جاري إعداد المقارنة...';
 
             try {
-                const result = await callAppsScriptJsonp('teacherAnalytics', {
+                const result = await callAppsScriptJsonpReliable('teacherAnalytics', {
                     password: teacherDashboardPassword || sessionStorage.getItem('teacherDashboardPassword') || '',
                     days: Number(document.getElementById('analyticsDays')?.value || 30),
                     courseId: document.getElementById('analyticsCourse')?.value || ''
+                }, {
+                    attempts: 2,
+                    timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.teacherAnalytics
                 });
+                if (!isCurrentTeacherRead('analytics', requestSequence)) return;
                 if (!result?.ok) {
                     throw new Error(result?.error || 'تعذر تحميل المقارنة.');
                 }
@@ -7109,6 +7192,7 @@
                     message.textContent = 'لا يوجد طلاب نشطون مطابقون للدورة والفترة المختارتين.';
                 }
             } catch (error) {
+                if (!isCurrentTeacherRead('analytics', requestSequence)) return;
                 console.error('Teacher analytics error:', error);
                 message.className = 'status-bar teacher-message invalid';
                 message.textContent = error.message || 'تعذر تحميل المقارنة.';
@@ -8227,7 +8311,9 @@
                 const script = document.createElement('script');
                 const timeoutId = setTimeout(() => {
                     cleanup();
-                    reject(new Error('Apps Script request timed out'));
+                    const error = new Error('استغرق الخادم وقتاً أطول من المتوقع. حاول التحديث مرة أخرى.');
+                    error.code = 'APPS_SCRIPT_TIMEOUT';
+                    reject(error);
                 }, timeoutMs);
 
                 function cleanup() {
@@ -8248,8 +8334,11 @@
 
                 script.onerror = () => {
                     cleanup();
-                    reject(new Error('Unable to load Apps Script response'));
+                    const error = new Error('تعذر تحميل استجابة الخادم. تحقق من الاتصال ثم حاول مرة أخرى.');
+                    error.code = 'APPS_SCRIPT_LOAD_ERROR';
+                    reject(error);
                 };
+                script.async = true;
                 script.src = url.toString();
                 document.body.appendChild(script);
             });
@@ -9976,7 +10065,10 @@
         }
 
         async function postAppsScriptForm(action, payload, uploadId) {
-            await callAppsScriptJsonp('uploadInit', { uploadId });
+            await callAppsScriptJsonpReliable('uploadInit', { uploadId }, {
+                attempts: 2,
+                timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.uploadStatus
+            });
             const cleanup = submitAppsScriptUploadForm(action, payload, uploadId);
 
             try {
@@ -10029,7 +10121,16 @@
 
             while (Date.now() < timeoutAt) {
                 await delay(1500);
-                const result = await callAppsScriptJsonp('uploadStatus', { uploadId });
+                let result;
+                try {
+                    result = await callAppsScriptJsonpReliable('uploadStatus', { uploadId }, {
+                        attempts: 2,
+                        timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.uploadStatus
+                    });
+                } catch (error) {
+                    console.warn('Upload status retry failed:', error);
+                    continue;
+                }
                 lastResult = result;
 
                 if (result?.state === 'SUCCESS' || result?.attachment) {
