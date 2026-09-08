@@ -9,8 +9,9 @@
     <title>التحضير الذاتي</title>
     <link rel="preconnect" href="https://script.google.com">
     <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" media="print" onload="this.media='all'">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
         :root {
             --brand-primary: #0e5a8a;
             --brand-primary-strong: #093a5b;
@@ -2944,7 +2945,7 @@
                         <label class="teacher-field">الطالب أو التمرين
                             <input type="search" id="reviewSearch" placeholder="اسم، رقم تدريبي، تمرين" oninput="scheduleTeacherSubmissionsLoad()">
                         </label>
-                        <button type="button" onclick="loadTeacherSubmissions()">تحديث التسليمات</button>
+                        <button type="button" onclick="loadTeacherSubmissions(true)">تحديث التسليمات</button>
                     </div>
                     <div id="reviewMessage" class="status-bar teacher-message waiting">افتح التبويب لتحميل التسليمات التي تنتظر المراجعة.</div>
                     <div class="review-summary">
@@ -3175,8 +3176,8 @@
         </div>
     </div>
 
-    <audio id="successSound" src="https://raw.githubusercontent.com/kbm4biz/att-qrc/main/assets/notification.wav" preload="auto"></audio>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+    <audio id="successSound" src="https://raw.githubusercontent.com/kbm4biz/att-qrc/main/assets/notification.wav" preload="none"></audio>
+    <script async src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js" onload="if (document.body.classList.contains('admin-view') &amp;&amp; typeof renderTeacherStaticQr === 'function') renderTeacherStaticQr()"></script>
 
     <script>
         // ================== CONFIGURATIONS ================== //
@@ -3254,11 +3255,11 @@
             complete: 22000,
             studentDashboard: 18000,
             studentReportAccess: 18000,
-            teacherAdminData: 18000,
-            teacherLog: 18000,
-            teacherAttendance: 18000,
-            teacherSubmissions: 18000,
-            teacherAnalytics: 22000,
+            teacherAdminData: 30000,
+            teacherLog: 30000,
+            teacherAttendance: 30000,
+            teacherSubmissions: 30000,
+            teacherAnalytics: 30000,
             reviewSubmission: 22000,
             taskStatus: 8000,
             uploadStatus: 15000
@@ -3268,6 +3269,12 @@
         const STUDENT_DASHBOARD_BROWSER_CACHE_MAX_STALE_MS = 12 * 60 * 60 * 1000;
         const STUDENT_REPORT_ACCESS_STORAGE_KEY = 'attqStudentReportAccessV1';
         const appsScriptPendingRequests = new Map();
+        const appsScriptReliableRequests = new Map();
+        const teacherReadQueue = [];
+        let teacherReadsActive = 0;
+        let teacherSubmissionSnapshot = null;
+        let teacherSubmissionSnapshotGeneration = 0;
+        const TEACHER_SUBMISSION_SNAPSHOT_TTL_MS = 30000;
         let traineeID = '';
         let scannerActive = false;
         let videoStream = null;
@@ -3433,7 +3440,7 @@
         }
 
         // ================== ON PAGE LOAD ================== //
-        window.onload = async () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const pageParams = new URLSearchParams(window.location.search);
             if (pageParams.get('view') === 'student') {
                 initializeStudentDashboard(
@@ -3506,7 +3513,7 @@
             setPreflightStatus('جاهز', 'تم تجهيز شاشة الحضور. يمكنك المتابعة الآن.');
             showStep(1);
             applyTraineeSessionBinding();
-        };
+        });
 
         async function initializeStudentDashboard(traineeId, token) {
             document.body.classList.add('student-dashboard-view');
@@ -6648,7 +6655,7 @@
                 return;
             }
             if (activeTeacherTab === 'reviews') {
-                loadTeacherSubmissions();
+                loadTeacherSubmissions(true);
                 return;
             }
             if (activeTeacherTab === 'qr') {
@@ -6905,7 +6912,42 @@
             teacherSubmissionSearchTimer = setTimeout(loadTeacherSubmissions, 450);
         }
 
-        async function loadTeacherSubmissions() {
+        async function getTeacherSubmissionData(password, filters, forceRefresh) {
+            const key = JSON.stringify([password, filters.days, filters.courseId]);
+            if (forceRefresh) {
+                teacherSubmissionSnapshot = null;
+                teacherSubmissionSnapshotGeneration++;
+            }
+            const generation = teacherSubmissionSnapshotGeneration;
+            let snapshot = teacherSubmissionSnapshot;
+            if (!snapshot || snapshot.key !== key || Date.now() - snapshot.savedAt >= TEACHER_SUBMISSION_SNAPSHOT_TTL_MS) {
+                const result = await callAppsScriptJsonpReliable('teacherSubmissions', {
+                    password, days: filters.days, courseId: filters.courseId, reviewStatus: 'ALL', query: ''
+                }, { attempts: 2, timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.teacherSubmissions });
+                if (!result?.ok) return result;
+                const rows = Array.isArray(result.rows) ? result.rows : [];
+                snapshot = {
+                    key, savedAt: Date.now(), result,
+                    complete: Number.isFinite(Number(result.totalFilteredRows)) && Number(result.totalFilteredRows) === rows.length
+                };
+                if (generation === teacherSubmissionSnapshotGeneration) teacherSubmissionSnapshot = snapshot;
+            }
+            if (!snapshot.complete) {
+                // A capped response cannot answer a narrower filter reliably.
+                return callAppsScriptJsonpReliable('teacherSubmissions', { password, ...filters }, {
+                    attempts: 2, timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.teacherSubmissions
+                });
+            }
+            const query = filters.query.trim().toLowerCase();
+            const rows = snapshot.result.rows.filter(row => {
+                if (filters.reviewStatus !== 'ALL' && row.reviewStatus !== filters.reviewStatus) return false;
+                const fieldValues = (row.customFields || []).map(field => `${field.value || ''} (${field.label || ''})`).join(' | ');
+                return !query || [row.name, row.traineeId, row.courseName, row.typingExercise, fieldValues].join(' ').toLowerCase().includes(query);
+            });
+            return { ...snapshot.result, rows, totalFilteredRows: rows.length };
+        }
+
+        async function loadTeacherSubmissions(forceRefresh = false) {
             const message = document.getElementById('reviewMessage');
             if (!message || activeTeacherTab !== 'reviews') return;
             const requestSequence = beginTeacherRead('submissions');
@@ -6919,16 +6961,12 @@
             message.className = 'status-bar teacher-message waiting';
             message.textContent = 'جاري تحميل التسليمات...';
             try {
-                const result = await callAppsScriptJsonpReliable('teacherSubmissions', {
-                    password,
+                const result = await getTeacherSubmissionData(password, {
                     days: Number(document.getElementById('reviewDays')?.value || 30),
                     courseId: document.getElementById('reviewCourse')?.value || '',
                     reviewStatus: document.getElementById('reviewStatusFilter')?.value || 'PENDING_REVIEW',
                     query: (document.getElementById('reviewSearch')?.value || '').trim()
-                }, {
-                    attempts: 2,
-                    timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.teacherSubmissions
-                });
+                }, forceRefresh === true);
                 if (!isCurrentTeacherRead('submissions', requestSequence)) return;
                 if (!result?.ok) throw new Error(result?.error || 'تعذر تحميل التسليمات.');
                 teacherSubmissionRows = Array.isArray(result.rows) ? result.rows : [];
@@ -6942,6 +6980,7 @@
                     : 'لا توجد تسليمات مطابقة للفلاتر الحالية.';
             } catch (error) {
                 if (!isCurrentTeacherRead('submissions', requestSequence)) return;
+                if (error.code === 'APPS_SCRIPT_SUPERSEDED') return;
                 console.error('Teacher submissions error:', error);
                 message.className = 'status-bar teacher-message invalid';
                 message.textContent = error.message || 'تعذر تحميل التسليمات.';
@@ -7048,6 +7087,8 @@
                 ? window.crypto.randomUUID()
                 : `review-${Date.now()}-${Math.random().toString(36).slice(2)}`;
             teacherSubmissionSaveLocks[attendanceId] = true;
+            beginTeacherRead('submissions');
+            teacherSubmissionSnapshotGeneration++;
             card.classList.add('is-saving');
             const message = document.getElementById('reviewMessage');
             if (message) {
@@ -7080,6 +7121,10 @@
                     if (result.record.reviewStatus === 'APPROVED') teacherSubmissionSummary.approved = Number(teacherSubmissionSummary.approved || 0) + 1;
                     if (result.record.reviewStatus === 'REJECTED') teacherSubmissionSummary.rejected = Number(teacherSubmissionSummary.rejected || 0) + 1;
                 }
+                if (teacherSubmissionSnapshot) {
+                    teacherSubmissionSnapshot.result.rows = teacherSubmissionSnapshot.result.rows.map(item => item.attendanceId === attendanceId ? result.record : item);
+                    teacherSubmissionSnapshot.result.summary = { ...teacherSubmissionSummary };
+                }
                 teacherSubmissionRows = teacherSubmissionRows.map(item => item.attendanceId === attendanceId ? result.record : item);
                 const activeFilter = document.getElementById('reviewStatusFilter')?.value || 'PENDING_REVIEW';
                 if (activeFilter !== 'ALL') teacherSubmissionRows = teacherSubmissionRows.filter(item => item.reviewStatus === activeFilter);
@@ -7101,7 +7146,7 @@
                         ? 'تم تعديل هذا التسليم من شاشة أخرى. جاري تحديث القائمة.'
                         : (error.message || 'تعذر حفظ المراجعة. حاول مرة أخرى.');
                 }
-                if (error.code === 'REVIEW_CONFLICT') setTimeout(loadTeacherSubmissions, 500);
+                if (error.code === 'REVIEW_CONFLICT') setTimeout(() => loadTeacherSubmissions(true), 500);
             } finally {
                 delete teacherSubmissionSaveLocks[attendanceId];
                 card.classList.remove('is-saving');
@@ -8309,20 +8354,32 @@
             const request = new Promise((resolve, reject) => {
                 const callbackName = `nfcCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
                 const script = document.createElement('script');
+                let settled = false;
                 const timeoutId = setTimeout(() => {
-                    cleanup();
+                    if (settled) return;
+                    cleanup(true);
                     const error = new Error('استغرق الخادم وقتاً أطول من المتوقع. حاول التحديث مرة أخرى.');
                     error.code = 'APPS_SCRIPT_TIMEOUT';
                     reject(error);
                 }, timeoutMs);
 
-                function cleanup() {
+                function cleanup(allowLateResponse = false) {
+                    settled = true;
                     clearTimeout(timeoutId);
-                    delete window[callbackName];
+                    if (allowLateResponse) {
+                        const ignoreLateResponse = () => {};
+                        window[callbackName] = ignoreLateResponse;
+                        setTimeout(() => {
+                            if (window[callbackName] === ignoreLateResponse) delete window[callbackName];
+                        }, 60000);
+                    } else {
+                        delete window[callbackName];
+                    }
                     script.remove();
                 }
 
                 window[callbackName] = (response) => {
+                    if (settled) return;
                     cleanup();
                     resolve(response);
                 };
@@ -8333,7 +8390,8 @@
                 url.searchParams.set('payload', JSON.stringify(requestPayload));
 
                 script.onerror = () => {
-                    cleanup();
+                    if (settled) return;
+                    cleanup(true);
                     const error = new Error('تعذر تحميل استجابة الخادم. تحقق من الاتصال ثم حاول مرة أخرى.');
                     error.code = 'APPS_SCRIPT_LOAD_ERROR';
                     reject(error);
@@ -8356,7 +8414,44 @@
             return trackedRequest;
         }
 
-        async function callAppsScriptJsonpReliable(action, payload, options = {}) {
+        function scheduleTeacherRead(action, run) {
+            return new Promise((resolve, reject) => {
+                const queuedIndex = teacherReadQueue.findIndex(item => item.action === action);
+                if (queuedIndex !== -1) {
+                    const obsolete = teacherReadQueue.splice(queuedIndex, 1)[0];
+                    const error = new Error('A newer filter request replaced this queued read.');
+                    error.code = 'APPS_SCRIPT_SUPERSEDED';
+                    obsolete.reject(error);
+                }
+                teacherReadQueue.push({ action, run, resolve, reject });
+                drainTeacherReadQueue();
+            });
+        }
+
+        function drainTeacherReadQueue() {
+            while (teacherReadsActive < 2 && teacherReadQueue.length) {
+                const task = teacherReadQueue.shift();
+                teacherReadsActive++;
+                Promise.resolve().then(task.run).then(task.resolve, task.reject).finally(() => {
+                    teacherReadsActive--;
+                    drainTeacherReadQueue();
+                });
+            }
+        }
+
+        function callAppsScriptJsonpReliable(action, payload, options = {}) {
+            const key = options.dedupe === false ? '' : JSON.stringify([action, payload, options.timeoutMs, options.attempts]);
+            if (key && appsScriptReliableRequests.has(key)) return appsScriptReliableRequests.get(key);
+            const run = () => runAppsScriptJsonpAttempts(action, payload, options);
+            const request = /^teacher/.test(action) ? scheduleTeacherRead(action, run) : run();
+            const tracked = request.finally(() => {
+                if (key && appsScriptReliableRequests.get(key) === tracked) appsScriptReliableRequests.delete(key);
+            });
+            if (key) appsScriptReliableRequests.set(key, tracked);
+            return tracked;
+        }
+
+        async function runAppsScriptJsonpAttempts(action, payload, options = {}) {
             const attempts = Math.max(1, Number(options.attempts || 1));
             let lastError = null;
             let lastResult = null;
@@ -8373,7 +8468,13 @@
                 }
 
                 if (attempt < attempts) {
-                    await delay(250 * attempt + Math.floor(Math.random() * 180));
+                    if (/^teacher/.test(action) && teacherReadQueue.some(task => task.action === action)) {
+                        const error = new Error('A newer filter is waiting.');
+                        error.code = 'APPS_SCRIPT_SUPERSEDED';
+                        throw error;
+                    }
+                    const baseDelay = /^teacher/.test(action) ? 900 : 250;
+                    await delay(baseDelay * attempt + Math.floor(Math.random() * 180));
                 }
             }
 
