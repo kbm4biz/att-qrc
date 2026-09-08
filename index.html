@@ -1888,6 +1888,15 @@
             background: #f5c94a;
             color: #4f3b00;
         }
+        .student-exercise-item.rejected {
+            border-color: #e59a9a;
+            background: #fff3f3;
+        }
+        .student-exercise-item.rejected .student-exercise-check {
+            border-color: #c43d3d;
+            background: #c43d3d;
+            color: #fff;
+        }
         .student-exercise-name {
             color: #12324a;
             font-weight: bold;
@@ -1941,6 +1950,12 @@
             background: #e6f6ec;
             border: 1px solid #79c995;
         }
+        .student-review-badge.rejected,
+        .review-status-badge.rejected {
+            color: #8f2424;
+            background: #fde9e9;
+            border: 1px solid #df8d8d;
+        }
         .teacher-field-definition-grid {
             grid-column: 1 / -1;
             display: grid;
@@ -1983,7 +1998,7 @@
         }
         .review-summary {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 10px;
             margin: 12px 0;
         }
@@ -2022,6 +2037,10 @@
         }
         .review-card.approved {
             border-color: #8bc99f;
+        }
+        .review-card.rejected {
+            border-color: #df8d8d;
+            background: #fffafa;
         }
         .review-card.is-saving {
             opacity: 0.7;
@@ -2077,6 +2096,9 @@
         }
         .review-approve-button {
             background: #1f7a48;
+        }
+        .review-reject-button {
+            background: #b83232;
         }
         .student-report-fab {
             position: fixed;
@@ -2897,7 +2919,7 @@
 
                 <div class="teacher-block" data-teacher-block="reviews">
                     <h3>مراجعة تسليمات الطلاب</h3>
-                    <div class="teacher-block-note">تظهر التسليمات الجديدة باللون الأصفر. راجع القيم وصححها عند الحاجة، ثم احفظ واعتمد النتيجة لتتحول إلى اللون الأخضر في تقرير الطالب.</div>
+                    <div class="teacher-block-note">تظهر التسليمات الجديدة باللون الأصفر. اعتمد النتيجة لتتحول إلى الأخضر، أو ارفضها لتظهر بالأحمر ويستطيع الطالب إرسال التمرين مرة أخرى. رفض المهمة لا يغيّر حضور الطالب.</div>
                     <div class="review-toolbar">
                         <label class="teacher-field">الفترة
                             <select id="reviewDays" onchange="loadTeacherSubmissions()">
@@ -2913,6 +2935,7 @@
                             <select id="reviewStatusFilter" onchange="loadTeacherSubmissions()">
                                 <option value="PENDING_REVIEW" selected>قيد المراجعة</option>
                                 <option value="APPROVED">معتمد</option>
+                                <option value="REJECTED">مرفوض</option>
                                 <option value="ALL">كل الحالات</option>
                             </select>
                         </label>
@@ -2925,6 +2948,7 @@
                     <div class="review-summary">
                         <div class="review-summary-item"><strong id="reviewPendingCount">0</strong><span>قيد المراجعة</span></div>
                         <div class="review-summary-item"><strong id="reviewApprovedCount">0</strong><span>تم اعتمادها</span></div>
+                        <div class="review-summary-item"><strong id="reviewRejectedCount">0</strong><span>تم رفضها</span></div>
                         <div class="review-summary-item"><strong id="reviewTotalCount">0</strong><span>إجمالي التسليمات</span></div>
                     </div>
                     <div id="reviewSubmissions" class="review-submissions"></div>
@@ -3595,14 +3619,26 @@
             renderStudentHistory(Array.isArray(result.records) ? result.records : []);
         }
 
+        function getSubmissionReviewPresentation(reviewStatus) {
+            if (reviewStatus === 'PENDING_REVIEW') {
+                return { className: 'pending', label: 'قيد المراجعة' };
+            }
+            if (reviewStatus === 'REJECTED') {
+                return { className: 'rejected', label: 'مرفوض' };
+            }
+            return { className: 'approved', label: 'معتمد' };
+        }
+
         function renderStudentExerciseProgress(exercises) {
             const container = document.getElementById('studentExerciseList');
             const progressFill = document.getElementById('studentExerciseProgressFill');
             const completed = exercises.filter(exercise => exercise.completed).length;
             const pending = exercises.filter(exercise => !exercise.completed && exercise.pending).length;
+            const rejected = exercises.filter(exercise => !exercise.completed && !exercise.pending && exercise.rejected).length;
             const total = exercises.length;
+            const notStarted = Math.max(0, total - completed - pending - rejected);
             const percentage = total ? Math.round((completed / total) * 100) : 0;
-            setText('studentExerciseProgressText', `${completed} معتمد · ${pending} قيد المراجعة · ${Math.max(0, total - completed - pending)} متبقي`);
+            setText('studentExerciseProgressText', `${completed} معتمد · ${pending} قيد المراجعة · ${rejected} مرفوض · ${notStarted} لم يبدأ`);
             if (progressFill) progressFill.style.width = `${percentage}%`;
             if (!container) return;
             if (!total) {
@@ -3612,10 +3648,12 @@
             container.innerHTML = exercises.map(exercise => {
                 const details = exercise.completed
                     ? `معتمد · ${Number(exercise.approvedSubmissionCount || exercise.submissionCount || 0)} نتيجة · أفضل سرعة ${formatTypingSpeed(exercise.bestTypingSpeed)} · أفضل دقة ${formatTypingAccuracy(exercise.bestTypingAccuracy)}`
-                    : (exercise.pending ? 'تم الإرسال وهو الآن قيد مراجعة المعلم' : 'لم يُنجز بعد');
-                const state = exercise.completed ? 'completed' : (exercise.pending ? 'pending' : '');
-                const symbol = exercise.completed ? '✓' : (exercise.pending ? '…' : '');
-                const ariaLabel = exercise.completed ? 'معتمد' : (exercise.pending ? 'قيد المراجعة' : 'متبقي');
+                    : (exercise.pending
+                        ? 'تم الإرسال وهو الآن قيد مراجعة المعلم'
+                        : (exercise.rejected ? 'مرفوض ويمكن إرسال التمرين مرة أخرى' : 'لم يُنجز بعد'));
+                const state = exercise.completed ? 'completed' : (exercise.pending ? 'pending' : (exercise.rejected ? 'rejected' : ''));
+                const symbol = exercise.completed ? '✓' : (exercise.pending ? '…' : (exercise.rejected ? '×' : ''));
+                const ariaLabel = exercise.completed ? 'معتمد' : (exercise.pending ? 'قيد المراجعة' : (exercise.rejected ? 'مرفوض ومتاح للإعادة' : 'متبقي'));
                 return `
                     <div class="student-exercise-item ${state}">
                         <span class="student-exercise-check" aria-label="${ariaLabel}">${symbol}</span>
@@ -3635,7 +3673,7 @@
                 return;
             }
             container.innerHTML = records.map(record => {
-                const isPending = record.reviewStatus === 'PENDING_REVIEW';
+                const reviewPresentation = getSubmissionReviewPresentation(record.reviewStatus);
                 const attachment = record.attachmentUrl
                     ? `<a class="teacher-attachment-link" href="${escapeUrlAttribute(record.attachmentUrl)}" target="_blank" rel="noopener">فتح المرفق</a>`
                     : '<span>دون مرفق</span>';
@@ -3643,7 +3681,7 @@
                     <article class="student-history-item">
                         <div><strong>${escapeHtml(record.date || '-')}</strong><span>${escapeHtml(record.time || '')}</span></div>
                         <div><strong>${escapeHtml(record.exerciseName || 'تمرين دون اسم')}</strong><span>${escapeHtml(record.meetingId || record.program || '')}</span></div>
-                        <div><strong>السرعة: ${escapeHtml(formatTypingSpeed(record.typingSpeed))}</strong><span>الدقة: ${escapeHtml(formatTypingAccuracy(record.typingAccuracy))}</span><span class="student-review-badge ${isPending ? 'pending' : 'approved'}">${isPending ? 'قيد المراجعة' : 'معتمد'}</span></div>
+                        <div><strong>السرعة: ${escapeHtml(formatTypingSpeed(record.typingSpeed))}</strong><span>الدقة: ${escapeHtml(formatTypingAccuracy(record.typingAccuracy))}</span><span class="student-review-badge ${reviewPresentation.className}">${reviewPresentation.label}</span></div>
                         <div>${attachment}</div>
                     </article>`;
             }).join('');
@@ -6817,7 +6855,7 @@
                 }, { timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.teacherSubmissions });
                 if (!result?.ok) throw new Error(result?.error || 'تعذر تحميل التسليمات.');
                 teacherSubmissionRows = Array.isArray(result.rows) ? result.rows : [];
-                teacherSubmissionSummary = result.summary || { total: 0, pending: 0, approved: 0 };
+                teacherSubmissionSummary = result.summary || { total: 0, pending: 0, approved: 0, rejected: 0 };
                 renderTeacherSubmissionSummary();
                 renderTeacherSubmissions();
                 message.className = `status-bar teacher-message ${teacherSubmissionRows.length ? 'valid' : 'waiting'}`;
@@ -6835,6 +6873,7 @@
         function renderTeacherSubmissionSummary() {
             setText('reviewPendingCount', Number(teacherSubmissionSummary.pending || 0));
             setText('reviewApprovedCount', Number(teacherSubmissionSummary.approved || 0));
+            setText('reviewRejectedCount', Number(teacherSubmissionSummary.rejected || 0));
             setText('reviewTotalCount', Number(teacherSubmissionSummary.total || 0));
         }
 
@@ -6848,6 +6887,8 @@
 
             container.innerHTML = teacherSubmissionRows.map(row => {
                 const isPending = row.reviewStatus === 'PENDING_REVIEW';
+                const isRejected = row.reviewStatus === 'REJECTED';
+                const reviewPresentation = getSubmissionReviewPresentation(row.reviewStatus);
                 const fields = Array.isArray(row.customFields) ? row.customFields : [];
                 const fieldsHtml = fields.length
                     ? fields.map(field => {
@@ -6865,11 +6906,19 @@
                 const attachment = row.attachmentUrl
                     ? `<a class="teacher-attachment-link" href="${escapeUrlAttribute(row.attachmentUrl)}" target="_blank" rel="noopener">فتح المرفق</a>`
                     : 'دون مرفق';
+                const primaryActions = isPending
+                    ? `<button type="button" class="teacher-secondary-button" onclick="saveTeacherSubmissionReview('${escapeJsString(row.attendanceId || '')}', 'PENDING_REVIEW')">حفظ التصحيح</button><button type="button" class="review-approve-button" onclick="saveTeacherSubmissionReview('${escapeJsString(row.attendanceId || '')}', 'APPROVED')">حفظ واعتماد</button>`
+                    : (isRejected
+                        ? `<button type="button" class="teacher-secondary-button" onclick="saveTeacherSubmissionReview('${escapeJsString(row.attendanceId || '')}', 'PENDING_REVIEW')">إعادة للمراجعة</button><button type="button" class="review-approve-button" onclick="saveTeacherSubmissionReview('${escapeJsString(row.attendanceId || '')}', 'APPROVED')">حفظ واعتماد</button>`
+                        : `<button type="button" onclick="saveTeacherSubmissionReview('${escapeJsString(row.attendanceId || '')}', 'APPROVED')">حفظ التعديلات</button><button type="button" class="teacher-secondary-button" onclick="saveTeacherSubmissionReview('${escapeJsString(row.attendanceId || '')}', 'PENDING_REVIEW')">إعادة للمراجعة</button>`);
+                const rejectAction = isRejected
+                    ? ''
+                    : `<button type="button" class="review-reject-button" onclick="saveTeacherSubmissionReview('${escapeJsString(row.attendanceId || '')}', 'REJECTED')">رفض وإتاحة الإعادة</button>`;
                 return `
-                    <article class="review-card ${isPending ? 'pending' : 'approved'}" data-review-id="${escapeAttribute(row.attendanceId || '')}">
+                    <article class="review-card ${reviewPresentation.className}" data-review-id="${escapeAttribute(row.attendanceId || '')}">
                         <div class="review-card-head">
                             <div><h4>${escapeHtml(row.name || 'طالب دون اسم')}</h4><p>${escapeHtml(row.traineeId || '')} · ${escapeHtml(row.courseName || '-')}</p></div>
-                            <span class="review-status-badge ${isPending ? 'pending' : 'approved'}">${isPending ? 'قيد المراجعة' : 'معتمد'}</span>
+                            <span class="review-status-badge ${reviewPresentation.className}">${reviewPresentation.label}</span>
                         </div>
                         <div class="review-field-grid">${fieldsHtml}</div>
                         ${row.supportNote ? `<div class="teacher-block-note">ملاحظة الطالب: ${escapeHtml(row.supportNote)}</div>` : ''}
@@ -6877,12 +6926,10 @@
                             <span>${escapeHtml(`${row.date || ''} ${row.time || ''}`.trim())}</span>
                             <span>${escapeHtml(row.typingExercise || 'دون اسم تمرين')}</span>
                             <span>${attachment}</span>
-                            ${row.reviewedAt ? `<span>آخر اعتماد: ${escapeHtml(row.reviewedAt)}</span>` : ''}
+                            ${row.reviewedAt ? `<span>آخر مراجعة: ${escapeHtml(row.reviewedAt)}</span>` : ''}
                         </div>
                         <div class="review-card-actions">
-                            ${isPending
-                                ? `<button type="button" class="teacher-secondary-button" onclick="saveTeacherSubmissionReview('${escapeJsString(row.attendanceId || '')}', 'PENDING_REVIEW')">حفظ التصحيح</button><button type="button" class="review-approve-button" onclick="saveTeacherSubmissionReview('${escapeJsString(row.attendanceId || '')}', 'APPROVED')">حفظ واعتماد</button>`
-                                : `<button type="button" onclick="saveTeacherSubmissionReview('${escapeJsString(row.attendanceId || '')}', 'APPROVED')">حفظ التعديلات</button><button type="button" class="teacher-secondary-button" onclick="saveTeacherSubmissionReview('${escapeJsString(row.attendanceId || '')}', 'PENDING_REVIEW')">إعادة للمراجعة</button>`}
+                            ${primaryActions}${rejectAction}
                         </div>
                     </article>`;
             }).join('');
@@ -6895,25 +6942,27 @@
             if (!row || !card) return;
 
             const existingFieldMap = new Map((row.customFields || []).map(field => [Number(field.index), field]));
-            let customFields = [];
-            try {
-                customFields = [...card.querySelectorAll('[data-review-field]')].map(input => {
-                    const index = Number(input.dataset.reviewField);
-                    const definition = existingFieldMap.get(index) || { index, label: `الحقل ${index + 1}`, type: input.type === 'number' ? 'number' : 'text' };
-                    const validation = validateSupportingFieldValue(definition, input.value);
-                    if (!validation.ok) {
-                        input.focus();
-                        throw new Error(validation.message);
+            let customFields = (row.customFields || []).map(field => ({ ...field }));
+            if (reviewStatus !== 'REJECTED') {
+                try {
+                    customFields = [...card.querySelectorAll('[data-review-field]')].map(input => {
+                        const index = Number(input.dataset.reviewField);
+                        const definition = existingFieldMap.get(index) || { index, label: `الحقل ${index + 1}`, type: input.type === 'number' ? 'number' : 'text' };
+                        const validation = validateSupportingFieldValue(definition, input.value);
+                        if (!validation.ok) {
+                            input.focus();
+                            throw new Error(validation.message);
+                        }
+                        return { ...definition, index, value: validation.value };
+                    });
+                } catch (validationError) {
+                    const message = document.getElementById('reviewMessage');
+                    if (message) {
+                        message.className = 'status-bar teacher-message invalid';
+                        message.textContent = validationError.message;
                     }
-                    return { ...definition, index, value: validation.value };
-                });
-            } catch (validationError) {
-                const message = document.getElementById('reviewMessage');
-                if (message) {
-                    message.className = 'status-bar teacher-message invalid';
-                    message.textContent = validationError.message;
+                    return;
                 }
-                return;
             }
 
             const previousStatus = row.reviewStatus;
@@ -6925,7 +6974,9 @@
             const message = document.getElementById('reviewMessage');
             if (message) {
                 message.className = 'status-bar teacher-message waiting';
-                message.textContent = reviewStatus === 'APPROVED' ? 'جاري حفظ التصحيح واعتماد النتيجة...' : 'جاري حفظ التعديلات...';
+                message.textContent = reviewStatus === 'APPROVED'
+                    ? 'جاري حفظ التصحيح واعتماد النتيجة...'
+                    : (reviewStatus === 'REJECTED' ? 'جاري رفض التسليم وإتاحته للإعادة...' : 'جاري حفظ التعديلات...');
             }
 
             try {
@@ -6946,8 +6997,10 @@
                 if (previousStatus !== result.record.reviewStatus) {
                     if (previousStatus === 'PENDING_REVIEW') teacherSubmissionSummary.pending = Math.max(0, Number(teacherSubmissionSummary.pending || 0) - 1);
                     if (previousStatus === 'APPROVED') teacherSubmissionSummary.approved = Math.max(0, Number(teacherSubmissionSummary.approved || 0) - 1);
+                    if (previousStatus === 'REJECTED') teacherSubmissionSummary.rejected = Math.max(0, Number(teacherSubmissionSummary.rejected || 0) - 1);
                     if (result.record.reviewStatus === 'PENDING_REVIEW') teacherSubmissionSummary.pending = Number(teacherSubmissionSummary.pending || 0) + 1;
                     if (result.record.reviewStatus === 'APPROVED') teacherSubmissionSummary.approved = Number(teacherSubmissionSummary.approved || 0) + 1;
+                    if (result.record.reviewStatus === 'REJECTED') teacherSubmissionSummary.rejected = Number(teacherSubmissionSummary.rejected || 0) + 1;
                 }
                 teacherSubmissionRows = teacherSubmissionRows.map(item => item.attendanceId === attendanceId ? result.record : item);
                 const activeFilter = document.getElementById('reviewStatusFilter')?.value || 'PENDING_REVIEW';
@@ -6958,7 +7011,9 @@
                     message.className = 'status-bar teacher-message valid';
                     message.textContent = result.record.reviewStatus === 'APPROVED'
                         ? 'تم اعتماد النتيجة وتحديث تقرير الطالب.'
-                        : 'تم حفظ التصحيح وإبقاء التسليم قيد المراجعة.';
+                        : (result.record.reviewStatus === 'REJECTED'
+                            ? 'تم رفض التسليم. بقي الحضور مسجلاً وأصبح التمرين متاحاً للإرسال مرة أخرى.'
+                            : 'تم حفظ التصحيح وإبقاء التسليم قيد المراجعة.');
                 }
             } catch (error) {
                 console.error('Review save error:', error);
@@ -6985,7 +7040,7 @@
             const lines = [headers, ...teacherSubmissionRows.map(row => {
                 const values = {};
                 (row.customFields || []).forEach(field => { values[Number(field.index)] = field.value || ''; });
-                return [row.date || '', row.time || '', row.reviewStatus === 'APPROVED' ? 'معتمد' : 'قيد المراجعة', row.traineeId || '', row.name || '', row.courseName || '', row.typingExercise || '', values[0] || '', values[1] || '', values[2] || '', row.attachmentUrl || ''];
+                return [row.date || '', row.time || '', getSubmissionReviewPresentation(row.reviewStatus).label, row.traineeId || '', row.name || '', row.courseName || '', row.typingExercise || '', values[0] || '', values[1] || '', values[2] || '', row.attachmentUrl || ''];
             })].map(csvLine).join('\n');
             const blob = new Blob(['\ufeff' + lines], { type: 'text/csv;charset=utf-8' });
             const link = document.createElement('a');
