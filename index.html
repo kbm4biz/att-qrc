@@ -759,6 +759,9 @@
             color: #102a43;
             font-size: 22px;
         }
+        .teacher-block[data-teacher-block="home"] > .teacher-actions + h3 {
+            margin-top: 28px;
+        }
         .teacher-topbar {
             display: flex;
             justify-content: space-between;
@@ -2502,9 +2505,26 @@
                     <h2>لوحة المعلم</h2>
                     <div class="teacher-actions">
                         <button type="button" onclick="refreshActiveTeacherView()">تحديث العرض</button>
-                        <button type="button" class="teacher-secondary-button" onclick="downloadActiveTeacherCsv()">تنزيل CSV</button>
+                        <button type="button" id="teacherExportButton" class="teacher-secondary-button" onclick="downloadActiveTeacherCsv()">تنزيل CSV</button>
                         <button type="button" class="teacher-secondary-button" onclick="openStudentView()">نموذج الطالب</button>
                     </div>
+                </div>
+
+                <div class="teacher-block" data-teacher-block="home">
+                    <h3>الرئيسية</h3>
+                    <div class="teacher-actions">
+                        <button type="button" onclick="switchTeacherTab('attendance')">كشف الحضور</button>
+                        <button type="button" onclick="switchTeacherTab('reviews')">مراجعة التسليمات</button>
+                        <button type="button" onclick="switchTeacherTab('qr')">عرض رمز التحقق</button>
+                        <button type="button" class="teacher-secondary-button" onclick="switchTeacherTab('settings')">الإعدادات</button>
+                    </div>
+                    <h3>المحاولات غير المكتملة</h3>
+                    <div class="teacher-actions">
+                        <button type="button" id="teacherCleanupPreviewButton" class="teacher-secondary-button" onclick="previewTeacherLogCleanup()" disabled>فحص المحاولات القديمة</button>
+                        <button type="button" id="teacherCleanupNextButton" class="teacher-secondary-button" onclick="previewTeacherLogCleanup(true)" hidden>فحص الجزء التالي</button>
+                        <button type="button" id="teacherCleanupConfirmButton" onclick="confirmTeacherLogCleanup()" hidden>تنظيف الدفعة</button>
+                    </div>
+                    <div id="teacherCleanupMessage" class="status-bar teacher-message waiting" role="status" aria-live="polite">التنظيف متاح بعد التحقق من إصدار الخادم.</div>
                 </div>
 
                 <div class="teacher-settings">
@@ -3331,7 +3351,9 @@
         let teacherInlineSaveLocks = {};
         let teacherActionLocks = {};
         let teacherLayoutReady = false;
-        let activeTeacherTab = 'dashboard';
+        let activeTeacherTab = 'home';
+        let teacherCleanupPreview = null;
+        let teacherCleanupBusy = false;
         let bootstrapActiveMeetingNow = null;
         let runtimeSettingsReady = false;
         let teacherQrInterval = null;
@@ -3856,6 +3878,7 @@
             panels.className = 'teacher-panels';
 
             const tabDefinitions = [
+                { id: 'home', label: 'الرئيسية', title: 'الرئيسية', nodes: [getTeacherBlock('home')] },
                 { id: 'dashboard', label: 'السجل الكامل', title: 'جميع الإرسالات والمحاولات', nodes: [filters, message, summary, listTools, rows] },
                 { id: 'attendance', label: 'الحضور فقط', title: 'كشف الحضور الفعلي', nodes: [attendanceView] },
                 { id: 'reviews', label: 'مراجعة التسليمات', title: 'مراجعة تسليمات الطلاب', nodes: [getTeacherBlock('reviews')] },
@@ -3909,7 +3932,9 @@
         }
 
         function switchTeacherTab(tabId) {
-            activeTeacherTab = tabId || 'dashboard';
+            activeTeacherTab = tabId || 'home';
+            const exportButton = document.getElementById('teacherExportButton');
+            if (exportButton) exportButton.hidden = !['dashboard', 'attendance', 'reviews'].includes(activeTeacherTab);
 
             document.querySelectorAll('.teacher-tab-button').forEach(button => {
                 button.classList.toggle('active', button.dataset.teacherTab === activeTeacherTab);
@@ -3919,6 +3944,9 @@
                 panel.classList.toggle('active', panel.dataset.teacherTab === activeTeacherTab);
             });
 
+            if (activeTeacherTab === 'dashboard') {
+                loadTeacherLog();
+            }
             if (activeTeacherTab === 'qr') {
                 initializeTeacherQrPanel();
             }
@@ -3968,8 +3996,7 @@
             document.querySelector('.header h1').textContent = 'لوحة المعلم';
             showStep(7);
             setupTeacherAdminLayout();
-            initializeTeacherQrPanel();
-            switchTeacherTab('dashboard');
+            switchTeacherTab('home');
 
             const dateInput = document.getElementById('teacherDate');
             if (dateInput && !dateInput.value) {
@@ -3982,7 +4009,62 @@
 
             syncAdminSettingsControls(getCurrentAppSettings());
             loadTeacherAdminData();
-            loadTeacherLog();
+        }
+
+        function syncTeacherCleanupControls() {
+            const supported = appsScriptCapabilities.expiredAttemptCleanupV1 === true;
+            document.getElementById('teacherCleanupPreviewButton').disabled = teacherCleanupBusy || !supported;
+            const next = document.getElementById('teacherCleanupNextButton');
+            next.hidden = !teacherCleanupPreview?.nextCursor;
+            next.disabled = teacherCleanupBusy;
+            const confirm = document.getElementById('teacherCleanupConfirmButton');
+            confirm.hidden = !teacherCleanupPreview?.count;
+            confirm.disabled = teacherCleanupBusy;
+        }
+
+        async function previewTeacherLogCleanup(nextPage = false) {
+            if (teacherCleanupBusy || appsScriptCapabilities.expiredAttemptCleanupV1 !== true) return;
+            const cursor = nextPage ? teacherCleanupPreview?.nextCursor : 2;
+            teacherCleanupBusy = true;
+            teacherCleanupPreview = null;
+            syncTeacherCleanupControls();
+            setTeacherStatus('teacherCleanupMessage', 'جاري فحص المحاولات الأقدم من 24 ساعة...', 'waiting');
+            try {
+                const result = await callAppsScriptJsonp('previewLogCleanup', {
+                    password: teacherDashboardPassword, cursor: cursor || 2
+                });
+                if (!result?.ok) throw new Error(result?.error || 'تعذر فحص المحاولات.');
+                teacherCleanupPreview = result;
+                setTeacherStatus('teacherCleanupMessage', result.count
+                    ? `هذه الدفعة: ${result.count} محاولة غير مكتملة أقدم من 24 ساعة. لم يُحذف شيء. سجلات الحضور والتسليمات محفوظة.`
+                    : 'لا توجد محاولات قابلة للتنظيف في الجزء المفحوص.', result.count ? 'waiting' : 'valid');
+            } catch (error) {
+                setTeacherStatus('teacherCleanupMessage', error.message || 'تعذر فحص المحاولات.', 'invalid');
+            } finally {
+                teacherCleanupBusy = false;
+                syncTeacherCleanupControls();
+            }
+        }
+
+        async function confirmTeacherLogCleanup() {
+            if (teacherCleanupBusy || !teacherCleanupPreview?.count) return;
+            if (!window.confirm(`تنظيف ${teacherCleanupPreview.count} محاولة قديمة غير مكتملة؟ لن تُحذف سجلات الحضور أو التسليمات.`)) return;
+            teacherCleanupBusy = true;
+            syncTeacherCleanupControls();
+            setTeacherStatus('teacherCleanupMessage', 'جاري تنظيف الدفعة...', 'waiting');
+            try {
+                const result = await callAppsScriptJsonp('cleanupLogAttempts', {
+                    password: teacherDashboardPassword, previewId: teacherCleanupPreview.previewId
+                });
+                if (!result?.ok) throw new Error(result?.error || 'تعذر تنظيف المحاولات.');
+                setTeacherStatus('teacherCleanupMessage', `تم تنظيف ${result.deleted} محاولة قديمة. سجلات الحضور والتسليمات لم تتغير.`, 'valid');
+            } catch (error) {
+                setTeacherStatus('teacherCleanupMessage', (error.message || 'لم يصل تأكيد التنظيف.') + ' افحص المحاولات مجدداً قبل المحاولة التالية.', 'invalid');
+            } finally {
+                teacherCleanupPreview = null;
+                teacherCleanupBusy = false;
+                syncTeacherCleanupControls();
+            }
         }
 
         function getTeacherQrStudentUrl() {
@@ -4646,6 +4728,14 @@
             appsScriptCapabilities = capabilities && typeof capabilities === 'object'
                 ? { ...capabilities }
                 : {};
+            if (adminMode) {
+                syncTeacherCleanupControls();
+                if (!teacherCleanupBusy && !teacherCleanupPreview) {
+                    setTeacherStatus('teacherCleanupMessage', appsScriptCapabilities.expiredAttemptCleanupV1 === true
+                        ? 'جاهز للفحص. التنظيف في وضع الصيانة، بعد 20 دقيقة من آخر نشاط حضور.'
+                        : 'لتفعيل التنظيف، حدّث Code.gs ثم انشر إصداراً جديداً من Apps Script.', 'waiting');
+                }
+            }
         }
 
         async function saveAdminSettingsInBackground(settings, courseSettingsUpdates) {
@@ -6644,6 +6734,10 @@
         }
 
         function refreshActiveTeacherView() {
+            if (activeTeacherTab === 'home') {
+                loadTeacherAdminData();
+                return;
+            }
             if (activeTeacherTab === 'attendance') {
                 loadTeacherAttendance();
                 return;
