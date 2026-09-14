@@ -3220,7 +3220,7 @@
         const SUPPORTING_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
         const SUPPORTING_IMAGE_MAX_DIMENSION = 1600;
         const SUPPORTING_IMAGE_QUALITY = 0.72;
-        const NFC_TAP_MAX_AGE_MS = 30 * 1000; // NFC tap must be used to start attendance within 30 seconds
+        const NFC_TAP_MAX_AGE_MS = 50 * 1000; // Start attendance within the server-issued tap window.
         const NFC_UID_PARAM_NAMES = ['uid', 'u'];
         const NFC_COUNTER_PARAM_NAMES = ['ctr', 'counter', 'cnt'];
         const NFC_MAC_PARAM_NAMES = ['c', 'cmac', 'mac'];
@@ -3246,13 +3246,13 @@
         const REDIRECT_DELAY = 10000;
         const APPS_SCRIPT_DEFAULT_TIMEOUT_MS = 30000;
         const APPS_SCRIPT_ACTION_TIMEOUTS = {
-            attendanceBootstrap: 12000,
+            attendanceBootstrap: 25000,
             appConfig: 14000,
-            reserve: 12000,
-            start: 16000,
-            startAttendance: 20000,
+            reserve: 25000,
+            start: 25000,
+            startAttendance: 25000,
             lookupTrainee: 18000,
-            complete: 22000,
+            complete: 35000,
             studentDashboard: 18000,
             studentReportAccess: 18000,
             teacherAdminData: 30000,
@@ -3260,7 +3260,7 @@
             teacherAttendance: 30000,
             teacherSubmissions: 30000,
             teacherAnalytics: 30000,
-            reviewSubmission: 22000,
+            reviewSubmission: 35000,
             taskStatus: 8000,
             uploadStatus: 15000
         };
@@ -8091,7 +8091,10 @@
                 : capturedAt + NFC_TAP_MAX_AGE_MS;
             const remainingMs = Math.max(0, expiresAtMs - Date.now());
             const remainingSeconds = Math.ceil(remainingMs / 1000);
-            const percent = Math.max(0, Math.min(100, (remainingMs / NFC_TAP_MAX_AGE_MS) * 100));
+            const serverWindowMs = expiresAtMs - Number(nfcTapData?.reservationAcceptedAtMs);
+            const windowMs = serverWindowMs > 0 && Number(nfcTapData?.reservationAcceptedAtMs) > 0
+                ? serverWindowMs : NFC_TAP_MAX_AGE_MS;
+            const percent = Math.max(0, Math.min(100, (remainingMs / windowMs) * 100));
 
             if (bar) {
                 bar.style.width = `${percent}%`;
@@ -8453,29 +8456,44 @@
 
         async function runAppsScriptJsonpAttempts(action, payload, options = {}) {
             const attempts = Math.max(1, Number(options.attempts || 1));
+            const attendanceWrite = ['reserve', 'start', 'startAttendance', 'complete', 'reviewSubmission'].includes(action) ||
+                (action === 'attendanceBootstrap' && Boolean(payload?.nfc));
+            const busyLimit = attendanceWrite ? 4 : attempts;
+            const requestTimeout = Number(options.timeoutMs || APPS_SCRIPT_ACTION_TIMEOUTS[action] || APPS_SCRIPT_DEFAULT_TIMEOUT_MS);
+            const deadline = Date.now() + (attendanceWrite ? 65000 : attempts * requestTimeout + 5000);
+            let busyCount = 0;
+            let failureCount = 0;
             let lastError = null;
             let lastResult = null;
 
-            for (let attempt = 1; attempt <= attempts; attempt++) {
+            while (Date.now() < deadline) {
                 try {
-                    const result = await callAppsScriptJsonp(action, payload, options);
+                    const result = await callAppsScriptJsonp(action, payload, {
+                        ...options, timeoutMs: Math.min(requestTimeout, Math.max(3000, deadline - Date.now()))
+                    });
                     lastResult = result;
+                    lastError = null;
                     if (!['ATTENDANCE_BUSY', 'SETTINGS_BUSY', 'REVIEW_BUSY'].includes(result?.code)) {
                         return result;
                     }
+                    if (++busyCount >= busyLimit) return result;
                 } catch (error) {
                     lastError = error;
+                    lastResult = null;
+                    if (++failureCount >= attempts) throw error;
                 }
 
-                if (attempt < attempts) {
-                    if (/^teacher/.test(action) && teacherReadQueue.some(task => task.action === action)) {
-                        const error = new Error('A newer filter is waiting.');
-                        error.code = 'APPS_SCRIPT_SUPERSEDED';
-                        throw error;
-                    }
-                    const baseDelay = /^teacher/.test(action) ? 900 : 250;
-                    await delay(baseDelay * attempt + Math.floor(Math.random() * 180));
+                if (/^teacher/.test(action) && teacherReadQueue.some(task => task.action === action)) {
+                    const error = new Error('A newer filter is waiting.');
+                    error.code = 'APPS_SCRIPT_SUPERSEDED';
+                    throw error;
                 }
+                // Busy responses mean nothing was saved; spread retries without changing the request ID.
+                const retryDelay = lastResult
+                    ? Math.min(4000, 750 * Math.pow(2, busyCount - 1)) + Math.floor(Math.random() * 1000)
+                    : 900 * failureCount + Math.floor(Math.random() * 600);
+                if (Date.now() + retryDelay + 3000 > deadline) break;
+                await delay(retryDelay);
             }
 
             if (lastResult) {
