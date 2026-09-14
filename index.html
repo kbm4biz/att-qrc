@@ -3381,9 +3381,7 @@
             setMeetingIndicatorState(false, 'تعذر تحميل إعدادات الحضور');
             setPreflightStatus(
                 'تعذر تجهيز التحضير',
-                nfcTapData
-                    ? 'تحقق من اتصال الإنترنت ثم المس البطاقة مرة أخرى.'
-                    : 'تحقق من اتصال الإنترنت ثم اضغط إعادة المحاولة.',
+                'لم تصل إعدادات خدمة الحضور. اضغط إعادة المحاولة.',
                 { error: true }
             );
         }
@@ -8342,6 +8340,69 @@
         }
 
         function callAppsScriptJsonp(action, payload, options = {}) {
+            // Keep the existing caller contract, but receive data as JSON instead of executable scripts.
+            if (typeof fetch !== 'function' || typeof AbortController !== 'function') {
+                return callAppsScriptLegacyJsonp(action, payload, options);
+            }
+            const requestPayload = payload && typeof payload === 'object' ? payload : {};
+            const timeoutMs = Math.max(3000, Number(options.timeoutMs || APPS_SCRIPT_ACTION_TIMEOUTS[action] || APPS_SCRIPT_DEFAULT_TIMEOUT_MS));
+            const requestKey = options.dedupe === false ? '' : `json:${action}:${JSON.stringify(requestPayload)}`;
+            if (requestKey && appsScriptPendingRequests.has(requestKey)) return appsScriptPendingRequests.get(requestKey);
+            const request = fetchAppsScriptJson(action, requestPayload, timeoutMs, options);
+            const trackedRequest = request.finally(() => {
+                if (requestKey && appsScriptPendingRequests.get(requestKey) === trackedRequest) appsScriptPendingRequests.delete(requestKey);
+            });
+            if (requestKey) appsScriptPendingRequests.set(requestKey, trackedRequest);
+            return trackedRequest;
+        }
+
+        async function fetchAppsScriptJson(action, payload, timeoutMs, options) {
+            const controller = new AbortController();
+            const startedAt = Date.now();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+            const url = new URL(APPS_SCRIPT_LOG_URL);
+            url.searchParams.set('action', action);
+            url.searchParams.set('payload', JSON.stringify(payload));
+            url.searchParams.set('_request', `${Date.now()}_${Math.random().toString(36).slice(2)}`);
+            try {
+                const response = await fetch(url.toString(), {
+                    method: 'GET', mode: 'cors', credentials: 'omit', cache: 'no-store',
+                    redirect: 'follow', signal: controller.signal
+                });
+                if (!response.ok) {
+                    const error = new Error('تعذر الاتصال بخدمة الحضور. حاول مرة أخرى.');
+                    error.code = 'APPS_SCRIPT_HTTP_ERROR';
+                    error.httpStatus = response.status;
+                    throw error;
+                }
+                const body = await response.text();
+                let result;
+                try { result = JSON.parse(body); } catch (ignored) {}
+                if (!result || typeof result !== 'object' || typeof result.ok !== 'boolean') {
+                    const error = new Error('لم تصل استجابة صحيحة من خدمة الحضور. حاول مرة أخرى.');
+                    error.code = 'APPS_SCRIPT_INVALID_RESPONSE';
+                    throw error;
+                }
+                return result;
+            } catch (error) {
+                if (controller.signal.aborted) {
+                    const timeoutError = new Error('استغرق الخادم وقتاً أطول من المتوقع. حاول التحديث مرة أخرى.');
+                    timeoutError.code = 'APPS_SCRIPT_TIMEOUT';
+                    throw timeoutError;
+                }
+                // Some older browsers/networks reject cross-origin fetch. Keep one bounded compatibility fallback.
+                const remainingMs = timeoutMs - (Date.now() - startedAt);
+                if (error instanceof TypeError && remainingMs >= 3000) {
+                    clearTimeout(timeoutId);
+                    return await callAppsScriptLegacyJsonp(action, payload, { ...options, timeoutMs: remainingMs });
+                }
+                throw error;
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        }
+
+        function callAppsScriptLegacyJsonp(action, payload, options = {}) {
             const requestPayload = payload && typeof payload === 'object' ? payload : {};
             const timeoutMs = Math.max(
                 3000,
