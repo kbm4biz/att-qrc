@@ -2461,7 +2461,7 @@
                 <div id="supportCustomFields"></div>
                 <textarea id="supportNote" maxlength="300" placeholder="ملاحظة قصيرة اختيارية" aria-label="ملاحظة قصيرة"></textarea>
                 <input type="file" id="supportAttachment" accept="application/pdf,image/*" aria-label="إرفاق ملف">
-                <div class="support-form-hint">يسمح برفع ملف PDF أو صورة فقط. الحد الأقصى 5 MB.</div>
+                <div id="supportAttachmentHint" class="support-form-hint">يسمح برفع ملف PDF أو صورة فقط.</div>
                 <div id="supportSpinner" class="spinner"></div>
                 <button onclick="submitSupportingForm()" id="supportButton">متابعة التحضير</button>
                 <div id="supportStatus" class="status-bar"></div>
@@ -3237,9 +3237,14 @@
         let MAINTENANCE_MODE = DEFAULT_APP_SETTINGS.maintenanceMode;
         let MAINTENANCE_MESSAGE = DEFAULT_APP_SETTINGS.maintenanceMessage;
         const SUPPORTING_NOTE_MAX_LENGTH = 300;
-        const SUPPORTING_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
-        const SUPPORTING_IMAGE_MAX_DIMENSION = 1600;
-        const SUPPORTING_IMAGE_QUALITY = 0.72;
+        const SUPPORTING_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+        const SUPPORTING_ATTACHMENT_LEGACY_MAX_BYTES = 5 * 1024 * 1024;
+        const SUPPORTING_IMAGE_MAX_DIMENSION = 2000;
+        const SUPPORTING_IMAGE_QUALITY = 0.82;
+        const SUPPORTING_IMAGE_TARGET_BYTES = 1500 * 1024;
+        const SUPPORTING_IMAGE_DECODE_TIMEOUT_MS = 12000;
+        const SUPPORTING_IMAGE_ENCODE_TIMEOUT_MS = 8000;
+        const SUPPORTING_FILE_READ_TIMEOUT_MS = 15000;
         const NFC_TAP_MAX_AGE_MS = 50 * 1000; // Start attendance within the server-issued tap window.
         const NFC_UID_PARAM_NAMES = ['uid', 'u'];
         const NFC_COUNTER_PARAM_NAMES = ['ctr', 'counter', 'cnt'];
@@ -4728,6 +4733,7 @@
             appsScriptCapabilities = capabilities && typeof capabilities === 'object'
                 ? { ...capabilities }
                 : {};
+            updateSupportingAttachmentHint();
             if (adminMode) {
                 syncTeacherCleanupControls();
                 if (!teacherCleanupBusy && !teacherCleanupPreview) {
@@ -10173,8 +10179,8 @@
                 return;
             }
 
-            if (file && !file.type.startsWith('image/') && file.size > SUPPORTING_ATTACHMENT_MAX_BYTES) {
-                showError('حجم الملف كبير. الحد الأقصى 5 MB.', status);
+            if (file && !getSupportingFileMimeType(file).startsWith('image/') && file.size > getSupportingAttachmentLimitBytes()) {
+                showError(getSupportingAttachmentSizeMessage(), status);
                 return;
             }
 
@@ -10201,8 +10207,8 @@
 
             try {
                 const uploadFile = file ? await prepareSupportingAttachment(file) : null;
-                if (uploadFile && uploadFile.size > SUPPORTING_ATTACHMENT_MAX_BYTES) {
-                    throw new Error('حجم الملف كبير. الحد الأقصى 5 MB.');
+                if (uploadFile && uploadFile.size > getSupportingAttachmentLimitBytes()) {
+                    throw new Error(getSupportingAttachmentSizeMessage());
                 }
                 if (status && uploadFile) {
                     status.textContent = 'لا تغلق الصفحة. جاري رفع الملف وإكمال تسجيل الحضور.';
@@ -10239,63 +10245,136 @@
         }
 
         function isAllowedSupportingFile(file) {
-            return file.type === 'application/pdf' || file.type.startsWith('image/');
+            const mimeType = getSupportingFileMimeType(file);
+            return mimeType === 'application/pdf' || mimeType.startsWith('image/');
+        }
+
+        function getSupportingFileMimeType(file) {
+            const type = String(file?.type || '').trim().toLowerCase();
+            if (type === 'image/jpg') return 'image/jpeg';
+            if (type && type !== 'application/octet-stream') return type;
+            const extension = String(file?.name || '').split('.').pop().toLowerCase();
+            return ({ jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp',
+                heic: 'image/heic', heif: 'image/heif', avif: 'image/avif', gif: 'image/gif',
+                bmp: 'image/bmp', tif: 'image/tiff', tiff: 'image/tiff', jfif: 'image/jpeg', pdf: 'application/pdf' })[extension] || '';
+        }
+
+        function getSupportingAttachmentLimitBytes(serverLimit = appsScriptCapabilities.attachmentMaxBytes) {
+            const limit = Number(serverLimit);
+            return Number.isFinite(limit) && limit > 0
+                ? Math.min(limit, SUPPORTING_ATTACHMENT_MAX_BYTES)
+                : SUPPORTING_ATTACHMENT_LEGACY_MAX_BYTES;
+        }
+
+        function getSupportingAttachmentSizeMessage(limit = getSupportingAttachmentLimitBytes()) {
+            return `حجم الملف كبير. الحد الأقصى ${Math.round(limit / (1024 * 1024))} MB.`;
+        }
+
+        function updateSupportingAttachmentHint() {
+            const hint = document.getElementById('supportAttachmentHint');
+            if (hint) hint.textContent = `PDF أو صورة. الحد الأقصى للرفع ${Math.round(getSupportingAttachmentLimitBytes() / (1024 * 1024))} MB.`;
         }
 
         async function prepareSupportingAttachment(file) {
-            if (!file.type.startsWith('image/')) {
-                return file;
+            const mimeType = getSupportingFileMimeType(file);
+            if (!isAllowedSupportingFile(file)) throw new Error('نوع الملف غير مسموح. استخدم PDF أو صورة فقط.');
+            if (!file.size) throw new Error('الملف فارغ. اختر ملفاً آخر.');
+            const normalizedFile = file.type === mimeType ? file : new File([file], file.name, {
+                type: mimeType, lastModified: file.lastModified
+            });
+            if (!mimeType.startsWith('image/')) {
+                return normalizedFile;
             }
 
             try {
-                return await compressImageAttachment(file);
+                return await compressImageAttachment(normalizedFile);
             } catch (error) {
-                console.warn('Unable to compress image, uploading original file:', error);
-                return file;
+                console.warn('Image preparation failed:', error);
+                if (normalizedFile.size <= getSupportingAttachmentLimitBytes()) return normalizedFile;
+                throw new Error(`تعذر تصغير الصورة على هذا الجهاز، وحجمها ${(file.size / (1024 * 1024)).toFixed(1)} MB. اختر نسخة JPG أو لقطة شاشة بحجم لا يتجاوز ${Math.round(getSupportingAttachmentLimitBytes() / (1024 * 1024))} MB.`);
             }
         }
 
         async function compressImageAttachment(file) {
             const image = await loadImageElement(file);
-            const largestSide = Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height);
-            const scale = Math.min(1, SUPPORTING_IMAGE_MAX_DIMENSION / largestSide);
-            const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
-            const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
             const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const context = canvas.getContext('2d');
-            context.drawImage(image, 0, 0, width, height);
-
-            const blob = await new Promise(resolve => {
-                canvas.toBlob(resolve, 'image/jpeg', SUPPORTING_IMAGE_QUALITY);
-            });
-
-            URL.revokeObjectURL(image.src);
-            if (!blob) {
-                return file;
+            try {
+                const sourceWidth = image.naturalWidth || image.width;
+                const sourceHeight = image.naturalHeight || image.height;
+                if (!sourceWidth || !sourceHeight) throw new Error('تعذر قراءة أبعاد الصورة.');
+                const largestSide = Math.max(sourceWidth, sourceHeight);
+                const context = canvas.getContext('2d');
+                if (!context) throw new Error('تعذر تجهيز الصورة على هذا الجهاز.');
+                const target = Math.min(SUPPORTING_IMAGE_TARGET_BYTES, getSupportingAttachmentLimitBytes());
+                let best = file;
+                for (const maxSide of [SUPPORTING_IMAGE_MAX_DIMENSION, 1600]) {
+                    const scale = Math.min(1, maxSide / largestSide);
+                    canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+                    canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+                    // Keep transparent screenshots readable when exporting to JPEG.
+                    context.fillStyle = '#ffffff';
+                    context.fillRect(0, 0, canvas.width, canvas.height);
+                    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                    for (const quality of [SUPPORTING_IMAGE_QUALITY, 0.7]) {
+                        let blob;
+                        try { blob = await encodeSupportingImage(canvas, quality); }
+                        catch (error) {
+                            if (best !== file && best.size <= getSupportingAttachmentLimitBytes()) return best;
+                            throw error;
+                        }
+                        if (blob.size < best.size) {
+                            const baseName = (file.name || 'attachment').replace(/\.[^.]+$/, '');
+                            const extension = blob.type === 'image/png' ? 'png' : 'jpg';
+                            best = new File([blob], `${baseName}.${extension}`, { type: blob.type, lastModified: file.lastModified });
+                        }
+                        if (best.size <= target) return best;
+                    }
+                    if (largestSide <= 1600) break;
+                }
+                return best;
+            } finally {
+                URL.revokeObjectURL(image.src);
+                image.src = '';
+                canvas.width = 0;
+                canvas.height = 0;
             }
+        }
 
-            if (blob.size >= file.size && file.size <= SUPPORTING_ATTACHMENT_MAX_BYTES) {
-                return file;
-            }
-
-            const baseName = (file.name || 'attachment').replace(/\.[^.]+$/, '');
-            return new File([blob], `${baseName}.jpg`, {
-                type: 'image/jpeg',
-                lastModified: Date.now()
+        function encodeSupportingImage(canvas, quality) {
+            return new Promise((resolve, reject) => {
+                const timer = setTimeout(() => reject(new Error('استغرقت معالجة الصورة وقتاً طويلاً.')), SUPPORTING_IMAGE_ENCODE_TIMEOUT_MS);
+                try {
+                    canvas.toBlob(blob => {
+                        clearTimeout(timer);
+                        if (!blob || !blob.size) reject(new Error('تعذر تحويل الصورة.'));
+                        else resolve(blob);
+                    }, 'image/jpeg', quality);
+                } catch (error) {
+                    clearTimeout(timer);
+                    reject(error);
+                }
             });
         }
 
         function loadImageElement(file) {
             return new Promise((resolve, reject) => {
                 const image = new Image();
-                image.onload = () => resolve(image);
-                image.onerror = () => {
-                    URL.revokeObjectURL(image.src);
-                    reject(new Error('تعذر تجهيز الصورة.'));
+                const url = URL.createObjectURL(file);
+                const cleanup = () => {
+                    clearTimeout(timer);
+                    image.onload = null;
+                    image.onerror = null;
                 };
-                image.src = URL.createObjectURL(file);
+                const fail = message => {
+                    cleanup();
+                    URL.revokeObjectURL(url);
+                    image.src = '';
+                    reject(new Error(message));
+                };
+                const timer = setTimeout(() => fail('استغرق فتح الصورة وقتاً طويلاً.'), SUPPORTING_IMAGE_DECODE_TIMEOUT_MS);
+                image.onload = () => { cleanup(); resolve(image); };
+                image.onerror = () => fail('تعذر فتح صيغة الصورة على هذا الجهاز.');
+                image.src = url;
             });
         }
 
@@ -10332,17 +10411,37 @@
         function readFileAsDataUrl(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = () => reject(new Error('تعذر قراءة الملف.'));
-                reader.readAsDataURL(file);
+                const cleanup = () => {
+                    clearTimeout(timer);
+                    reader.onload = null;
+                    reader.onerror = null;
+                    reader.onabort = null;
+                };
+                const fail = message => { cleanup(); reject(new Error(message)); };
+                const timer = setTimeout(() => {
+                    fail('استغرقت قراءة الملف وقتاً طويلاً. اختر الملف مجدداً.');
+                    try { reader.abort(); } catch (ignored) {}
+                }, SUPPORTING_FILE_READ_TIMEOUT_MS);
+                reader.onload = () => {
+                    cleanup();
+                    if (typeof reader.result !== 'string' || !reader.result.includes(';base64,')) reject(new Error('تعذر قراءة الملف.'));
+                    else resolve(reader.result);
+                };
+                reader.onerror = () => fail('تعذر قراءة الملف.');
+                reader.onabort = () => fail('توقفت قراءة الملف. اختر الملف مجدداً.');
+                try { reader.readAsDataURL(file); }
+                catch (error) { cleanup(); reject(error); }
             });
         }
 
         async function postAppsScriptForm(action, payload, uploadId) {
-            await callAppsScriptJsonpReliable('uploadInit', { uploadId }, {
+            const init = await callAppsScriptJsonpReliable('uploadInit', { uploadId }, {
                 attempts: 2,
                 timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.uploadStatus
             });
+            if (!init?.ok) throw new Error(getUploadErrorMessage(init));
+            const serverLimit = getSupportingAttachmentLimitBytes(init.maxBytes || SUPPORTING_ATTACHMENT_LEGACY_MAX_BYTES);
+            if (payload.size > serverLimit) throw new Error(getSupportingAttachmentSizeMessage(serverLimit));
             const cleanup = submitAppsScriptUploadForm(action, payload, uploadId);
 
             try {
@@ -10392,14 +10491,20 @@
         async function waitForUploadStatus(uploadId) {
             const timeoutAt = Date.now() + 90000;
             let lastResult = null;
+            let polls = 0;
 
             while (Date.now() < timeoutAt) {
-                await delay(1500);
+                const pause = Math.min(1500 + polls * 750, 4500);
+                if (timeoutAt - Date.now() < pause + 3000) break;
+                await delay(pause);
+                const remaining = timeoutAt - Date.now();
+                if (remaining < 3000) break;
+                polls++;
                 let result;
                 try {
                     result = await callAppsScriptJsonpReliable('uploadStatus', { uploadId }, {
-                        attempts: 2,
-                        timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.uploadStatus
+                        attempts: 1,
+                        timeoutMs: Math.min(APPS_SCRIPT_ACTION_TIMEOUTS.uploadStatus, remaining)
                     });
                 } catch (error) {
                     console.warn('Upload status retry failed:', error);
@@ -10440,7 +10545,7 @@
                 return 'نوع الملف غير مسموح. استخدم PDF أو صورة فقط.';
             }
             if (result?.code === 'UPLOAD_SIZE') {
-                return 'حجم الملف كبير. الحد الأقصى 5 MB.';
+                return getSupportingAttachmentSizeMessage(getSupportingAttachmentLimitBytes(result.maxBytes));
             }
             return result?.error || 'تعذر رفع الملف. حاول مرة أخرى.';
         }
