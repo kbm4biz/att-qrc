@@ -1792,6 +1792,57 @@
         body.student-dashboard-view .container {
             max-width: 980px;
         }
+        body.student-report-entry-view .container {
+            max-width: 600px;
+        }
+        body.student-report-entry-view .floating-emojis,
+        body.student-report-entry-view .meeting-indicator,
+        body.student-report-entry-view .header-subline,
+        body.student-report-entry-view .student-report-fab {
+            display: none !important;
+        }
+        #step10.active-step {
+            justify-content: flex-start;
+            min-height: 360px;
+            padding-top: 36px;
+        }
+        #step10 .report-access-dialog {
+            width: min(430px, 100%);
+            padding: 0;
+            border-radius: 0;
+            background: transparent;
+            box-shadow: none;
+        }
+        #step10 .report-access-dialog p {
+            display: none;
+        }
+        #step10 #studentReportAccessId {
+            min-height: 64px;
+            margin: 8px 0 16px;
+            padding: 14px;
+            border: 2px solid #c8d7e0;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 26px;
+        }
+        #step10 #studentReportAccessId:focus-visible {
+            outline: 2px solid var(--brand-primary);
+            outline-offset: 2px;
+        }
+        #step10 #studentReportAccessStatus:empty {
+            display: none;
+        }
+        #step10 .report-access-actions button {
+            width: 100%;
+            max-width: none;
+            min-height: 56px;
+        }
+        .report-access-home-link {
+            display: inline-block;
+            padding: 12px;
+            margin-top: 16px;
+            color: #126b88;
+        }
         .student-dashboard {
             width: 100%;
         }
@@ -3172,6 +3223,10 @@
             </div>
         </div>
 
+        <div id="step10" class="step">
+            <a id="reportAccessHomeLink" class="report-access-home-link" href="./">نموذج التحضير</a>
+        </div>
+
         <button id="adminReset" onclick="forceReset()">إعادة تعيين الجلسة</button>
         
         <div class="footer">
@@ -3191,7 +3246,7 @@
             <div id="studentReportAccessStatus" class="status-bar"></div>
             <div class="report-access-actions">
                 <button type="button" id="studentReportAccessSubmit" onclick="submitStudentReportAccess()">فتح التقرير</button>
-                <button type="button" class="teacher-secondary-button" onclick="closeStudentReportAccess()">إلغاء</button>
+                <button type="button" id="studentReportAccessCancel" class="teacher-secondary-button" onclick="closeStudentReportAccess()">إلغاء</button>
             </div>
         </div>
     </div>
@@ -3467,6 +3522,10 @@
         // ================== ON PAGE LOAD ================== //
         document.addEventListener('DOMContentLoaded', async () => {
             const pageParams = new URLSearchParams(window.location.search);
+            if (pageParams.get('view') === 'report') {
+                initializeStudentReportEntry();
+                return;
+            }
             if (pageParams.get('view') === 'student') {
                 initializeStudentDashboard(
                     pageParams.get('student') || '',
@@ -3766,6 +3825,33 @@
             } catch (error) {
                 return null;
             }
+        }
+
+        function initializeStudentReportEntry() {
+            document.body.classList.add('student-report-entry-view');
+            document.title = 'تقريري';
+            document.querySelector('.header h1').textContent = 'تقريري';
+            const page = document.getElementById('step10');
+            const dialog = document.querySelector('#studentReportAccessModal .report-access-dialog');
+            page.prepend(dialog);
+            document.getElementById('studentReportAccessTitle').textContent = 'الرقم التدريبي';
+            document.getElementById('studentReportAccessCancel').hidden = true;
+            document.getElementById('reportAccessHomeLink').href = getTeacherQrStudentUrl();
+            const saved = readStudentReportAccess();
+            const trainee = readSessionJson('traineeDetails', null);
+            document.getElementById('studentReportAccessId').value = saved?.traineeId || getActiveTraineeSession()?.id || trainee?.id || '';
+            showStep(10);
+            window.addEventListener('pageshow', event => {
+                if (!event.persisted) return;
+                studentReportAccessInProgress = false;
+                document.getElementById('studentReportAccessId').disabled = false;
+                const button = document.getElementById('studentReportAccessSubmit');
+                button.disabled = false;
+                button.textContent = 'فتح التقرير';
+                const status = document.getElementById('studentReportAccessStatus');
+                status.textContent = '';
+                status.className = 'status-bar';
+            });
         }
 
         function openStudentReportAccess() {
