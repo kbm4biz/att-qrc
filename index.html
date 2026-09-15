@@ -3396,7 +3396,6 @@
         let supportingFormCompleted = false;
         let supportingFormData = null;
         let supportingFormSubmitting = false;
-        const supportingAttachmentAttempts = new WeakMap();
         let teacherDashboardPassword = '';
         let teacherSearchTimer = null;
         let teacherAttendanceSearchTimer = null;
@@ -7105,24 +7104,24 @@
             }
             const generation = teacherSubmissionSnapshotGeneration;
             let snapshot = teacherSubmissionSnapshot;
-            const scope = JSON.stringify([filters.reviewStatus, filters.query]);
-            const reusable = snapshot && snapshot.key === key &&
-                (snapshot.scope === scope || (snapshot.complete && snapshot.allRows));
-            if (!reusable || Date.now() - snapshot.savedAt >= TEACHER_SUBMISSION_SNAPSHOT_TTL_MS) {
+            if (!snapshot || snapshot.key !== key || Date.now() - snapshot.savedAt >= TEACHER_SUBMISSION_SNAPSHOT_TTL_MS) {
                 const result = await callAppsScriptJsonpReliable('teacherSubmissions', {
-                    password, ...filters, snapshot: true, fresh: forceRefresh === true
+                    password, days: filters.days, courseId: filters.courseId, reviewStatus: 'ALL', query: ''
                 }, { attempts: 2, timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.teacherSubmissions });
                 if (!result?.ok) return result;
                 const rows = Array.isArray(result.rows) ? result.rows : [];
                 snapshot = {
-                    key, scope, allRows: result.completeDataset === true || (filters.reviewStatus === 'ALL' && !filters.query),
-                    savedAt: Date.now(), result,
+                    key, savedAt: Date.now(), result,
                     complete: Number.isFinite(Number(result.totalFilteredRows)) && Number(result.totalFilteredRows) === rows.length
                 };
                 if (generation === teacherSubmissionSnapshotGeneration) teacherSubmissionSnapshot = snapshot;
             }
-            // A capped result already answers its requested filter; never scan again just to display it.
-            if (!snapshot.complete) return snapshot.result;
+            if (!snapshot.complete) {
+                // A capped response cannot answer a narrower filter reliably.
+                return callAppsScriptJsonpReliable('teacherSubmissions', { password, ...filters }, {
+                    attempts: 2, timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.teacherSubmissions
+                });
+            }
             const query = filters.query.trim().toLowerCase();
             const rows = snapshot.result.rows.filter(row => {
                 if (filters.reviewStatus !== 'ALL' && row.reviewStatus !== filters.reviewStatus) return false;
@@ -10301,7 +10300,7 @@
                     status.textContent = 'لا تغلق الصفحة. جاري رفع الملف وإكمال تسجيل الحضور.';
                 }
 
-                const attachment = uploadFile ? await uploadSupportingAttachment(uploadFile, note, file) : null;
+                const attachment = uploadFile ? await uploadSupportingAttachment(uploadFile, note) : null;
                 supportingFormData = {
                     enabled: true,
                     note,
@@ -10465,33 +10464,12 @@
             });
         }
 
-        async function uploadSupportingAttachment(file, note, sourceFile = file) {
+        async function uploadSupportingAttachment(file, note) {
             const trainee = readSessionJson('traineeDetails', {});
             const meeting = readSessionJson('currentMeeting', {});
-            const contextKey = JSON.stringify([trainee.id, meeting.meetingId]);
-            let attempt = supportingAttachmentAttempts.get(sourceFile);
-            if (!attempt || attempt.contextKey !== contextKey) {
-                attempt = { contextKey, sent: false, uploadId: window.crypto?.randomUUID
-                    ? window.crypto.randomUUID() : `upload-${Date.now()}-${Math.random().toString(36).slice(2)}` };
-                supportingAttachmentAttempts.set(sourceFile, attempt);
-            }
-            if (attempt.attachment) return attempt.attachment;
-            if (attempt.promise) return attempt.promise;
-            attempt.promise = finishSupportingAttachment(file, note, trainee, meeting, attempt).then(result => {
-                if (!result?.ok || !result.attachment) {
-                    if (result?.state === 'ERROR') supportingAttachmentAttempts.delete(sourceFile);
-                    throw new Error(getUploadErrorMessage(result));
-                }
-                attempt.attachment = result.attachment;
-                return result.attachment;
-            }).finally(() => { attempt.promise = null; });
-            return attempt.promise;
-        }
-
-        async function finishSupportingAttachment(file, note, trainee, meeting, attempt) {
-            // A lost response is not permission to POST the same image again.
-            if (attempt.sent) return waitForUploadStatus(attempt.uploadId, { timeoutAt: Date.now() + 45000 });
-            const uploadId = attempt.uploadId;
+            const uploadId = window.crypto?.randomUUID
+                ? window.crypto.randomUUID()
+                : `upload-${Date.now()}-${Math.random().toString(36).slice(2)}`;
             const dataUrl = await readFileAsDataUrl(file);
             const base64Data = dataUrl.split(',')[1] || '';
             const payload = {
@@ -10508,7 +10486,12 @@
                 clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false })
             };
 
-            return postAppsScriptForm('uploadAttachment', payload, uploadId, () => { attempt.sent = true; });
+            const result = await postAppsScriptForm('uploadAttachment', payload, uploadId);
+            if (!result?.ok) {
+                throw new Error(getUploadErrorMessage(result));
+            }
+
+            return result.attachment;
         }
 
         function readFileAsDataUrl(file) {
@@ -10537,44 +10520,21 @@
             });
         }
 
-        async function postAppsScriptForm(action, payload, uploadId, onSent = () => {}) {
-            let serverLimit = getSupportingAttachmentLimitBytes();
-            if (!Number(appsScriptCapabilities.attachmentMaxBytes)) {
-                const init = await callAppsScriptJsonpReliable('uploadInit', { uploadId }, {
-                    attempts: 1, timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.uploadStatus
-                });
-                if (!init?.ok) throw new Error(getUploadErrorMessage(init));
-                serverLimit = getSupportingAttachmentLimitBytes(init.maxBytes || SUPPORTING_ATTACHMENT_LEGACY_MAX_BYTES);
-            }
+        async function postAppsScriptForm(action, payload, uploadId) {
+            const init = await callAppsScriptJsonpReliable('uploadInit', { uploadId }, {
+                attempts: 2,
+                timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.uploadStatus
+            });
+            if (!init?.ok) throw new Error(getUploadErrorMessage(init));
+            const serverLimit = getSupportingAttachmentLimitBytes(init.maxBytes || SUPPORTING_ATTACHMENT_LEGACY_MAX_BYTES);
             if (payload.size > serverLimit) throw new Error(getSupportingAttachmentSizeMessage(serverLimit));
-            const timeoutAt = Date.now() + 90000;
-            if (typeof fetch !== 'function' || typeof AbortController !== 'function') {
-                onSent();
-                const cleanup = submitAppsScriptUploadForm(action, payload, uploadId);
-                try { return await waitForUploadStatus(uploadId, { timeoutAt }); }
-                finally { cleanup(); }
-            }
-            const direct = appsScriptCapabilities.attachmentDirectPostV1 === true;
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 65000);
+            const cleanup = submitAppsScriptUploadForm(action, payload, uploadId);
+
             try {
-                const body = new URLSearchParams({ action, uploadId, payload: JSON.stringify(payload) });
-                if (direct) body.set('response', 'json');
-                onSent();
-                const response = await fetch(APPS_SCRIPT_LOG_URL, {
-                    method: 'POST', mode: direct ? 'cors' : 'no-cors', credentials: 'omit',
-                    redirect: 'follow', body, signal: controller.signal
-                });
-                if (direct && response.ok) {
-                    const result = await response.json();
-                    if (result?.source === 'attendanceAttachmentUpload' && result.uploadId === uploadId &&
-                        ((result.ok === true && result.state === 'SUCCESS' && result.attachment?.fileId) ||
-                         (result.ok === false && result.state === 'ERROR'))) return result;
-                }
-            } catch (error) {
-                console.warn('Upload confirmation unavailable; checking the same upload ID:', error);
-            } finally { clearTimeout(timer); }
-            return waitForUploadStatus(uploadId, { timeoutAt });
+                return await waitForUploadStatus(uploadId);
+            } finally {
+                cleanup();
+            }
         }
 
         function submitAppsScriptUploadForm(action, payload, uploadId) {
@@ -10614,13 +10574,13 @@
                 };
         }
 
-        async function waitForUploadStatus(uploadId, options = {}) {
-            const timeoutAt = options.timeoutAt || Date.now() + 90000;
+        async function waitForUploadStatus(uploadId) {
+            const timeoutAt = Date.now() + 90000;
             let lastResult = null;
             let polls = 0;
 
             while (Date.now() < timeoutAt) {
-                const pause = polls === 0 ? 0 : Math.min(3000 + polls * 1500, 9000) + Math.floor(Math.random() * 500);
+                const pause = Math.min(1500 + polls * 750, 4500);
                 if (timeoutAt - Date.now() < pause + 3000) break;
                 await delay(pause);
                 const remaining = timeoutAt - Date.now();
@@ -10638,7 +10598,7 @@
                 }
                 lastResult = result;
 
-                if (result?.ok && result.uploadId === uploadId && result.state === 'SUCCESS' && result.attachment?.fileId) {
+                if (result?.state === 'SUCCESS' || result?.attachment) {
                     return result;
                 }
 
@@ -10656,11 +10616,11 @@
 
         function getUploadTimeoutMessage(result) {
             if (!result || result.state === 'PENDING' || result.state === 'NOT_FOUND') {
-                return 'تعذر تأكيد حفظ الملف بسبب تأخر الاتصال. اضغط متابعة التحضير للتحقق مجدداً دون إعادة اختيار الملف.';
+                return 'لم يصل الملف إلى الخادم. جرّب ملفاً أصغر أو صورة أقل حجماً، ثم حاول مرة أخرى.';
             }
 
             if (result.state === 'RECEIVED' || result.state === 'PROCESSING') {
-                return 'الملف قيد الحفظ. اضغط متابعة التحضير للتحقق من اكتماله دون رفع نسخة أخرى.';
+                return 'وصل الملف إلى الخادم لكن المعالجة أخذت وقتاً طويلاً. جرّب ملفاً أصغر.';
             }
 
             return 'انتهت مهلة رفع الملف. حاول مرة أخرى.';
