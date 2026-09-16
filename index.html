@@ -3291,6 +3291,7 @@
         const STUDENT_REPORT_ACCESS_STORAGE_KEY = 'attqStudentReportAccessV1';
         const appsScriptPendingRequests = new Map();
         const appsScriptReliableRequests = new Map();
+        let appsScriptLegacyTransportPreferred = false;
         const teacherReadQueue = [];
         let teacherReadsActive = 0;
         let teacherSubmissionSnapshot = null;
@@ -8321,7 +8322,10 @@
                     timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.start
                 });
                 nfcTokenStarted = Boolean(result?.ok);
-                if (!nfcTokenStarted) {
+                if (nfcTokenStarted) {
+                    nfcReservationAccepted = true;
+                    clearNfcCountdownTimer();
+                } else {
                     nfcReservationAccepted = false;
                 }
                 nfcTapError = nfcTokenStarted
@@ -8368,6 +8372,9 @@
             );
             nfcTokenStarted = Boolean(result?.nfcStarted || result?.nfcStart?.ok);
             if (nfcTokenStarted) {
+                // A confirmed server STARTED may arrive after the local countdown expires.
+                nfcReservationAccepted = true;
+                clearNfcCountdownTimer();
                 nfcTapError = '';
                 return result;
             }
@@ -8437,8 +8444,15 @@
 
         function callAppsScriptJsonp(action, payload, options = {}) {
             // Keep the existing caller contract, but receive data as JSON instead of executable scripts.
-            if (typeof fetch !== 'function' || typeof AbortController !== 'function') {
-                return callAppsScriptLegacyJsonp(action, payload, options);
+            if (appsScriptLegacyTransportPreferred || options.transport === 'jsonp' ||
+                typeof fetch !== 'function' || typeof AbortController !== 'function') {
+                return callAppsScriptLegacyJsonp(action, payload, options).then(result => {
+                    appsScriptLegacyTransportPreferred = true;
+                    return result;
+                }, error => {
+                    appsScriptLegacyTransportPreferred = false;
+                    throw error;
+                });
             }
             const requestPayload = payload && typeof payload === 'object' ? payload : {};
             const timeoutMs = Math.max(3000, Number(options.timeoutMs || APPS_SCRIPT_ACTION_TIMEOUTS[action] || APPS_SCRIPT_DEFAULT_TIMEOUT_MS));
@@ -8490,7 +8504,10 @@
                 const remainingMs = timeoutMs - (Date.now() - startedAt);
                 if (error instanceof TypeError && remainingMs >= 3000) {
                     clearTimeout(timeoutId);
-                    return await callAppsScriptLegacyJsonp(action, payload, { ...options, timeoutMs: remainingMs });
+                    const result = await callAppsScriptLegacyJsonp(action, payload, { ...options, timeoutMs: remainingMs });
+                    // Remember a working fallback only for this page, never cached settings or tokens.
+                    appsScriptLegacyTransportPreferred = true;
+                    return result;
                 }
                 throw error;
             } finally {
@@ -8541,6 +8558,12 @@
                 window[callbackName] = (response) => {
                     if (settled) return;
                     cleanup();
+                    if (!response || typeof response !== 'object' || typeof response.ok !== 'boolean') {
+                        const error = new Error('لم تصل استجابة صحيحة من خدمة الحضور. حاول مرة أخرى.');
+                        error.code = 'APPS_SCRIPT_INVALID_RESPONSE';
+                        reject(error);
+                        return;
+                    }
                     resolve(response);
                 };
 
@@ -8622,11 +8645,13 @@
             let failureCount = 0;
             let lastError = null;
             let lastResult = null;
+            let retryTransport = options.transport;
 
             while (Date.now() < deadline) {
                 try {
                     const result = await callAppsScriptJsonp(action, payload, {
-                        ...options, timeoutMs: Math.min(requestTimeout, Math.max(3000, deadline - Date.now()))
+                        ...options, transport: retryTransport,
+                        timeoutMs: Math.min(requestTimeout, Math.max(3000, deadline - Date.now()))
                     });
                     lastResult = result;
                     lastError = null;
@@ -8637,6 +8662,12 @@
                 } catch (error) {
                     lastError = error;
                     lastResult = null;
+                    if (['start', 'startAttendance'].includes(action) &&
+                        (error.code === 'APPS_SCRIPT_INVALID_RESPONSE' ||
+                         (error.code === 'APPS_SCRIPT_HTTP_ERROR' && [404, 502, 503, 504].includes(error.httpStatus)))) {
+                        // Use the existing retry slot for another response transport, not an extra request.
+                        retryTransport = 'jsonp';
+                    }
                     if (++failureCount >= attempts) throw error;
                 }
 
@@ -9011,7 +9042,13 @@
                     showError(attendanceContext?.error || 'رقم المتدرب غير صحيح', idStatus);
                 }
             } catch (error) {
-                showError('خدمة التحقق غير متوفرة', idStatus);
+                const connectionFailure = /^APPS_SCRIPT_(TIMEOUT|HTTP_ERROR|INVALID_RESPONSE|LOAD_ERROR)$/.test(error.code || '');
+                if (connectionFailure) attemptCount = Math.max(0, attemptCount - 1);
+                showError(connectionFailure
+                    ? (isNfcGateSatisfied()
+                        ? 'لم يصل رد التحقق. انتظر قليلاً ثم اضغط تحضير من نفس الصفحة.'
+                        : 'تعذر تأكيد البدء قبل انتهاء المهلة. المس البطاقة مرة أخرى.')
+                    : 'خدمة التحقق غير متوفرة', idStatus);
                 console.error('خطأ في جلب البيانات:', error);
             } finally {
                 idVerificationInProgress = false;
