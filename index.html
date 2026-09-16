@@ -3240,6 +3240,7 @@
         const SUPPORTING_ATTACHMENT_MAX_BYTES = 15 * 1024 * 1024;
         const SUPPORTING_IMAGE_MAX_DIMENSION = 1600;
         const SUPPORTING_IMAGE_QUALITY = 0.72;
+        const SUPPORTING_IMAGE_PREPARE_TIMEOUT_MS = 8000;
         const NFC_TAP_MAX_AGE_MS = 50 * 1000; // Start attendance within the server-issued tap window.
         const NFC_UID_PARAM_NAMES = ['uid', 'u'];
         const NFC_COUNTER_PARAM_NAMES = ['ctr', 'counter', 'cnt'];
@@ -3336,6 +3337,7 @@
         let supportingFormCompleted = false;
         let supportingFormData = null;
         let supportingFormSubmitting = false;
+        let supportingAttachmentAttempt = null;
         let teacherDashboardPassword = '';
         let teacherSearchTimer = null;
         let teacherAttendanceSearchTimer = null;
@@ -10181,7 +10183,7 @@
             supportingFormSubmitting = true;
             if (button) {
                 button.disabled = true;
-                button.textContent = 'جاري رفع الملف...';
+                button.textContent = 'جاري تجهيز الملف...';
             }
             if (noteElement) {
                 noteElement.disabled = true;
@@ -10200,15 +10202,22 @@
             }
 
             try {
+                const startedAt = performance.now();
+                const timing = { sourceBytes: file?.size || 0 };
+                window.attendanceUploadTiming = timing;
                 const uploadFile = file ? await prepareSupportingAttachment(file) : null;
+                timing.prepareMs = Math.round(performance.now() - startedAt);
+                timing.uploadBytes = uploadFile?.size || 0;
                 if (uploadFile && uploadFile.size > SUPPORTING_ATTACHMENT_MAX_BYTES) {
                     throw new Error('حجم الملف كبير. الحد الأقصى 15 MB.');
                 }
                 if (status && uploadFile) {
                     status.textContent = 'لا تغلق الصفحة. جاري رفع الملف وإكمال تسجيل الحضور.';
+                    if (button) button.textContent = 'جاري رفع الملف...';
                 }
 
-                const attachment = uploadFile ? await uploadSupportingAttachment(uploadFile, note) : null;
+                const attachment = uploadFile ? await uploadSupportingAttachment(uploadFile, note, file) : null;
+                timing.totalMs = Math.round(performance.now() - startedAt);
                 supportingFormData = {
                     enabled: true,
                     note,
@@ -10243,7 +10252,7 @@
         }
 
         async function prepareSupportingAttachment(file) {
-            if (!file.type.startsWith('image/')) {
+            if (!file.type.startsWith('image/') || file.size <= 512 * 1024) {
                 return file;
             }
 
@@ -10256,73 +10265,97 @@
         }
 
         async function compressImageAttachment(file) {
+            const deadline = Date.now() + SUPPORTING_IMAGE_PREPARE_TIMEOUT_MS;
             const image = await loadImageElement(file);
-            const largestSide = Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height);
-            const scale = Math.min(1, SUPPORTING_IMAGE_MAX_DIMENSION / largestSide);
-            const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
-            const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const context = canvas.getContext('2d');
-            context.drawImage(image, 0, 0, width, height);
+            let canvas;
+            try {
+                const largestSide = Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height);
+                const scale = Math.min(1, SUPPORTING_IMAGE_MAX_DIMENSION / largestSide);
+                const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+                const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+                canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const context = canvas.getContext('2d');
+                context.drawImage(image, 0, 0, width, height);
 
-            const blob = await new Promise(resolve => {
-                canvas.toBlob(resolve, 'image/jpeg', SUPPORTING_IMAGE_QUALITY);
-            });
+                const blob = await new Promise((resolve, reject) => {
+                    const timer = setTimeout(() => resolve(null), Math.max(1, deadline - Date.now()));
+                    try {
+                        canvas.toBlob(value => { clearTimeout(timer); resolve(value); }, 'image/jpeg', SUPPORTING_IMAGE_QUALITY);
+                    } catch (error) { clearTimeout(timer); reject(error); }
+                });
 
-            URL.revokeObjectURL(image.src);
-            if (!blob) {
-                return file;
+                if (!blob || (blob.size >= file.size && file.size <= SUPPORTING_ATTACHMENT_MAX_BYTES)) {
+                    return file;
+                }
+
+                const baseName = (file.name || 'attachment').replace(/\.[^.]+$/, '');
+                return new File([blob], `${baseName}.jpg`, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                });
+            } finally {
+                URL.revokeObjectURL(image.src);
+                image.src = '';
+                if (canvas) { canvas.width = 0; canvas.height = 0; }
             }
-
-            if (blob.size >= file.size && file.size <= SUPPORTING_ATTACHMENT_MAX_BYTES) {
-                return file;
-            }
-
-            const baseName = (file.name || 'attachment').replace(/\.[^.]+$/, '');
-            return new File([blob], `${baseName}.jpg`, {
-                type: 'image/jpeg',
-                lastModified: Date.now()
-            });
         }
 
         function loadImageElement(file) {
             return new Promise((resolve, reject) => {
                 const image = new Image();
-                image.onload = () => resolve(image);
-                image.onerror = () => {
-                    URL.revokeObjectURL(image.src);
-                    reject(new Error('تعذر تجهيز الصورة.'));
+                const url = URL.createObjectURL(file);
+                const finish = success => {
+                    clearTimeout(timer);
+                    image.onload = image.onerror = null;
+                    if (success) return resolve(image);
+                    URL.revokeObjectURL(url);
+                    image.src = '';
+                    reject(new Error('تعذر تجهيز الصورة. سيتم استخدام الملف الأصلي.'));
                 };
-                image.src = URL.createObjectURL(file);
+                const timer = setTimeout(() => finish(false), SUPPORTING_IMAGE_PREPARE_TIMEOUT_MS);
+                image.onload = () => finish(true);
+                image.onerror = () => finish(false);
+                image.src = url;
             });
         }
 
-        async function uploadSupportingAttachment(file, note) {
+        async function uploadSupportingAttachment(file, note, sourceFile = file) {
             const trainee = readSessionJson('traineeDetails', {});
             const meeting = readSessionJson('currentMeeting', {});
-            const uploadId = window.crypto?.randomUUID
-                ? window.crypto.randomUUID()
-                : `upload-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-            const dataUrl = await readFileAsDataUrl(file);
-            const base64Data = dataUrl.split(',')[1] || '';
-            const payload = {
-                uploadId,
-                traineeId: trainee.id || '',
-                meetingId: meeting.meetingId || '',
-                note,
-                fileName: file.name,
-                mimeType: file.type,
-                size: file.size,
-                base64Data,
-                deviceId: getOrCreateDeviceId(),
-                deviceFingerprint: getDeviceFingerprint(),
-                clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false })
-            };
+            const contextKey = JSON.stringify([trainee.id, meeting.meetingId]);
+            let attempt = supportingAttachmentAttempt;
+            if (!attempt || attempt.sourceFile !== sourceFile || attempt.contextKey !== contextKey) {
+                const uploadId = window.crypto?.randomUUID
+                    ? window.crypto.randomUUID()
+                    : `upload-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                const readStartedAt = performance.now();
+                const dataUrl = await readFileAsDataUrl(file);
+                if (window.attendanceUploadTiming) window.attendanceUploadTiming.readMs = Math.round(performance.now() - readStartedAt);
+                const base64Data = dataUrl.split(',')[1] || '';
+                const payload = {
+                    uploadId,
+                    replyToken: Array.from(window.crypto.getRandomValues(new Uint8Array(16)), value => value.toString(16).padStart(2, '0')).join(''),
+                    traineeId: trainee.id || '',
+                    meetingId: meeting.meetingId || '',
+                    note,
+                    fileName: file.name,
+                    mimeType: file.type,
+                    size: file.size,
+                    base64Data,
+                    deviceId: getOrCreateDeviceId(),
+                    deviceFingerprint: getDeviceFingerprint(),
+                    clientTimestampSaudi: getSaudiTime().toLocaleString('ar-SA', { hour12: false })
+                };
+                attempt = { sourceFile, contextKey, payload, posted: false, result: null, cleanup: null };
+                supportingAttachmentAttempt = attempt;
+            }
 
-            const result = await postAppsScriptForm('uploadAttachment', payload, uploadId);
-            if (!result?.ok) {
+            const result = attempt.result || await postAppsScriptForm('uploadAttachment', attempt.payload, attempt.payload.uploadId, attempt);
+            attempt.result = result;
+            if (!result?.ok || !result.attachment?.fileId) {
+                if (result?.retryable === true || ['UPLOAD_TYPE', 'UPLOAD_SIZE', 'UPLOAD_MISSING'].includes(result?.code)) supportingAttachmentAttempt = null;
                 throw new Error(getUploadErrorMessage(result));
             }
 
@@ -10332,23 +10365,59 @@
         function readFileAsDataUrl(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = () => reject(new Error('تعذر قراءة الملف.'));
-                reader.readAsDataURL(file);
+                const finish = (error, value) => {
+                    clearTimeout(timer);
+                    reader.onload = reader.onerror = reader.onabort = null;
+                    if (error) reject(error); else resolve(value);
+                };
+                const timer = setTimeout(() => {
+                    finish(new Error('تعذر قراءة الملف في الوقت المحدد. أعد اختيار الملف.'));
+                    reader.abort();
+                }, 15000);
+                reader.onload = () => finish(null, reader.result);
+                reader.onerror = reader.onabort = () => finish(new Error('تعذر قراءة الملف.'));
+                try { reader.readAsDataURL(file); } catch (error) { finish(error); }
             });
         }
 
-        async function postAppsScriptForm(action, payload, uploadId) {
-            await callAppsScriptJsonpReliable('uploadInit', { uploadId }, {
-                attempts: 2,
-                timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.uploadStatus
-            });
-            const cleanup = submitAppsScriptUploadForm(action, payload, uploadId);
-
+        async function postAppsScriptForm(action, payload, uploadId, attempt) {
+            const startedAt = performance.now();
+            const control = { stopped: false };
+            let resolveReply;
+            const reply = new Promise(resolve => { resolveReply = resolve; });
+            const onMessage = event => {
+                // Apps Script adds a nested sandbox frame, so source !== the outer iframe.
+                const trustedOrigin = /^https:\/\/(?:script\.google\.com|script\.googleusercontent\.com|[a-z0-9-]+-script\.googleusercontent\.com)$/.test(event.origin);
+                const result = event.data;
+                if (!trustedOrigin || !result || result.source !== 'attendanceAttachmentUpload' ||
+                    result.uploadId !== uploadId || result.replyToken !== payload.replyToken ||
+                    !['SUCCESS', 'ERROR'].includes(result.state)) return;
+                if (result.state === 'SUCCESS' && (!result.ok || !result.attachment?.fileId)) return;
+                if (result.state === 'ERROR' && result.ok !== false) return;
+                if (window.attendanceUploadTiming) window.attendanceUploadTiming.confirmation = 'message';
+                resolveReply(result);
+            };
+            window.addEventListener('message', onMessage);
             try {
-                return await waitForUploadStatus(uploadId);
+                if (!attempt.posted) {
+                    attempt.cleanup = submitAppsScriptUploadForm(action, payload, uploadId);
+                    attempt.posted = true;
+                    // Keep only the identity/token needed to check a delayed result.
+                    delete payload.base64Data;
+                }
+                const result = await Promise.race([reply, waitForUploadStatus(uploadId, control)]);
+                if (window.attendanceUploadTiming) {
+                    window.attendanceUploadTiming.confirmMs = Math.round(performance.now() - startedAt);
+                    window.attendanceUploadTiming.server = result.performance || null;
+                }
+                attempt.cleanup?.();
+                attempt.cleanup = null;
+                return result;
             } finally {
-                cleanup();
+                control.stopped = true;
+                control.wake?.();
+                window.removeEventListener('message', onMessage);
+                // On timeout, leave the POST frame alive. Retrying only checks this uploadId.
             }
         }
 
@@ -10378,10 +10447,11 @@
                 form.style.display = 'none';
                 addField('action', action);
                 addField('uploadId', uploadId);
+                addField('replyToken', payload.replyToken || '');
                 addField('payload', JSON.stringify(payload));
                 document.body.appendChild(iframe);
                 document.body.appendChild(form);
-                form.submit();
+                try { form.submit(); } catch (error) { form.remove(); iframe.remove(); throw error; }
 
                 return () => {
                     form.remove();
@@ -10389,30 +10459,44 @@
                 };
         }
 
-        async function waitForUploadStatus(uploadId) {
+        async function waitForUploadStatus(uploadId, control = {}) {
             const timeoutAt = Date.now() + 90000;
             let lastResult = null;
+            let pollCount = 0;
 
-            while (Date.now() < timeoutAt) {
-                await delay(1500);
+            while (!control.stopped && Date.now() < timeoutAt) {
+                await new Promise(resolve => {
+                    const timer = setTimeout(resolve, Math.min(5000, 2000 + pollCount * 1000));
+                    control.wake = () => { clearTimeout(timer); resolve(); };
+                });
+                if (control.stopped) return null;
+                const remainingMs = timeoutAt - Date.now();
+                if (remainingMs < 1000) break;
                 let result;
                 try {
+                    pollCount++;
                     result = await callAppsScriptJsonpReliable('uploadStatus', { uploadId }, {
-                        attempts: 2,
-                        timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.uploadStatus
+                        attempts: 1,
+                        timeoutMs: Math.min(APPS_SCRIPT_ACTION_TIMEOUTS.uploadStatus, remainingMs)
                     });
                 } catch (error) {
                     console.warn('Upload status retry failed:', error);
                     continue;
                 }
+                if (control.stopped) return null;
                 lastResult = result;
 
-                if (result?.state === 'SUCCESS' || result?.attachment) {
+                if (result?.ok && result?.attachment?.fileId) {
+                    if (window.attendanceUploadTiming) window.attendanceUploadTiming.confirmation = 'status';
                     return result;
                 }
 
-                if (result?.state === 'ERROR' || result?.ok === false) {
+                if (result?.state === 'ERROR') {
                     return result;
+                }
+                if (['RECEIVED', 'PROCESSING'].includes(result?.state)) {
+                    const status = document.getElementById('supportStatus');
+                    if (status) status.textContent = 'وصل الملف. انتظر تأكيد الحفظ وإكمال تسجيل الحضور.';
                 }
             }
 
@@ -10425,11 +10509,11 @@
 
         function getUploadTimeoutMessage(result) {
             if (!result || result.state === 'PENDING' || result.state === 'NOT_FOUND') {
-                return 'لم يصل الملف إلى الخادم. جرّب ملفاً أصغر أو صورة أقل حجماً، ثم حاول مرة أخرى.';
+                return 'تعذر تأكيد حفظ الملف حتى الآن. اضغط متابعة للتحقق من نفس الملف دون إعادة رفعه.';
             }
 
             if (result.state === 'RECEIVED' || result.state === 'PROCESSING') {
-                return 'وصل الملف إلى الخادم لكن المعالجة أخذت وقتاً طويلاً. جرّب ملفاً أصغر.';
+                return 'وصل الملف ولا يزال قيد المعالجة. اضغط متابعة للتحقق من اكتماله.';
             }
 
             return 'انتهت مهلة رفع الملف. حاول مرة أخرى.';
