@@ -2387,6 +2387,23 @@
                 max-width: 350px;
             }
         }
+        #teacherStudentsList .teacher-grid-table { min-width: 1330px; }
+        #teacherStudentsList .teacher-grid-input { min-width: 125px; box-sizing: border-box; }
+        #teacherStudentsList .teacher-grid-select { min-width: 145px; box-sizing: border-box; }
+        .student-access-controls { display: grid; gap: 8px; min-width: 155px; }
+        .student-access-controls label { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .student-access-controls input[type="date"] { width: 145px; min-height: 36px; font: inherit; border: 1px solid #d3dde6; border-radius: 6px; background: white; }
+        .student-access-actions { display: flex; flex-wrap: wrap; gap: 6px; min-width: 230px; }
+        .student-access-actions button { width: auto; max-width: none; min-height: 36px; margin: 0; padding: 8px 10px; font-size: 13px; border-radius: 6px; box-shadow: none; }
+        .student-access-dialog { margin: auto; width: min(440px, calc(100vw - 32px)); box-sizing: border-box; border: 1px solid #d4dce0; border-radius: 8px; padding: 20px; color: #213b43; background: #fff; max-height: calc(100dvh - 32px); overflow-y: auto; }
+        .student-access-dialog::backdrop { background: #182c3970; }
+        .student-access-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .student-access-dialog-head h3 { margin: 0; font-size: 18px; }
+        .student-access-dialog-head button { flex: 0 0 40px; width: 40px; height: 40px; min-height: 40px; padding: 0; margin: 0; font-size: 24px; border-radius: 6px; box-shadow: none; }
+        .student-access-dialog p { overflow-wrap: anywhere; }
+        .student-access-dialog input { box-sizing: border-box; width: 100%; font-size: 16px; min-height: 40px; padding: 8px; border: 1px solid #d3dde6; border-radius: 6px; }
+        .student-access-qr { width: min(100%, 320px); aspect-ratio: 1; margin: 16px auto; padding: 16px; background: #fff; box-sizing: border-box; }
+        .student-access-qr canvas, .student-access-qr img { width: 100%; height: auto; }
     </style>
 </head>
 <body>
@@ -2949,6 +2966,7 @@
                                 <option value="7">آخر 7 أيام</option>
                                 <option value="30" selected>آخر 30 يوماً</option>
                                 <option value="90">آخر 90 يوماً</option>
+                                <option value="160">آخر 160 يوماً</option>
                             </select>
                         </label>
                         <label class="teacher-field">الدورة
@@ -2987,6 +3005,7 @@
                                 <option value="7">آخر 7 أيام</option>
                                 <option value="30" selected>آخر 30 يوماً</option>
                                 <option value="90">آخر 90 يوماً</option>
+                                <option value="160">آخر 160 يوماً</option>
                             </select>
                         </label>
                         <label class="teacher-field">
@@ -3196,6 +3215,18 @@
         </div>
     </div>
 
+    <dialog id="studentAccessDialog" class="student-access-dialog" dir="rtl" aria-labelledby="studentAccessDialogTitle">
+        <div class="student-access-dialog-head">
+            <h3 id="studentAccessDialogTitle">رابط الطالب الاستثنائي</h3>
+            <button type="button" onclick="document.getElementById('studentAccessDialog').close()" aria-label="إغلاق" title="إغلاق">×</button>
+        </div>
+        <p id="studentAccessDialogName"></p>
+        <div id="studentAccessQr" class="student-access-qr"></div>
+        <p id="studentAccessDialogExpiry"></p>
+        <input id="studentAccessDialogUrl" readonly dir="ltr" aria-label="رابط الطالب">
+        <button type="button" onclick="copyStudentAccessDialogUrl()">نسخ الرابط</button>
+        <p id="studentAccessCopyStatus" role="status"></p>
+    </dialog>
     <audio id="successSound" src="https://raw.githubusercontent.com/kbm4biz/att-qrc/main/assets/notification.wav" preload="none"></audio>
     <script async src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js" onload="if (document.body.classList.contains('admin-view') &amp;&amp; typeof renderTeacherStaticQr === 'function') renderTeacherStaticQr()"></script>
 
@@ -3359,6 +3390,8 @@
         let teacherCleanupBusy = false;
         let bootstrapActiveMeetingNow = null;
         let runtimeSettingsReady = false;
+        const exceptionLinkRequested = new URLSearchParams(location.hash.slice(1)).has('access');
+        let studentExceptionAccess = null;
         let teacherQrInterval = null;
         let teacherQrSessionId = '';
         let teacherQrBusy = false;
@@ -3489,6 +3522,11 @@
                 return;
             }
 
+            if (exceptionLinkRequested) {
+                await initializeStudentExceptionLink();
+                return;
+            }
+
             setPreflightStatus('جاري تجهيز التحضير', 'نقوم الآن بتحميل الإعدادات والتحقق من حالة النظام.');
             nfcTapData = loadNfcTapData(true);
             if (nfcTapData) {
@@ -3537,6 +3575,35 @@
             showStep(1);
             applyTraineeSessionBinding();
         });
+
+        async function initializeStudentExceptionLink() {
+            setPreflightStatus('جاري تجهيز التحضير', 'يرجى الانتظار قليلاً.');
+            try {
+                const token = new URLSearchParams(location.hash.slice(1)).get('access') || '';
+                const result = await callAppsScriptJsonpReliable('exceptionBootstrap', { exceptionAccessToken: token }, {
+                    attempts: 1, timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.attendanceBootstrap
+                });
+                if (!result?.ok || result.capabilities?.studentExceptionLinksV1 !== true ||
+                    !result.exceptionAccess?.traineeId || !hasAuthoritativeRuntimeSettings(result.settings)) {
+                    throw new Error(result?.error || 'الرابط غير متاح. راجع المعلم.');
+                }
+                studentExceptionAccess = { ...result.exceptionAccess, token };
+                applyAppsScriptCapabilities(result.capabilities);
+                applyRuntimeSettings(result.settings);
+                runtimeSettingsReady = true;
+                bootstrapActiveMeetingNow = result.activeMeetingNow === true;
+                setMeetingIndicatorState(bootstrapActiveMeetingNow);
+                const input = document.getElementById('idInput');
+                input.value = studentExceptionAccess.traineeId;
+                input.readOnly = true;
+                showStep(1);
+                applyNfcGateToForm();
+            } catch (error) {
+                runtimeSettingsReady = false;
+                studentExceptionAccess = null;
+                setPreflightStatus('تعذر فتح الرابط', error.message || 'أعد المحاولة أو راجع المعلم.', { error: true });
+            }
+        }
 
         async function initializeStudentDashboard(traineeId, token) {
             document.body.classList.add('student-dashboard-view');
@@ -4990,6 +5057,16 @@
             row.querySelectorAll('input, select, button, textarea').forEach(control => {
                 control.disabled = Boolean(isDisabled);
             });
+            if (entity === 'student' && !isDisabled) {
+                const student = getTeacherEntityByRow(teacherAdminData.students, rowNumber);
+                const access = student?.exceptionAccess || {};
+                const available = appsScriptCapabilities.studentExceptionLinksV1 === true;
+                row.querySelectorAll('.student-access-controls input').forEach(control => { control.disabled = !available; });
+                const actions = row.querySelectorAll('.student-access-actions button');
+                actions.forEach((button, index) => {
+                    button.disabled = !available || !access.enabled || (index < 2 && (!student?.active || access.expiresAt <= Date.now()));
+                });
+            }
         }
 
         function setTeacherRowLock(lockKey, entity, rowNumber, isLocked) {
@@ -5058,6 +5135,11 @@
 
         function renderTeacherStudentRow(student) {
             const rowNumber = Number(student.rowNumber);
+            const access = student.exceptionAccess || {};
+            const accessAvailable = appsScriptCapabilities.studentExceptionLinksV1 === true;
+            const expiry = access.expiresAt || Date.now() + 90 * 86400000;
+            const expiryDate = new Date(expiry + 3 * 3600000).toISOString().slice(0, 10);
+            const linkDisabled = !accessAvailable || !student.active || !access.enabled || access.expiresAt <= Date.now();
             const courses = sortTeacherItems(teacherAdminData.courses, item => `${item.courseName || ''} ${item.courseId || ''}`);
             const locations = sortTeacherItems(teacherAdminData.locations, item => `${item.locationName || ''} ${item.locationId || ''}`);
             return `
@@ -5067,10 +5149,104 @@
                     <td><select class="teacher-grid-select" id="${teacherCellId('student', rowNumber, 'course')}" onchange="saveInlineStudent(${rowNumber})">${renderTeacherSelectOptions(courses, 'courseId', 'courseName', student.courseId, '')}</select></td>
                     <td><select class="teacher-grid-select" id="${teacherCellId('student', rowNumber, 'location')}" onchange="saveInlineStudent(${rowNumber})">${renderTeacherSelectOptions(locations, 'locationId', 'locationName', student.locationId, 'بدون موقع')}</select></td>
                     <td><input class="teacher-grid-checkbox" type="checkbox" id="${teacherCellId('student', rowNumber, 'active')}" ${student.active ? 'checked' : ''} onchange="saveInlineStudent(${rowNumber})"></td>
+                    <td><div class="student-access-controls">
+                        <label><input type="checkbox" id="studentAccessEnabled_${rowNumber}" ${access.enabled ? 'checked' : ''} ${!accessAvailable ? 'disabled' : ''} onchange="updateStudentExceptionLink(${rowNumber})"> السماح بالرابط</label>
+                        <label>ينتهي في <input type="date" id="studentAccessExpiry_${rowNumber}" value="${expiryDate}" ${!accessAvailable ? 'disabled' : ''} onchange="updateStudentExceptionLink(${rowNumber})"></label>
+                    </div></td>
+                    <td><div class="student-access-actions">
+                        <button type="button" ${linkDisabled ? 'disabled' : ''} onclick="shareStudentExceptionLink(${rowNumber}, false)">نسخ الرابط</button>
+                        <button type="button" ${linkDisabled ? 'disabled' : ''} onclick="shareStudentExceptionLink(${rowNumber}, true)">نسخ وعرض QR</button>
+                        <button type="button" ${!accessAvailable || !access.enabled ? 'disabled' : ''} onclick="updateStudentExceptionLink(${rowNumber}, true)">تجديد الرابط</button>
+                    </div></td>
                     <td class="teacher-grid-cell-note"><input class="teacher-grid-input" id="${teacherCellId('student', rowNumber, 'notes')}" value="${escapeAttribute(student.notes || '')}" onblur="saveInlineStudent(${rowNumber})" onkeydown="handleTeacherGridEnter(event)"></td>
                     <td><button type="button" class="teacher-danger-button" onclick="deleteStudent('${escapeAttribute(student.traineeId || '')}', ${rowNumber})">حذف</button></td>
                 </tr>
             `;
+        }
+
+        async function updateStudentExceptionLink(rowNumber, rotate = false) {
+            const student = getTeacherEntityByRow(teacherAdminData.students, rowNumber);
+            const lockKey = `student:${rowNumber}`;
+            if (!student || isTeacherRowLocked(lockKey)) return;
+            if (rotate && !confirm('سيتم إلغاء الرابط السابق. هل تريد إنشاء رابط جديد؟')) return;
+            const enabled = Boolean(document.getElementById(`studentAccessEnabled_${rowNumber}`)?.checked);
+            const date = document.getElementById(`studentAccessExpiry_${rowNumber}`)?.value;
+            const expiresAt = Date.parse(`${date}T23:59:59+03:00`);
+            if (enabled && (!Number.isFinite(expiresAt) || expiresAt <= Date.now() || expiresAt > Date.now() + 180 * 86400000)) {
+                setTeacherStatus('teacherStudentsMessage', 'اختر تاريخ انتهاء قادماً خلال 180 يوماً.', 'invalid');
+                return;
+            }
+            setTeacherRowLock(lockKey, 'student', rowNumber, true);
+            setTeacherStatus('teacherStudentsMessage', 'جاري حفظ صلاحية الرابط...', 'waiting');
+            try {
+                const result = await callAppsScriptJsonpReliable('studentExceptionLink', {
+                    password: teacherDashboardPassword, traineeId: student.traineeId,
+                    operation: rotate ? 'rotate' : 'save', enabled, expiresAt,
+                    expectedVersion: student.exceptionAccess?.version || '', requestId: crypto.randomUUID()
+                }, { attempts: 2, timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.startAttendance });
+                if (!result?.ok) throw new Error(result?.error || 'تعذر حفظ صلاحية الرابط.');
+                student.exceptionAccess = result.access;
+                renderTeacherStudentsList();
+                setTeacherStatus('teacherStudentsMessage', enabled ? 'تم حفظ صلاحية الرابط. يمكنك نسخه الآن.' : 'تم إيقاف الرابط الاستثنائي.', 'valid');
+            } catch (error) {
+                renderTeacherStudentsList();
+                setTeacherStatus('teacherStudentsMessage', error.message, 'invalid');
+            } finally {
+                setTeacherRowLock(lockKey, 'student', rowNumber, false);
+            }
+        }
+
+        async function copyStudentAccessUrl(url) {
+            try { await navigator.clipboard.writeText(url); return true; } catch (error) {}
+            const field = document.createElement('textarea');
+            field.value = url;
+            field.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+            (document.getElementById('studentAccessDialog').open ? document.getElementById('studentAccessDialog') : document.body).appendChild(field);
+            field.select();
+            let copied = false;
+            try { copied = document.execCommand('copy'); } catch (error) {}
+            field.remove();
+            return copied;
+        }
+
+        async function copyStudentAccessDialogUrl() {
+            const copied = await copyStudentAccessUrl(document.getElementById('studentAccessDialogUrl').value);
+            setText('studentAccessCopyStatus', copied ? 'تم نسخ الرابط.' : 'تعذر النسخ التلقائي. يمكنك تحديد الرابط ونسخه.');
+        }
+
+        async function shareStudentExceptionLink(rowNumber, showQr) {
+            const student = getTeacherEntityByRow(teacherAdminData.students, rowNumber);
+            const lockKey = `student:${rowNumber}`;
+            if (!student || isTeacherRowLocked(lockKey)) return;
+            setTeacherRowLock(lockKey, 'student', rowNumber, true);
+            try {
+                const result = await callAppsScriptJsonp('studentExceptionLink', {
+                    password: teacherDashboardPassword, traineeId: student.traineeId, operation: 'get'
+                });
+                if (!result?.ok || !result.token) throw new Error(result?.error || 'الرابط موقوف أو منتهي الصلاحية.');
+                const url = `https://kbm4biz.github.io/att-qrc/#access=${encodeURIComponent(result.token)}`;
+                const copied = await copyStudentAccessUrl(url);
+                setTeacherStatus('teacherStudentsMessage', copied ? 'تم نسخ رابط الطالب.' : 'يمكنك نسخ الرابط من النافذة.', copied ? 'valid' : 'waiting');
+                if (showQr || !copied) {
+                    setText('studentAccessDialogName', `${student.name} · ${student.traineeId}`);
+                    setText('studentAccessDialogExpiry', `ينتهي: ${new Date(result.access.expiresAt).toLocaleDateString('ar-SA', { timeZone: 'Asia/Riyadh' })}`);
+                    setText('studentAccessCopyStatus', copied ? 'تم نسخ الرابط.' : '');
+                    document.getElementById('studentAccessDialogUrl').value = url;
+                    const container = document.getElementById('studentAccessQr');
+                    container.replaceChildren();
+                    document.getElementById('studentAccessDialog').showModal();
+                    for (let attempt = 0; typeof QRCode === 'undefined' && attempt < 20; attempt++) await new Promise(resolve => setTimeout(resolve, 100));
+                    if (typeof QRCode === 'undefined') {
+                        container.textContent = 'تعذر تحميل QR. أغلق النافذة وحاول مجدداً.';
+                    } else {
+                        new QRCode(container, { text: url, width: 288, height: 288, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+                    }
+                }
+            } catch (error) {
+                setTeacherStatus('teacherStudentsMessage', error.message || 'تعذر تجهيز الرابط.', 'invalid');
+            } finally {
+                setTeacherRowLock(lockKey, 'student', rowNumber, false);
+            }
         }
 
         function renderTeacherScheduleDays(rowNumber, weekdays) {
@@ -5214,6 +5390,8 @@
                             <th>الدورة</th>
                             <th>الموقع</th>
                             <th>فعال</th>
+                            <th>الرابط الاستثنائي</th>
+                            <th>مشاركة الرابط</th>
                             <th>ملاحظات</th>
                             <th>إجراءات</th>
                         </tr>
@@ -7105,13 +7283,10 @@
                 const fieldsHtml = fields.length
                     ? fields.map(field => {
                         const isNumber = field.type === 'number';
-                        const min = field.min !== null && field.min !== undefined ? ` min="${escapeAttribute(field.min)}"` : '';
-                        const max = field.max !== null && field.max !== undefined ? ` max="${escapeAttribute(field.max)}"` : '';
                         return `
                             <label class="teacher-field">
                                 ${escapeHtml(field.label || `الحقل ${Number(field.index || 0) + 1}`)}
-                                <input type="${isNumber ? 'number' : 'text'}" ${isNumber ? `inputmode="decimal" step="any"${min}${max}` : 'maxlength="160"'} value="${escapeAttribute(field.value || '')}" data-review-field="${Number(field.index || 0)}">
-                                ${getSupportingFieldConstraintText(field) ? `<small class="support-form-hint">${escapeHtml(getSupportingFieldConstraintText(field))}</small>` : ''}
+                                <input type="${isNumber ? 'number' : 'text'}" ${isNumber ? 'inputmode="decimal" step="any"' : 'maxlength="160"'} value="${escapeAttribute(field.value || '')}" data-review-field="${Number(field.index || 0)}">
                             </label>`;
                     }).join('')
                     : '<div class="teacher-empty">لا توجد حقول مخصصة في هذا التسليم.</div>';
@@ -7155,26 +7330,24 @@
 
             const existingFieldMap = new Map((row.customFields || []).map(field => [Number(field.index), field]));
             let customFields = (row.customFields || []).map(field => ({ ...field }));
-            if (reviewStatus !== 'REJECTED') {
-                try {
-                    customFields = [...card.querySelectorAll('[data-review-field]')].map(input => {
-                        const index = Number(input.dataset.reviewField);
-                        const definition = existingFieldMap.get(index) || { index, label: `الحقل ${index + 1}`, type: input.type === 'number' ? 'number' : 'text' };
-                        const validation = validateSupportingFieldValue(definition, input.value);
-                        if (!validation.ok) {
-                            input.focus();
-                            throw new Error(validation.message);
-                        }
-                        return { ...definition, index, value: validation.value };
-                    });
-                } catch (validationError) {
-                    const message = document.getElementById('reviewMessage');
-                    if (message) {
-                        message.className = 'status-bar teacher-message invalid';
-                        message.textContent = validationError.message;
+            try {
+                customFields = [...card.querySelectorAll('[data-review-field]')].map(input => {
+                    const index = Number(input.dataset.reviewField);
+                    const definition = existingFieldMap.get(index) || { index, label: `الحقل ${index + 1}`, type: input.type === 'number' ? 'number' : 'text' };
+                    const validation = validateSupportingFieldValue({ ...definition, min: null, max: null, exactDigits: null }, input.value);
+                    if (!validation.ok) {
+                        input.focus();
+                        throw new Error(validation.message);
                     }
-                    return;
+                    return { ...definition, index, value: validation.value };
+                });
+            } catch (validationError) {
+                const message = document.getElementById('reviewMessage');
+                if (message) {
+                    message.className = 'status-bar teacher-message invalid';
+                    message.textContent = validationError.message;
                 }
+                return;
             }
 
             const previousStatus = row.reviewStatus;
@@ -7630,6 +7803,7 @@
         }
 
         function formatGateStatus(status) {
+            if (status === 'teacher_exception') return 'استثناء بإذن المعلم';
             if (status === 'passed') {
                 return 'تم';
             }
@@ -8091,6 +8265,7 @@
         }
 
         function isNfcGateSatisfied() {
+            if (exceptionLinkRequested && !studentExceptionAccess) return false;
             return !ENABLE_NFC_TAP_VALIDATION ||
                 Boolean(nfcTapData && nfcReservationAccepted && (nfcTokenStarted || nfcTapUsedForThisAttempt || isNfcTapFresh(nfcTapData)));
         }
@@ -8986,27 +9161,43 @@
 
             try {
                 let attendanceContext = null;
-                const fastLookupResult = await startNfcAttendanceAndLookup(normalizedInputID);
-                if (fastLookupResult !== null) {
-                    if (!nfcTokenStarted) {
-                        showError(nfcTapError || fastLookupResult?.error || 'تعذر بدء تسجيل الحضور. حاول مرة أخرى.', idStatus);
+                if (studentExceptionAccess) {
+                    if (normalizedInputID !== studentExceptionAccess.traineeId) {
+                        showError('هذا الرابط مخصص لرقم تدريبي محدد.', idStatus);
                         return;
                     }
-                    nfcTapUsedForThisAttempt = true;
-                    clearNfcCountdownTimer();
-                    attendanceContext = await interpretTraineeAttendanceContextResult(fastLookupResult);
-                    if (!attendanceContext) {
-                        attendanceContext = await lookupTraineeFromLegacySheets(normalizedInputID, fastLookupResult);
+                    const result = await callAppsScriptJsonpReliable('exceptionStart', {
+                        exceptionAccessToken: studentExceptionAccess.token, traineeId: normalizedInputID,
+                        deviceId: getOrCreateDeviceId(), deviceFingerprint: getDeviceFingerprint()
+                    }, { attempts: 2, timeoutMs: APPS_SCRIPT_ACTION_TIMEOUTS.startAttendance });
+                    if (!result?.ok) {
+                        showError(result?.error || 'تعذر بدء التسجيل. راجع المعلم.', idStatus);
+                        return;
                     }
+                    attendanceContext = result;
                 } else {
-                    const nfcStarted = await startNfcAttendanceAttempt();
-                    if (!nfcStarted) {
-                        showError(nfcTapError || 'انتهت مهلة البدء. المس البطاقة مرة أخرى.', idStatus);
-                        return;
+                    const fastLookupResult = await startNfcAttendanceAndLookup(normalizedInputID);
+                    if (fastLookupResult !== null) {
+                        if (!nfcTokenStarted) {
+                            showError(nfcTapError || fastLookupResult?.error || 'تعذر بدء تسجيل الحضور. حاول مرة أخرى.', idStatus);
+                            return;
+                        }
+                        nfcTapUsedForThisAttempt = true;
+                        clearNfcCountdownTimer();
+                        attendanceContext = await interpretTraineeAttendanceContextResult(fastLookupResult);
+                        if (!attendanceContext) {
+                            attendanceContext = await lookupTraineeFromLegacySheets(normalizedInputID, fastLookupResult);
+                        }
+                    } else {
+                        const nfcStarted = await startNfcAttendanceAttempt();
+                        if (!nfcStarted) {
+                            showError(nfcTapError || 'انتهت مهلة البدء. المس البطاقة مرة أخرى.', idStatus);
+                            return;
+                        }
+                        nfcTapUsedForThisAttempt = true;
+                        clearNfcCountdownTimer();
+                        attendanceContext = await lookupTraineeAttendanceContext(normalizedInputID);
                     }
-                    nfcTapUsedForThisAttempt = true;
-                    clearNfcCountdownTimer();
-                    attendanceContext = await lookupTraineeAttendanceContext(normalizedInputID);
                 }
 
                 if (attendanceContext?.ok && attendanceContext.trainee) {
@@ -10373,6 +10564,7 @@
                 const base64Data = dataUrl.split(',')[1] || '';
                 const payload = {
                     uploadId,
+                    ...(studentExceptionAccess ? { exceptionAccessToken: studentExceptionAccess.token, accessMethod: 'exception' } : {}),
                     replyToken: Array.from(window.crypto.getRandomValues(new Uint8Array(16)), value => value.toString(16).padStart(2, '0')).join(''),
                     traineeId: trainee.id || '',
                     meetingId: meeting.meetingId || '',
@@ -10570,12 +10762,14 @@
             const currentMeeting = readSessionJson('currentMeeting', null);
             const meetingId = currentMeeting ? currentMeeting.meetingId : null;
             const address = sessionStorage.getItem('attendanceAddress') || 'غير معروف';
-            const attendanceId = window.crypto?.randomUUID
+            const attendanceId = studentExceptionAccess?.attendanceId || (window.crypto?.randomUUID
                 ? window.crypto.randomUUID()
-                : `${trainee.id}-${Date.now()}`;
+                : `${trainee.id}-${Date.now()}`);
+            if (studentExceptionAccess) studentExceptionAccess.attendanceId = attendanceId;
 
             return {
                 attendanceId,
+                ...(studentExceptionAccess ? { exceptionAccessToken: studentExceptionAccess.token, accessMethod: 'exception' } : {}),
                 id: trainee.id,
                 name: trainee.name,
                 program: trainee.program,
@@ -10644,7 +10838,7 @@
         async function sendAttendanceLog(trainee) {
             try {
                 const payload = buildAttendancePayload(trainee);
-                console.log('Logging attendance:', payload);
+                if (!studentExceptionAccess) console.log('Logging attendance:', payload);
 
                 if (window.google?.script?.run) {
                     const result = await new Promise((resolve, reject) => {
@@ -10712,6 +10906,12 @@
         }
 
         function applyTraineeSessionBinding() {
+            if (studentExceptionAccess) {
+                const input = document.getElementById('idInput');
+                input.value = studentExceptionAccess.traineeId;
+                input.readOnly = true;
+                return true;
+            }
             const session = getActiveTraineeSession();
             const idInput = document.getElementById('idInput');
             const idStatus = document.getElementById('idStatus');
