@@ -602,6 +602,56 @@
             font-weight: 800;
             white-space: nowrap;
         }
+        .exercise-due-meta {
+            display: block;
+            margin-top: 4px;
+            color: #526474;
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.8;
+            overflow-wrap: anywhere;
+        }
+        .exercise-due-meta.late {
+            color: #a12727;
+        }
+        .exercise-due-meta.on-time {
+            color: #25633d;
+        }
+        .teacher-due-editor {
+            grid-column: 1 / -1;
+            min-width: 0;
+        }
+        .teacher-due-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            text-align: right;
+        }
+        .teacher-due-table th,
+        .teacher-due-table td {
+            padding: 10px 6px;
+            border-bottom: 1px solid #d9e2ec;
+            overflow-wrap: anywhere;
+            vertical-align: middle;
+        }
+        .teacher-due-table th {
+            color: #334e68;
+            font-size: 13px;
+        }
+        .teacher-due-table input[type="date"] {
+            box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
+            min-height: 44px;
+            padding: 8px 4px;
+            border: 1px solid #bcccdc;
+            border-radius: 6px;
+            background: #fff;
+            color: #243b53;
+            font: inherit;
+            font-size: 16px;
+            direction: ltr;
+        }
         .support-choice-device-note {
             color: #607d8b;
             font-size: 12px;
@@ -2689,8 +2739,9 @@
                                 </div>
                                 <label class="teacher-field teacher-form-wide">
                                     خيارات الحقل المخصص 3 (خيار واحد في كل سطر)
-                                    <textarea id="adminSupportChoiceOptions" maxlength="3000" placeholder="مثال:&#10;الخيار الأول&#10;الخيار الثاني&#10;الخيار الثالث" oninput="markCourseFormSettingsDirty()"></textarea>
+                                    <textarea id="adminSupportChoiceOptions" maxlength="3000" placeholder="مثال:&#10;الخيار الأول&#10;الخيار الثاني&#10;الخيار الثالث" oninput="handleAdminChoiceOptionsChange()"></textarea>
                                 </label>
+                                <div id="adminChoiceDueDates" class="teacher-due-editor"></div>
                             </div>
                             <div class="teacher-settings-note">اختر "رقم" لإظهار لوحة الأرقام للطالب، ويمكنك تحديد أقل وأعلى قيمة. لمقررات مهارات الطباعة: سمِّ الحقل الأول "السرعة" والحقل الثاني "الدقة". إذا أضفت خيارات للحقل الثالث فستظهر كاختيار واحد بدلاً من مربع الإدخال.</div>
                         </div>
@@ -3259,6 +3310,7 @@
         }));
         let SUPPORTING_CUSTOM_FIELD_VISIBILITY = [true, true, true];
         let SUPPORTING_CHOICE_OPTIONS = [];
+        let SUPPORTING_CHOICE_DUE_DATES = {};
         let ACTIVE_SUPPORTING_COURSE_ID = '';
         let GLOBAL_SUPPORTING_FORM_SETTINGS = {
             enabled: DEFAULT_APP_SETTINGS.enableSupportingForm,
@@ -3766,6 +3818,7 @@
                         <div>
                             <div class="student-exercise-name">${escapeHtml(exercise.name || 'تمرين دون اسم')}</div>
                             <div class="student-exercise-meta">${escapeHtml(details)}</div>
+                            ${renderExerciseDueDate(exercise.dueDate, exercise.submittedAtMs, exercise.completed || exercise.pending)}
                         </div>
                     </div>`;
             }).join('');
@@ -3786,7 +3839,7 @@
                 return `
                     <article class="student-history-item">
                         <div><strong>${escapeHtml(record.date || '-')}</strong><span>${escapeHtml(record.time || '')}</span></div>
-                        <div><strong>${escapeHtml(record.exerciseName || 'تمرين دون اسم')}</strong><span>${escapeHtml(record.meetingId || record.program || '')}</span></div>
+                        <div><strong>${escapeHtml(record.exerciseName || 'تمرين دون اسم')}</strong><span>${escapeHtml(record.meetingId || record.program || '')}</span>${renderExerciseDueDate(record.dueDate, record.submittedAtMs, true)}</div>
                         <div><strong>السرعة: ${escapeHtml(formatTypingSpeed(record.typingSpeed))}</strong><span>الدقة: ${escapeHtml(formatTypingAccuracy(record.typingAccuracy))}</span><span class="student-review-badge ${reviewPresentation.className}">${reviewPresentation.label}</span></div>
                         <div>${attachment}</div>
                     </article>`;
@@ -6463,6 +6516,7 @@
                 requireNote: Boolean(GLOBAL_SUPPORTING_FORM_SETTINGS.requireNote),
                 visibleFields: labels.map(Boolean),
                 choiceOptions: [],
+                choiceDueDates: {},
                 showStudentDashboard: false,
                 fieldDefinitions: createDefaultSupportingFieldDefinitions(labels)
             };
@@ -6474,18 +6528,51 @@
             const compactVisibility = typeof visibleSource === 'string'
                 ? visibleSource.split('').map(value => value === '1')
                 : visibleSource;
+            const choiceOptions = normalizeSupportingChoiceOptions(settings?.choiceOptions ?? settings?.o ?? fallback.choiceOptions);
             return {
                 enabled: coerceBooleanSetting(settings?.enabled ?? settings?.e, fallback.enabled),
                 requireAttachment: coerceBooleanSetting(settings?.requireAttachment ?? settings?.a, fallback.requireAttachment),
                 requireNote: coerceBooleanSetting(settings?.requireNote ?? settings?.n, fallback.requireNote),
                 visibleFields: normalizeSupportingFieldVisibility(compactVisibility, fallback.visibleFields),
-                choiceOptions: normalizeSupportingChoiceOptions(settings?.choiceOptions ?? settings?.o ?? fallback.choiceOptions),
+                choiceOptions,
+                choiceDueDates: normalizeCourseChoiceDueDates(settings?.choiceDueDates ?? settings?.d ?? fallback.choiceDueDates, choiceOptions),
                 showStudentDashboard: coerceBooleanSetting(settings?.showStudentDashboard ?? settings?.r, fallback.showStudentDashboard),
                 fieldDefinitions: normalizeSupportingFieldDefinitions(
                     settings?.fieldDefinitions ?? settings?.f,
                     fallback.fieldDefinitions || createDefaultSupportingFieldDefinitions()
                 )
             };
+        }
+
+        function normalizeExerciseDueDate(value) {
+            const date = String(value || '').trim();
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < '1900-01-01' || date > '9999-12-31') return '';
+            const parsed = new Date(date + 'T00:00:00.000Z');
+            return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date ? date : '';
+        }
+
+        function normalizeCourseChoiceDueDates(dates, options) {
+            const source = dates && typeof dates === 'object' && !Array.isArray(dates) ? dates : {};
+            const byKey = new Map(Object.entries(source).map(([name, date]) => [normalizeSupportingChoiceKey(name), normalizeExerciseDueDate(date)]));
+            return Object.fromEntries(normalizeSupportingChoiceOptions(options).flatMap(name => {
+                const date = byKey.get(normalizeSupportingChoiceKey(name));
+                return date ? [[name, date]] : [];
+            }));
+        }
+
+        function renderExerciseDueDate(value, submittedAtMs, hasSubmission = false, nowMs = Date.now()) {
+            const dueDate = normalizeExerciseDueDate(value);
+            if (!dueDate) return '';
+            // Dates are inclusive through the end of the selected day in Riyadh.
+            const deadline = Date.parse(dueDate + 'T23:59:59.999+03:00');
+            const timestamp = Number(submittedAtMs);
+            const knownSubmissionTime = hasSubmission && Number.isFinite(timestamp) && timestamp > 0;
+            const late = knownSubmissionTime ? timestamp > deadline : (!hasSubmission && nowMs > deadline);
+            const status = knownSubmissionTime
+                ? (late ? 'تم التسليم متأخرًا' : 'تم التسليم في الموعد')
+                : (late ? 'متأخر عن التسليم' : '');
+            const className = late ? 'late' : (knownSubmissionTime ? 'on-time' : '');
+            return `<small class="exercise-due-meta ${className}">آخر موعد: <bdi>${escapeHtml(dueDate)}</bdi> (الرياض)${status ? ` · ${status}` : ''}</small>`;
         }
 
         function encodeUtf8Base64Url(value) {
@@ -6513,6 +6600,7 @@
                 n: normalized.requireNote ? 1 : 0,
                 v: normalized.visibleFields.map(value => value ? '1' : '0').join(''),
                 o: normalized.choiceOptions,
+                d: normalized.choiceDueDates,
                 r: normalized.showStudentDashboard ? 1 : 0,
                 f: normalized.fieldDefinitions.map(field => ({
                     l: field.label,
@@ -6609,6 +6697,7 @@
             setChecked('adminSupportFieldVisible2', settings.visibleFields[1]);
             setChecked('adminSupportFieldVisible3', settings.visibleFields[2]);
             setValue('adminSupportChoiceOptions', settings.choiceOptions.join('\n'));
+            renderAdminChoiceDueDates(settings.choiceOptions, settings.choiceDueDates);
             settings.fieldDefinitions.forEach((field, index) => {
                 const suffix = index + 1;
                 setValue(`adminCourseFieldLabel${suffix}`, field.label || '');
@@ -6632,6 +6721,7 @@
                     getChecked('adminSupportFieldVisible3')
                 ],
                 choiceOptions: document.getElementById('adminSupportChoiceOptions')?.value || '',
+                choiceDueDates: readAdminChoiceDueDates(),
                 fieldDefinitions: [0, 1, 2].map(index => {
                     const suffix = index + 1;
                     return {
@@ -6642,6 +6732,38 @@
                     };
                 })
             });
+        }
+
+        function readAdminChoiceDueDates() {
+            return Object.fromEntries([...document.querySelectorAll('#adminChoiceDueDates input[data-exercise]')]
+                .filter(input => input.value)
+                .map(input => [input.dataset.exercise, input.value]));
+        }
+
+        function renderAdminChoiceDueDates(options, dates) {
+            const container = document.getElementById('adminChoiceDueDates');
+            if (!container) return;
+            const names = normalizeSupportingChoiceOptions(options);
+            const normalizedDates = normalizeCourseChoiceDueDates(dates, names);
+            const supported = appsScriptCapabilities.exerciseDueDatesV1 === true;
+            const disabled = !supported || document.getElementById('adminSupportChoiceOptions')?.disabled;
+            container.innerHTML = names.length ? `
+                <table class="teacher-due-table">
+                    <colgroup><col style="width:48%"><col style="width:52%"></colgroup>
+                    <thead><tr><th scope="col">التمرين</th><th scope="col">آخر موعد · اختياري (الرياض)</th></tr></thead>
+                    <tbody>${names.map(name => `<tr>
+                        <td>${escapeHtml(name)}</td>
+                        <td><input type="date" min="1900-01-01" max="9999-12-31" data-exercise="${escapeAttribute(name)}"
+                            value="${escapeAttribute(normalizedDates[name] || '')}" aria-label="${escapeAttribute(`آخر موعد: ${name}`)}"
+                            onchange="markCourseFormSettingsDirty()" ${disabled ? 'disabled' : ''}></td>
+                    </tr>`).join('')}</tbody>
+                </table>${supported ? '' : '<div class="teacher-empty">تواريخ الاستحقاق غير متاحة في إصدار الخادم الحالي.</div>'}` : '';
+        }
+
+        function handleAdminChoiceOptionsChange() {
+            const dates = readAdminChoiceDueDates();
+            renderAdminChoiceDueDates(document.getElementById('adminSupportChoiceOptions')?.value || '', dates);
+            markCourseFormSettingsDirty();
         }
 
         function captureAdminCourseFormSettings(markDirty = true) {
@@ -6775,6 +6897,7 @@
             SUPPORTING_FIELD_DEFINITIONS = createDefaultSupportingFieldDefinitions(SUPPORTING_CUSTOM_FIELDS);
             SUPPORTING_CUSTOM_FIELD_VISIBILITY = [true, true, true];
             SUPPORTING_CHOICE_OPTIONS = [];
+            SUPPORTING_CHOICE_DUE_DATES = {};
             ACTIVE_SUPPORTING_COURSE_ID = '';
             backendSubmittedSupportingChoices = [];
             backendSubmittedChoicesAuthoritative = false;
@@ -6878,6 +7001,9 @@
                 if (element) {
                     element.disabled = disabled;
                 }
+            });
+            document.querySelectorAll('#adminChoiceDueDates input').forEach(input => {
+                input.disabled = disabled || appsScriptCapabilities.exerciseDueDatesV1 !== true;
             });
         }
 
@@ -9043,6 +9169,7 @@
             REQUIRE_SUPPORTING_NOTE = normalized.requireNote;
             SUPPORTING_CUSTOM_FIELD_VISIBILITY = normalized.visibleFields;
             SUPPORTING_CHOICE_OPTIONS = normalized.choiceOptions;
+            SUPPORTING_CHOICE_DUE_DATES = normalized.choiceDueDates;
             SUPPORTING_FIELD_DEFINITIONS = normalized.fieldDefinitions;
             renderSupportingCustomFields();
         }
@@ -10250,7 +10377,7 @@
                         return `
                             <label class="support-choice-option ${wasSubmitted ? 'submitted' : ''}">
                                 <input type="radio" name="supportCustomField3" id="supportCustomField3Choice${optionIndex + 1}" value="${escapeAttribute(option)}" data-submitted="${wasSubmitted ? 'true' : 'false'}" ${wasSubmitted ? 'disabled' : ''}>
-                                <span>${escapeHtml(option)}</span>
+                                <span>${escapeHtml(option)}${renderExerciseDueDate(SUPPORTING_CHOICE_DUE_DATES[option], null, wasSubmitted)}</span>
                                 ${wasSubmitted ? '<span class="support-choice-check">✓ تم إرساله</span>' : ''}
                             </label>
                         `;
