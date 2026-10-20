@@ -612,7 +612,19 @@
             overflow-wrap: anywhere;
         }
         .exercise-due-meta.late {
-            color: #a12727;
+            padding: 8px 10px;
+            border-inline-start: 3px solid #b54708;
+            border-radius: 6px;
+            background: #fff4da;
+            color: #8a3009;
+        }
+        .exercise-due-meta.late .exercise-due-warning {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            color: #8a3009;
+            font-size: 13px;
+            font-weight: 800;
         }
         .exercise-due-meta.on-time {
             color: #25633d;
@@ -2598,7 +2610,7 @@
                     <div class="teacher-settings-header">
                         <h3>إعدادات نموذج التحضير</h3>
                         <div class="teacher-actions">
-                            <button type="button" onclick="saveAdminSettings()">حفظ الإعدادات</button>
+                            <button type="button" id="adminSettingsSaveButton" onclick="saveAdminSettings()">حفظ الإعدادات</button>
                             <button type="button" class="teacher-secondary-button" onclick="loadAdminSettings()">استعادة</button>
                         </div>
                     </div>
@@ -2739,7 +2751,7 @@
                                 </div>
                                 <label class="teacher-field teacher-form-wide">
                                     خيارات الحقل المخصص 3 (خيار واحد في كل سطر)
-                                    <textarea id="adminSupportChoiceOptions" maxlength="3000" placeholder="مثال:&#10;الخيار الأول&#10;الخيار الثاني&#10;الخيار الثالث" oninput="handleAdminChoiceOptionsChange()"></textarea>
+                                    <textarea id="adminSupportChoiceOptions" placeholder="مثال:&#10;الخيار الأول&#10;الخيار الثاني&#10;الخيار الثالث" oninput="handleAdminChoiceOptionsChange()"></textarea>
                                 </label>
                                 <div id="adminChoiceDueDates" class="teacher-due-editor"></div>
                             </div>
@@ -3456,9 +3468,11 @@
         let courseFormSettingsDrafts = {};
         let courseFormSettingsDirtyIds = new Set();
         let adminSelectedSupportCourseId = '';
+        let adminSettingsSaveInProgress = false;
         let backendSubmittedSupportingChoices = [];
         let backendSubmittedChoicesAuthoritative = false;
         const COURSE_FORM_CONFIG_MARKER = 'ATTQ_FORM_V1';
+        const MAX_COURSE_CHOICE_OPTIONS = 200;
         const SUBMITTED_CHOICE_HISTORY_KEY = 'attqSubmittedChoiceHistoryV1';
         let teacherAdminData = {
             courses: [],
@@ -4789,17 +4803,20 @@
         }
 
         async function saveAdminSettings() {
+            if (adminSettingsSaveInProgress) return;
             if (!teacherDashboardPassword) {
                 teacherDashboardPassword = sessionStorage.getItem('teacherDashboardPassword') || '';
             }
 
             captureAdminCourseFormSettings(false);
             const settings = readAdminSettingsControls();
+            adminSettingsSaveInProgress = true;
             setAdminSettingsDisabled(true);
             showAdminSettingsMessage('جاري حفظ الإعدادات...', 'waiting');
 
             try {
                 const courseSettingsUpdates = getPendingCourseFormSettingsUpdates();
+                validateCourseChoiceOptionsForSave(courseSettingsUpdates);
                 let savedCourseCount = 0;
                 let result;
                 let savedCourseIds = [];
@@ -4829,6 +4846,10 @@
                 }
 
                 if (useBackgroundSave) {
+                    if (result.savedCourseChoiceCounts && courseSettingsUpdates.some(update =>
+                        result.savedCourseChoiceCounts[update.courseId] !== update.formSettings.choiceOptions.length)) {
+                        throw new Error('لم يؤكد الخادم حفظ جميع التمارين. بقيت تعديلاتك في الصفحة؛ أعد المحاولة.');
+                    }
                     applySavedCourseFormSettingsUpdates(courseSettingsUpdates, savedCourseIds);
                     savedCourseCount = Number(result.courseSettingsSaved || savedCourseIds.length || 0);
                 }
@@ -4843,6 +4864,7 @@
                 console.error('Settings save error:', error);
                 showAdminSettingsMessage(error.message || 'تعذر حفظ الإعدادات.', 'invalid');
             } finally {
+                adminSettingsSaveInProgress = false;
                 setAdminSettingsDisabled(false);
             }
         }
@@ -6447,13 +6469,26 @@
             source.forEach(option => {
                 const normalized = String(option || '').trim().slice(0, 100);
                 const key = normalizeSupportingChoiceKey(normalized);
-                if (normalized && !seen.has(key) && unique.length < 30) {
+                if (normalized && !seen.has(key)) {
                     seen.add(key);
                     unique.push(normalized);
                 }
             });
 
             return unique;
+        }
+
+        function validateCourseChoiceOptionsForSave(updates) {
+            for (const update of updates) {
+                const count = normalizeSupportingChoiceOptions(update.formSettings?.choiceOptions).length;
+                if (count > MAX_COURSE_CHOICE_OPTIONS) {
+                    throw new Error(`الحد الأقصى هو ${MAX_COURSE_CHOICE_OPTIONS} تمرين لكل دورة. لم يتم حفظ التغييرات.`);
+                }
+                // Old deployments silently kept only the first 30 choices.
+                if (count > Number(appsScriptCapabilities.maxCourseChoiceOptions || 30)) {
+                    throw new Error('لحفظ أكثر من 30 تمرينًا، حدّث Code.gs وانشر New version من النشر الحالي ثم حدّث الصفحة. لم يتم حفظ التغييرات.');
+                }
+            }
         }
 
         function normalizeSupportingChoiceKey(value) {
@@ -6572,7 +6607,10 @@
                 ? (late ? 'تم التسليم متأخرًا' : 'تم التسليم في الموعد')
                 : (late ? 'متأخر عن التسليم' : '');
             const className = late ? 'late' : (knownSubmissionTime ? 'on-time' : '');
-            return `<small class="exercise-due-meta ${className}">آخر موعد: <bdi>${escapeHtml(dueDate)}</bdi> (الرياض)${status ? ` · ${status}` : ''}</small>`;
+            const warning = late
+                ? `<span class="exercise-due-warning"><span aria-hidden="true">⚠️</span><span>${status}</span></span>`
+                : '';
+            return `<small class="exercise-due-meta ${className}">${warning}آخر موعد: <bdi>${escapeHtml(dueDate)}</bdi>${status && !late ? ` · ${status}` : ''}</small>`;
         }
 
         function encodeUtf8Base64Url(value) {
@@ -6750,7 +6788,7 @@
             container.innerHTML = names.length ? `
                 <table class="teacher-due-table">
                     <colgroup><col style="width:48%"><col style="width:52%"></colgroup>
-                    <thead><tr><th scope="col">التمرين</th><th scope="col">آخر موعد · اختياري (الرياض)</th></tr></thead>
+                    <thead><tr><th scope="col">التمرين</th><th scope="col">آخر موعد · اختياري</th></tr></thead>
                     <tbody>${names.map(name => `<tr>
                         <td>${escapeHtml(name)}</td>
                         <td><input type="date" min="1900-01-01" max="9999-12-31" data-exercise="${escapeAttribute(name)}"
@@ -6772,7 +6810,9 @@
                 return;
             }
             courseFormSettingsDrafts[courseId] = readAdminCourseFormSettingsControls();
-            if (markDirty) {
+            const course = teacherAdminData.courses.find(item => item.courseId === courseId);
+            const savedSettings = normalizeCourseFormSettings(course?.formSettings || parseCourseFormSettingsFromNotes(course?.notes));
+            if (markDirty || JSON.stringify(courseFormSettingsDrafts[courseId]) !== JSON.stringify(savedSettings)) {
                 courseFormSettingsDirtyIds.add(courseId);
             }
         }
@@ -6978,6 +7018,7 @@
 
         function setAdminSettingsDisabled(disabled) {
             [
+                'adminSettingsSaveButton',
                 'adminGpsToggle',
                 'adminQrToggle',
                 'adminNfcToggle',
