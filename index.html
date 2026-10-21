@@ -629,6 +629,15 @@
         .exercise-due-meta.on-time {
             color: #25633d;
         }
+        .exercise-due-meta .exercise-due-relative {
+            display: inline;
+            color: inherit;
+            font-size: inherit;
+            font-weight: 800;
+        }
+        .exercise-due-meta > bdi {
+            white-space: nowrap;
+        }
         .teacher-due-editor {
             grid-column: 1 / -1;
             min-width: 0;
@@ -3473,6 +3482,10 @@
         let backendSubmittedChoicesAuthoritative = false;
         const COURSE_FORM_CONFIG_MARKER = 'ATTQ_FORM_V1';
         const MAX_COURSE_CHOICE_OPTIONS = 200;
+        const EXERCISE_DUE_DAY_FORMATTER = new Intl.DateTimeFormat('en', {
+            timeZone: 'Asia/Riyadh', calendar: 'gregory', numberingSystem: 'latn',
+            year: 'numeric', month: '2-digit', day: '2-digit'
+        });
         const SUBMITTED_CHOICE_HISTORY_KEY = 'attqSubmittedChoiceHistoryV1';
         let teacherAdminData = {
             courses: [],
@@ -6595,6 +6608,29 @@
             }));
         }
 
+        function describeExerciseDueDate(value, nowMs = Date.now()) {
+            const date = normalizeExerciseDueDate(value);
+            const now = new Date(nowMs);
+            if (!date || !Number.isFinite(now.getTime())) return '';
+            const parts = Object.fromEntries(EXERCISE_DUE_DAY_FORMATTER.formatToParts(now)
+                .map(part => [part.type, part.value]));
+            // Compare calendar days, not remaining hours, regardless of the phone's timezone.
+            const today = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day));
+            const difference = Math.round((Date.parse(date + 'T00:00:00.000Z') - today) / 86400000);
+            if (difference === 0) return 'اليوم';
+            if (difference === 1) return 'غدًا';
+            if (difference === 2) return 'بعد يومين';
+            if (difference === -1) return 'أمس';
+            if (difference === -2) return 'قبل يومين';
+            const days = Math.abs(difference);
+            const duration = `${days} ${days <= 10 ? 'أيام' : 'يومًا'}`;
+            if (difference < 0) return `قبل ${duration}`;
+            const remainingWeekDays = 6 - new Date(today).getUTCDay();
+            if (difference <= remainingWeekDays) return `هذا الأسبوع · بعد ${duration}`;
+            if (difference <= remainingWeekDays + 7) return `الأسبوع القادم · بعد ${duration}`;
+            return `بعد ${duration}`;
+        }
+
         function renderExerciseDueDate(value, submittedAtMs, hasSubmission = false, nowMs = Date.now()) {
             const dueDate = normalizeExerciseDueDate(value);
             if (!dueDate) return '';
@@ -6610,7 +6646,8 @@
             const warning = late
                 ? `<span class="exercise-due-warning"><span aria-hidden="true">⚠️</span><span>${status}</span></span>`
                 : '';
-            return `<small class="exercise-due-meta ${className}">${warning}آخر موعد: <bdi>${escapeHtml(dueDate)}</bdi>${status && !late ? ` · ${status}` : ''}</small>`;
+            const relative = describeExerciseDueDate(dueDate, nowMs);
+            return `<small class="exercise-due-meta ${className}">${warning}آخر موعد: <strong class="exercise-due-relative">${escapeHtml(relative)}</strong> · <bdi>${escapeHtml(dueDate)}</bdi>${status && !late ? ` · ${status}` : ''}</small>`;
         }
 
         function encodeUtf8Base64Url(value) {
